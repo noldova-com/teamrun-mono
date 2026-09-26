@@ -7,6 +7,7 @@
  */
 
 import { ChangeDetectionStrategy, Component, type Signal, computed, inject } from "@angular/core";
+import { AppUpdateStatus } from "@noldova/teamrun-protocol";
 import { MatButtonModule } from "@angular/material/button";
 import { MatDividerModule } from "@angular/material/divider";
 import { MatIconModule } from "@angular/material/icon";
@@ -15,8 +16,10 @@ import { MatTooltipModule } from "@angular/material/tooltip";
 
 import { DockSide } from "../../enums/dock-side";
 import { PanelId } from "../../enums/panel-id";
+import { SettingsSection } from "../../enums/settings-section";
 import { ShortcutAction } from "../../enums/shortcut-action";
 import { Resources } from "../../resources";
+import { AppUpdatesService } from "../../services/app-updates.service";
 import { HistoryService } from "../../services/history.service";
 import { LayoutService } from "../../services/layout.service";
 import { NavigationService } from "../../services/navigation.service";
@@ -38,6 +41,7 @@ export class WindowControlsComponent {
   protected readonly search: SearchLauncher = inject(SearchLauncher);
   protected readonly navigation: NavigationService = inject(NavigationService);
   protected readonly shortcuts: ShortcutsService = inject(ShortcutsService);
+  private readonly updates: AppUpdatesService = inject(AppUpdatesService);
   protected readonly panels: readonly PanelId[] = Object.values(PanelId);
   protected readonly hideSidebarTooltip: string = Resources.formatWithKeys(Resources.hideSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
   protected readonly showSidebarTooltip: string = Resources.formatWithKeys(Resources.showSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
@@ -45,4 +49,23 @@ export class WindowControlsComponent {
   protected readonly forwardTooltip: string = Resources.formatWithKeys(Resources.historyForwardLabel, this.shortcuts.keysOf(ShortcutAction.Forward));
   protected readonly searchTooltip: string = Resources.formatWithKeys(Resources.searchLabel, this.shortcuts.keysOf(ShortcutAction.Search));
   protected readonly settingsTooltip: string = Resources.formatWithKeys(Resources.settingsTitle, this.shortcuts.keysOf(ShortcutAction.OpenSettings));
+  protected readonly aboutSection: SettingsSection = SettingsSection.About;
+  protected readonly updateLabel: Signal<string | null> = computed(() => {
+    const state = this.updates.state();
+    if (Object.isNull(state) || Object.isNull(state.availableVersion))
+      return null;
+    const version = state.availableVersion;
+    switch (state.status) {
+      case AppUpdateStatus.Available:
+        return Resources.formatUpdateAvailable(version);
+      case AppUpdateStatus.Downloading:
+        return Resources.formatUpdateDownloading(version, state.progressPercent ?? 0);
+      case AppUpdateStatus.Downloaded:
+        return state.canInstall ? Resources.formatUpdateReady(version) : Resources.formatUpdateDownloaded(version);
+      case AppUpdateStatus.Error:
+        return Resources.formatUpdateAttention(version);
+      default:
+        return null;
+    }
+  });
 }

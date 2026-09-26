@@ -28,6 +28,12 @@ LICENSE file in the root directory of this source tree.
     [matMenuTriggerFor]="panelsMenu">
     <mat-icon>{{ resources.icons["panels"] }}</mat-icon>
   </button>
+  @if (updateLabel(); as label) {
+    <button mat-icon-button class="tr-small-icon-button tr-update-open" [matTooltip]="label" [attr.aria-label]="label"
+      (click)="navigation.openSettings(aboutSection)">
+      <mat-icon class="tr-primary">{{ resources.icons["update"] }}</mat-icon>
+    </button>
+  }
   <button mat-icon-button class="tr-small-icon-button tr-settings-open" [matTooltip]="settingsTooltip" [attr.aria-label]="resources.settingsTitle"
     (click)="navigation.openSettings()">
     <mat-icon>{{ resources.icons["settings"] }}</mat-icon>

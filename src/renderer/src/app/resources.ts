@@ -83,6 +83,26 @@ export class Resources {
     return `Installed version: ${version}`;
   }
 
+  public static formatUpdateAvailable(version: string): string {
+    return `Update ${version} available`;
+  }
+
+  public static formatUpdateDownloading(version: string, percent: number): string {
+    return `Downloading update ${version}: ${percent}%`;
+  }
+
+  public static formatUpdateReady(version: string): string {
+    return `Update ${version} ready to install`;
+  }
+
+  public static formatUpdateDownloaded(version: string): string {
+    return `Update ${version} downloaded`;
+  }
+
+  public static formatUpdateAttention(version: string): string {
+    return `Update ${version} needs attention`;
+  }
+
   public static formatUpdateProgress(percent: number): string {
     return `${percent}%`;
   }
@@ -914,6 +934,7 @@ export class Resources {
   public static readonly icons: Readonly<Record<string, string>> = {
     image: "image",
     download: "download",
+    update: "system_update_alt",
     zoomIn: "add",
     zoomOut: "remove",
     attachment: "attach_file",

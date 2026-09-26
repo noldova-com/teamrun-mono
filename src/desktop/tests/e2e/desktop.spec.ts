@@ -50,6 +50,7 @@ test("keeps application updates disabled in the branded development application"
   await desktop.page.locator("tr-settings-page a").filter({ hasText: "About" }).click();
   await expect(desktop.page.locator("tr-app-updates")).toContainText("Updates are unavailable when running TeamRun from source.");
   await expect(desktop.page.getByRole("button", { name: "Check for updates", exact: true })).toHaveCount(0);
+  await expect(desktop.page.locator("tr-window-controls .tr-update-open")).toHaveCount(0);
   await expect(desktop.page.locator("tr-app-updates").getByRole("button", { name: /Download the latest version/ })).toHaveCount(1);
   await desktop.capture("branded-development-about");
 });
