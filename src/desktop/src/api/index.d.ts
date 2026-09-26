@@ -297,16 +297,16 @@ export declare class UpdateSettings {
   private constructor();
 
   /**
-   * Selects the fixed public release feed for packaged Windows x64 and Linux x64 AppImages, or validates an explicit local test override.
+   * Selects the fixed public release feed for every packaged target that can update itself, or validates an explicit local test override.
    * @param environment TEAMRUN_UPDATE_TEST_FEED optionally supplies an HTTP loopback base URL without credentials, query or fragment.
    * On Linux, APPIMAGE must name the running AppImage; other Linux builds cannot update themselves.
    * @param isPackaged Whether Electron is running a packaged app.
-   * @param platform Node platform; Windows and Linux AppImages can install updates, other platforms cannot yet.
-   * @param architecture Node CPU architecture; public releases support x64, local test overrides also accept arm64.
-   * @returns Validated settings. Development builds and invalid test feeds are disabled with an explanation; other packaged
-   * targets without in-app delivery are disabled without one.
+   * @param platform Node platform; Windows, macOS and Linux AppImages can install updates.
+   * @param architecture Node CPU architecture; x64 and arm64 can install updates.
+   * @param inApplicationsFolder Whether a macOS application runs from an Applications folder, where an update can replace it; ignored on other platforms.
+   * @returns Validated settings. Development builds, installations that cannot update themselves and invalid test feeds are disabled with an explanation.
    */
-  public static fromEnvironment(environment: NodeJS.ProcessEnv, isPackaged: boolean, platform: string, architecture: string): UpdateSettings;
+  public static fromEnvironment(environment: NodeJS.ProcessEnv, isPackaged: boolean, platform: string, architecture: string, inApplicationsFolder: boolean): UpdateSettings;
 }
 
 /**
@@ -735,10 +735,6 @@ export declare class SenderInfo {
  */
 export declare class Resources {
   /**
-   * CPU architecture for the published release channel.
-   */
-  public static readonly publicUpdateArchitecture: string;
-  /**
    * Fixed anonymous HTTPS feed for the repository's latest public release.
    */
   public static readonly publicUpdateFeed: string;
@@ -770,6 +766,10 @@ export declare class Resources {
    * update exit milliseconds used by update preparation and recovery.
    */
   public static readonly updateExitMilliseconds: number;
+  /**
+   * Time allowed on macOS between an install request and the application quitting, including Squirrel.Mac's preparation of the new application.
+   */
+  public static readonly macUpdateExitMilliseconds: number;
   /**
    * update exit poll milliseconds used by update preparation and recovery.
    */
@@ -960,7 +960,7 @@ export declare class Resources {
    */
   public static readonly updateTestFeedVariable: string;
   /**
-   * Supported local-test CPU names.
+   * CPU architectures that can install updates.
    */
   public static readonly updateArchitectures: readonly string[];
   /**
@@ -1033,6 +1033,14 @@ export declare class Resources {
    * Explanation for source builds.
    */
   public static readonly updatesDevelopmentDisabled: string;
+  /**
+   * Explanation for packaged installations that cannot update themselves.
+   */
+  public static readonly updatesUnsupported: string;
+  /**
+   * Explanation for macOS applications outside an Applications folder.
+   */
+  public static readonly updatesOutsideApplications: string;
   /**
    * Explanation for builds without a feed.
    */

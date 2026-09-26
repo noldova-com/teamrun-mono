@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import electronUpdater, { type BaseUpdater, type CancellationToken, type NsisUpdater, type ProgressInfo } from "electron-updater";
+import electronUpdater, { type AppUpdater, type CancellationToken, type NsisUpdater, type ProgressInfo } from "electron-updater";
 import { app } from "electron";
 
 import "@noldova/teamrun-foundation-core";
@@ -24,7 +24,7 @@ import { ReleaseUpdateProvider } from "./release-update-provider.js";
 export class ElectronUpdateBackend implements IUpdateBackend {
   private readonly settings: UpdateSettings;
   private readonly dataDirectory: string;
-  private updater: BaseUpdater | null = null;
+  private updater: AppUpdater | null = null;
   private cancellation: CancellationToken | null = null;
   private disposed: boolean = false;
 
@@ -65,7 +65,7 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     if (!this.settings.allowInstallation)
       throw new Error(Resources.updateInstallDeferred);
     const updater = await this.getUpdater();
-    let appImage = process.platform === Resources.windowsPlatform ? undefined : process.env[Resources.appImageVariable];
+    let appImage = process.platform === Resources.linuxPlatform ? process.env[Resources.appImageVariable] : undefined;
     return new Promise((resolve, reject) => {
       const cleanup = (): void => {
         clearTimeout(timer);
@@ -81,7 +81,7 @@ export class ElectronUpdateBackend implements IUpdateBackend {
           ElectronUpdateBackend.restartAppImage(appImage);
         resolve();
       };
-      const timer = setTimeout(failed, Resources.updateExitMilliseconds);
+      const timer = setTimeout(failed, process.platform === Resources.macPlatform ? Resources.macUpdateExitMilliseconds : Resources.updateExitMilliseconds);
       updater.once(Resources.updateErrorEvent, failed);
       updater.on(Resources.appImageRenamedEvent, renamed);
       app.once(Resources.beforeQuitEvent, quitting);
@@ -94,7 +94,7 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     });
   }
 
-  private async getUpdater(): Promise<BaseUpdater> {
+  private async getUpdater(): Promise<AppUpdater> {
     if (this.disposed || Object.isNull(this.settings.feedUrl))
       throw new Error(Resources.updatesFeedMissing);
     if (!Object.isNull(this.updater))
@@ -109,7 +109,8 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     if (this.disposed)
       throw new Error(Resources.updatesFeedMissing);
 
-    const updater = process.platform === Resources.windowsPlatform ? ElectronUpdateBackend.createWindowsUpdater() : new electronUpdater.AppImageUpdater();
+    const updater = process.platform === Resources.windowsPlatform ? ElectronUpdateBackend.createWindowsUpdater()
+      : process.platform === Resources.macPlatform ? new electronUpdater.MacUpdater() : new electronUpdater.AppImageUpdater();
     updater.logger = null;
     updater.autoDownload = false;
     updater.autoInstallOnAppQuit = false;

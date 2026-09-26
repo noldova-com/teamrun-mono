@@ -20,7 +20,7 @@ export class UpdateServiceTests {
   @TestMethod
   public async installsOnlyAfterDownloadAndKeepsARetryAfterPreparationFails(): Promise<void> {
     const backend = new FakeUpdateBackend();
-    const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/", TEAMRUN_UPDATE_TEST_INSTALL: "1" }, true, "win32", "x64");
+    const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/", TEAMRUN_UPDATE_TEST_INSTALL: "1" }, true, "win32", "x64", true);
     let attempts = 0;
     const restart = { install: async (version: string, install: () => Promise<void>): Promise<void> => {
       Assert.areEqual("0.0.2", version);
@@ -97,7 +97,7 @@ export class UpdateServiceTests {
   @TestMethod
   public keepsDisabledBuildsOfflineAndOwnsItsTimerLifetime(): Promise<void> {
     return this.run(async (service, backend) => {
-      const disabled = new UpdateService(UpdateSettings.fromEnvironment({}, false, "win32", "x64"), "0.0.1", backend, () => undefined);
+      const disabled = new UpdateService(UpdateSettings.fromEnvironment({}, false, "win32", "x64", true), "0.0.1", backend, () => undefined);
       disabled.start(1, 1);
       await disabled.execute(AppUpdateCommand.Check);
       await disabled.execute(AppUpdateCommand.Download);
@@ -138,7 +138,7 @@ export class UpdateServiceTests {
   private async run(body: (service: UpdateService, backend: FakeUpdateBackend, states: AppUpdateState[]) => Promise<void>): Promise<void> {
     const backend = new FakeUpdateBackend();
     const states: AppUpdateState[] = [];
-    const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/" }, true, "win32", "x64");
+    const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/" }, true, "win32", "x64", true);
     const service = new UpdateService(settings, "0.0.1", backend, t => states.push(t));
     try { await body(service, backend, states); }
     finally { service.dispose(); }
