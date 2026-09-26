@@ -208,7 +208,7 @@ export class BridgeGatewayTests {
     const bridgeHost = new FakeBridgeHost();
     const connection = new RuntimeConnection(host, new RecordingForwarder(), "desktop-test");
     const info = new DesktopInfo(settings.dataDirectory, settings.productVersion, process.platform);
-    const updates = new UpdateService(UpdateSettings.fromEnvironment({}, false, process.platform, process.arch), "0.0.1", new FakeUpdateBackend(), () => undefined);
+    const updates = new UpdateService(UpdateSettings.fromEnvironment({}, false, process.platform, process.arch, true), "0.0.1", new FakeUpdateBackend(), () => undefined);
     const gateway = new BridgeGateway(new SenderPolicy(settings), connection, bridgeHost, info, updates);
     const forwarding = new RuntimeConnection(host, gateway, "desktop-forwarding");
     const forwardingGateway = new BridgeGateway(new SenderPolicy(settings), forwarding, bridgeHost, info, updates);

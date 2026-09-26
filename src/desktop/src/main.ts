@@ -45,7 +45,8 @@ const host = new ElectronBridgeHost();
 const attacher = new TimedAttacher(launcher, line => console.error(line));
 const connection = new RuntimeConnection(attacher, { forward: event => host.broadcast(Resources.eventChannel, event.toJson()) }, Resources.clientName);
 const info = new DesktopInfo(settings.dataDirectory, settings.productVersion, process.platform);
-const updateSettings = UpdateSettings.fromEnvironment(process.env, isPackaged, process.platform, process.arch);
+const updateSettings = UpdateSettings.fromEnvironment(process.env, isPackaged, process.platform, process.arch,
+  process.platform === Resources.macPlatform && app.isInApplicationsFolder());
 const checkpoints = new RendererCheckpoint(host);
 const installedExecutable = process.env[Resources.appImageVariable] ?? process.execPath;
 const installation = InstallationRegistry.forEntry(moduleDirectory, installedExecutable, app.getPath(Resources.homePathName));

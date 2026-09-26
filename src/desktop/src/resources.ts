@@ -9,7 +9,6 @@
 import "@noldova/teamrun-foundation-core";
 
 export class Resources {
-  public static readonly publicUpdateArchitecture: string = "x64";
   public static readonly publicUpdateFeed: string = "https://github.com/noldova-com/teamrun/releases/latest/download/";
   public static readonly appImageVariable: string = "APPIMAGE";
   public static readonly updateTestInstallVariable: string = "TEAMRUN_UPDATE_TEST_INSTALL";
@@ -18,6 +17,7 @@ export class Resources {
   public static readonly updatePreparing: string = "Saving workspaces and stopping idle runtimes…";
   public static readonly updateRejectedPromise: string = "rejected";
   public static readonly updateExitMilliseconds: number = 15_000;
+  public static readonly macUpdateExitMilliseconds: number = 120_000;
   public static readonly updateExitPollMilliseconds: number = 50;
   public static readonly updateIgnoredStdio: "ignore" = "ignore";
   public static readonly updateSpawnEvent: "spawn" = "spawn";
@@ -73,6 +73,8 @@ export class Resources {
   public static readonly updateReleaseDateField: string = "releaseDate";
   public static readonly updateProgressEvent: "download-progress" = "download-progress";
   public static readonly updatesDevelopmentDisabled: string = "Updates are unavailable when running TeamRun from source.";
+  public static readonly updatesUnsupported: string = "This installation cannot update itself. New versions are published on GitHub.";
+  public static readonly updatesOutsideApplications: string = "Move TeamRun to the Applications folder to update it.";
   public static readonly updatesFeedMissing: string = "Update downloads are not configured for this build.";
   public static readonly updatesFeedInvalid: string = "The local update test feed must be an HTTP loopback URL without credentials, a query or a fragment.";
   public static readonly updateCheckFailed: string = "Could not check for updates. Check the connection to the update server and try again.";
