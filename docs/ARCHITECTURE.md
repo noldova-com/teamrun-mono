@@ -96,7 +96,7 @@ Related domain writes and their durable change records commit atomically. Live m
 
 Migrations are ordered, explicit and transactional. Validate that the existing migration history is a recognized prefix before modifying it. Back up an existing database before upgrading its schema using a SQLite-aware operation that includes committed WAL data; verify the completed backup before publishing it as a recovery point. Unknown/newer schemas are refused rather than reset. Destructive rollback, backup retention and committed-asset cleanup require explicit policies; no automatic deletion is assumed.
 
-Unsent desktop drafts use IndexedDB within the data directory's desktop profile, with explicit durable-write acknowledgements. Save immutable file data separately from frequently changing text. Clear a sent draft only if it still matches the submitted snapshot. Failed storage or send operations retain recoverable content and expose an error; an unacknowledged write is not claimed durable.
+Unsent desktop drafts use IndexedDB within the data directory's desktop profile, with explicit durable-write acknowledgements. Save immutable file data separately from frequently changing text. Clear a sent draft only if it still matches the submitted snapshot. Failed storage or send operations retain recoverable content and expose an error; an unacknowledged write is not claimed durable. Closing TeamRun waits for each window to save its drafts: a window that reports a failed save keeps TeamRun open with the error, while a window that is gone or does not answer before the timeout does not block closing.
 
 ## 6. Conversation execution and sessions
 

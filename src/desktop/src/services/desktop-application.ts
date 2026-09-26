@@ -130,7 +130,7 @@ export class DesktopApplication {
     if (!Object.isNull(this.closing))
       return this.closing;
     const id = Guid.createVersion7().toString();
-    this.closing = this.checkpoints.prepare(id).then(ready => {
+    this.closing = this.checkpoints.prepareToClose(id).then(ready => {
       if (ready) {
         this.quitting = true;
         app.quit();

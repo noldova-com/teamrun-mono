@@ -215,6 +215,14 @@ export declare class RendererCheckpoint {
   public prepare(id: string): Promise<boolean>;
 
   /**
+   * Freezes all live windows and waits for each one before TeamRun closes. A repeated matching id shares the operation.
+   * @param id Unique operation id.
+   * @returns True after every window acknowledges, and when no window can answer: none is open, or one does not answer before the timeout.
+   * False when a window reports a failed save or another checkpoint is active.
+   */
+  public prepareToClose(id: string): Promise<boolean>;
+
+  /**
    * Accepts each window acknowledgement once.
    * @param windowId Native web-contents id.
    * @param result Validated correlated result.

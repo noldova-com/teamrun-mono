@@ -73,6 +73,10 @@ test("preserves drafts and tabs across Settings, navigation, sending and restart
   await desktop.capture("main-window");
 });
 
+test("quits when its window is gone before it could save", async () => {
+  expect(await desktop.closeFromPage()).toBe(0);
+});
+
 test("opens an attachment in a modal or tab and retains the composer draft", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();

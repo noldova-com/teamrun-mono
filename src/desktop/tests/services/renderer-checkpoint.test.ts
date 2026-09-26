@@ -49,4 +49,25 @@ export class RendererCheckpointTests {
     host.windows.length = 0;
     Assert.isFalse(await checkpoint.prepare("no-window"));
   }
+
+  @TestMethod
+  public async closesWhenNoWindowCanAnswerButNotAfterAFailedSave(): Promise<void> {
+    const host = new FakeBridgeHost();
+    const checkpoint = new RendererCheckpoint(host, 20);
+    const refused = checkpoint.prepareToClose("refused");
+    Assert.isFalse(await checkpoint.prepareToClose("other"));
+    checkpoint.acknowledge(1, new UpdateCheckpointResult("refused", false));
+    Assert.isFalse(await refused);
+    Assert.isTrue(await checkpoint.prepareToClose("silent"));
+    Assert.isFalse(checkpoint.isPrepared);
+    Assert.isFalse(checkpoint.isFrozen);
+    const saved = checkpoint.prepareToClose("saved");
+    checkpoint.acknowledge(1, new UpdateCheckpointResult("saved", true));
+    Assert.isTrue(await saved);
+    Assert.isTrue(checkpoint.isPrepared);
+    checkpoint.resume("saved");
+    host.windows.length = 0;
+    Assert.isTrue(await checkpoint.prepareToClose("no-window"));
+    Assert.isFalse(await checkpoint.prepare("no-window-update"));
+  }
 }

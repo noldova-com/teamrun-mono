@@ -35,23 +35,11 @@ export class RendererCheckpoint {
   }
 
   public prepare(id: string): Promise<boolean> {
-    if (this.id === id)
-      return this.pending?.promise ?? Promise.resolve(this.ready);
-    if (!Object.isNull(this.id))
-      return Promise.resolve(false);
-    const windows = this.host.windowIds();
-    if (windows.length === 0)
-      return Promise.resolve(false);
-    this.id = id;
-    this.pending = Promise.withResolvers<boolean>();
-    const promise = this.pending.promise;
-    this.ready = false;
-    for (const windowId of windows)
-      this.waiting.add(windowId);
-    this.timer = setTimeout(() => this.resume(id), this.milliseconds);
-    for (const windowId of windows)
-      this.host.sendToWindow(windowId, Resources.checkpointEventChannel, new UpdateCheckpoint(id, UpdateCheckpointPhase.Prepare).toJson());
-    return promise;
+    return this.start(id, false);
+  }
+
+  public prepareToClose(id: string): Promise<boolean> {
+    return this.start(id, true);
   }
 
   public acknowledge(windowId: number, result: UpdateCheckpointResult): boolean {
@@ -73,6 +61,35 @@ export class RendererCheckpoint {
   }
 
   public resume(id: string): void {
+    this.finish(id, false);
+  }
+
+  public dispose(): void {
+    if (!Object.isNull(this.id))
+      this.resume(this.id);
+  }
+
+  private start(id: string, closing: boolean): Promise<boolean> {
+    if (this.id === id)
+      return this.pending?.promise ?? Promise.resolve(this.ready);
+    if (!Object.isNull(this.id))
+      return Promise.resolve(false);
+    const windows = this.host.windowIds();
+    if (windows.length === 0)
+      return Promise.resolve(closing);
+    this.id = id;
+    this.pending = Promise.withResolvers<boolean>();
+    const promise = this.pending.promise;
+    this.ready = false;
+    for (const windowId of windows)
+      this.waiting.add(windowId);
+    this.timer = setTimeout(() => this.finish(id, closing), this.milliseconds);
+    for (const windowId of windows)
+      this.host.sendToWindow(windowId, Resources.checkpointEventChannel, new UpdateCheckpoint(id, UpdateCheckpointPhase.Prepare).toJson());
+    return promise;
+  }
+
+  private finish(id: string, value: boolean): void {
     if (this.id !== id)
       return;
     if (!Object.isNull(this.timer))
@@ -81,13 +98,8 @@ export class RendererCheckpoint {
     this.waiting.clear();
     this.ready = false;
     this.id = null;
-    this.pending?.resolve(false);
+    this.pending?.resolve(value);
     this.pending = null;
     this.host.broadcast(Resources.checkpointEventChannel, new UpdateCheckpoint(id, UpdateCheckpointPhase.Resume).toJson());
-  }
-
-  public dispose(): void {
-    if (!Object.isNull(this.id))
-      this.resume(this.id);
   }
 }

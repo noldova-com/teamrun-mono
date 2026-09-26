@@ -25,6 +25,7 @@ export class DesktopFixture {
   private static readonly VIEWPORT_WIDTH: number = 1920;
   private static readonly VIEWPORT_HEIGHT: number = 1080;
   private static readonly DEVICE_SCALE_FACTOR: number = 1;
+  private static readonly EXIT_MILLISECONDS: number = 10_000;
   private static readonly PNG_WIDTH_OFFSET: number = 16;
   private static readonly PNG_HEIGHT_OFFSET: number = 20;
 
@@ -234,12 +235,33 @@ export class DesktopFixture {
     await expect(this.window.getByRole("button", { name: "Conversation A", exact: true })).toBeVisible();
   }
 
-  private async closeWindow(): Promise<void> {
-    if (!this.application)
-      return;
+  public async closeFromPage(): Promise<number | null> {
+    if (!this.application || !this.window)
+      throw new Error("The fixture window is not running.");
     const application = this.application;
     const child = application.process();
     this.application = null;
+    await this.stopTracing();
+    const exited = new Promise<number | null>(resolve => child.once("exit", code => resolve(code)));
+    await this.window.evaluate(() => { setTimeout(() => window.close()); });
+    this.window = null;
+    this.captureSession = null;
+    let expired = false;
+    const deadline = setTimeout(() => {
+      expired = true;
+      void application.evaluate(({ app }) => app.exit(1)).catch(() => child.kill());
+    }, DesktopFixture.EXIT_MILLISECONDS);
+    try {
+      const code = await exited;
+      expect(expired, "TeamRun kept running after its window closed").toBe(false);
+      return code;
+    }
+    finally {
+      clearTimeout(deadline);
+    }
+  }
+
+  private async stopTracing(): Promise<void> {
     try {
       if (this.tracing && this.window && !this.window.isClosed()) {
         const trace = this.info.outputPath(`desktop-${this.launches}.zip`);
@@ -252,19 +274,28 @@ export class DesktopFixture {
     }
     finally {
       this.tracing = false;
-      try {
-        await application.close();
-      }
-      finally {
-        this.captureSession = null;
-        if (child.exitCode === null && child.signalCode === null)
-          await new Promise<void>((resolve, reject) => {
-            child.once("exit", () => resolve());
-            if (!child.kill())
-              reject(new Error("The fixture process could not be stopped."));
-          });
-      }
-      this.window = null;
     }
+  }
+
+  private async closeWindow(): Promise<void> {
+    if (!this.application)
+      return;
+    const application = this.application;
+    const child = application.process();
+    this.application = null;
+    await this.stopTracing();
+    try {
+      await application.close();
+    }
+    finally {
+      this.captureSession = null;
+      if (child.exitCode === null && child.signalCode === null)
+        await new Promise<void>((resolve, reject) => {
+          child.once("exit", () => resolve());
+          if (!child.kill())
+            reject(new Error("The fixture process could not be stopped."));
+        });
+    }
+    this.window = null;
   }
 }
