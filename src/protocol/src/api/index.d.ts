@@ -188,6 +188,10 @@ export declare enum AppUpdateStatus {
    */
   Preparing = "Preparing",
   /**
+   * Preparation finished and the platform installer has the update; TeamRun restarts when the installation finishes.
+   */
+  Installing = "Installing",
+  /**
    * The last check or download failed and can be retried.
    */
   Error = "Error"

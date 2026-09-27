@@ -15,6 +15,7 @@ export class Resources {
   public static readonly updateInstallerFailed: string = "The update installer could not start. Your saved workspace is available; try again.";
   public static readonly updateInstallReady: string = "The update is verified. Restart when your conversations are idle.";
   public static readonly updatePreparing: string = "Saving workspaces and stopping idle runtimes…";
+  public static readonly updateInstalling: string = "Installing the update. TeamRun will restart when the installation finishes.";
   public static readonly updateRejectedPromise: string = "rejected";
   public static readonly updateExitMilliseconds: number = 15_000;
   public static readonly macUpdateExitMilliseconds: number = 120_000;

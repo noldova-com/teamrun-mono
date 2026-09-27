@@ -767,6 +767,10 @@ export declare class Resources {
    */
   public static readonly updatePreparing: string;
   /**
+   * Explanation shown once preparation has handed the update to the platform installer.
+   */
+  public static readonly updateInstalling: string;
+  /**
    * update rejected promise used by update preparation and recovery.
    */
   public static readonly updateRejectedPromise: string;

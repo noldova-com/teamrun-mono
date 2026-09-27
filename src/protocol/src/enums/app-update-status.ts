@@ -15,5 +15,6 @@ export enum AppUpdateStatus {
   Downloading = "Downloading",
   Downloaded = "Downloaded",
   Preparing = "Preparing",
+  Installing = "Installing",
   Error = "Error"
 }

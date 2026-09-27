@@ -27,6 +27,32 @@ describe("AppUpdatesComponent", () => {
     fixture.componentRef.setInput("state", new AppUpdateState(AppUpdateStatus.Preparing, "1.0.0", "2.0.0", 100, null, null, true, true));
     await fixture.whenStable();
     expect(button.disabled).toBe(true);
+    fixture.componentRef.setInput("state", new AppUpdateState(AppUpdateStatus.Installing, "1.0.0", "2.0.0", 100, null, null, true, true));
+    await fixture.whenStable();
+    expect(element.textContent).toContain("Installing update…");
+    expect(button.disabled).toBe(true);
+  });
+
+  it("shows a restart that waits for running replies, with a way to cancel it", async () => {
+    const fixture = TestBed.createComponent(AppUpdatesComponent);
+    const commands: AppUpdateCommand[] = [];
+    let cancelled = 0;
+    fixture.componentInstance.command.subscribe(t => commands.push(t));
+    fixture.componentInstance.cancelWaiting.subscribe(() => cancelled++);
+    fixture.componentRef.setInput("state", new AppUpdateState(AppUpdateStatus.Downloaded, "1.0.0", "2.0.0", 100, null, null, false, true));
+    fixture.componentRef.setInput("waitingFor", 2);
+    await fixture.whenStable();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain("Restarts when 2 replies finish");
+    expect(element.textContent).not.toContain("Restart to update");
+    const cancel = element.querySelector<HTMLButtonElement>("button")!;
+    expect(cancel.textContent?.trim()).toBe("Cancel restart");
+    cancel.click();
+    expect(cancelled).toBe(1);
+    fixture.componentRef.setInput("waitingFor", null);
+    await fixture.whenStable();
+    expect(element.querySelector("button")?.textContent).toContain("Restart to update");
+    expect(commands).toEqual([]);
   });
   it("offers explicit check/download/retry actions and disables them during work", async () => {
     const fixture = TestBed.createComponent(AppUpdatesComponent);

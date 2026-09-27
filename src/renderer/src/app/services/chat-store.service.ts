@@ -147,6 +147,7 @@ export class ChatStore {
   public readonly recentConversations: Signal<readonly Conversation[]> = computed(() =>
     ChatStore.newestFirst([...this.conversationsByProjectSignal().values()].flat()).slice(0, Resources.recentCount));
   public readonly pendingApprovals: Signal<readonly Approval[]> = computed(() => this.approvalsSignal().filter(t => t.status === ApprovalStatus.Pending));
+  public readonly workingReplies: Signal<readonly Message[]> = computed(() => [...this.workingSignal().values()]);
   public readonly runningReply: Signal<Message | null> = computed(() => {
     const replies = [...this.workingSignal().values()].filter(t => t.conversationId === this.selectedConversationId())
       .sort((a, b) => a.sequence - b.sequence);

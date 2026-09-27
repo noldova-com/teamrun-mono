@@ -28,19 +28,25 @@ export class UpdateServiceTests {
       if (attempts === 1) throw new Error("Workspace could not be saved.");
       await install();
     } };
-    const service = new UpdateService(settings, "0.0.1", backend, () => undefined, restart);
+    const statuses: AppUpdateStatus[] = [];
+    const service = new UpdateService(settings, "0.0.1", backend, t => statuses.push(t.status), restart);
     try {
       await service.execute(AppUpdateCommand.Install);
       Assert.areEqual(0, attempts);
       await service.execute(AppUpdateCommand.Check);
       await service.execute(AppUpdateCommand.Download);
       Assert.isTrue(service.state.canInstall);
+      statuses.length = 0;
       Assert.areEqual(AppUpdateStatus.Error, (await service.execute(AppUpdateCommand.Install)).status);
+      Assert.areEqual([AppUpdateStatus.Preparing, AppUpdateStatus.Error].join(), statuses.join());
       Assert.isTrue(service.state.canInstall);
       Assert.areEqual(0, backend.installs);
+      statuses.length = 0;
       await service.execute(AppUpdateCommand.Install);
       Assert.areEqual(1, backend.installs);
       Assert.areEqual(2, attempts);
+      Assert.areEqual([AppUpdateStatus.Preparing, AppUpdateStatus.Installing].join(), statuses.join());
+      Assert.areEqual(Resources.updateInstalling, service.state.message);
     }
     finally { service.dispose(); }
   }

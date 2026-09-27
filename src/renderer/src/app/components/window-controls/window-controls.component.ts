@@ -25,6 +25,7 @@ import { LayoutService } from "../../services/layout.service";
 import { NavigationService } from "../../services/navigation.service";
 import { SearchLauncher } from "../../services/search-launcher.service";
 import { ShortcutsService } from "../../services/shortcuts.service";
+import { UpdateRestartService } from "../../services/update-restart.service";
 
 @Component({
   selector: "tr-window-controls",
@@ -42,6 +43,7 @@ export class WindowControlsComponent {
   protected readonly navigation: NavigationService = inject(NavigationService);
   protected readonly shortcuts: ShortcutsService = inject(ShortcutsService);
   private readonly updates: AppUpdatesService = inject(AppUpdatesService);
+  private readonly restart: UpdateRestartService = inject(UpdateRestartService);
   protected readonly panels: readonly PanelId[] = Object.values(PanelId);
   protected readonly hideSidebarTooltip: string = Resources.formatWithKeys(Resources.hideSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
   protected readonly showSidebarTooltip: string = Resources.formatWithKeys(Resources.showSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
@@ -60,8 +62,12 @@ export class WindowControlsComponent {
         return Resources.formatUpdateAvailable(version);
       case AppUpdateStatus.Downloading:
         return Resources.formatUpdateDownloading(version, state.progressPercent ?? 0);
-      case AppUpdateStatus.Downloaded:
+      case AppUpdateStatus.Downloaded: {
+        const waiting = this.restart.waitingFor();
+        if (!Object.isNull(waiting))
+          return Resources.formatUpdateWaiting(version, waiting);
         return state.canInstall ? Resources.formatUpdateReady(version) : Resources.formatUpdateDownloaded(version);
+      }
       case AppUpdateStatus.Error:
         return Resources.formatUpdateAttention(version);
       default:

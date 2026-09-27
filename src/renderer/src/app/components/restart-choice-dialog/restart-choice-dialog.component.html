@@ -1,0 +1,18 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+<h2 mat-dialog-title>{{ resources.restartChoiceTitle }}</h2>
+<mat-dialog-content>
+  <p class="mt-0">{{ resources.formatRunningReplies(running) }}</p>
+  <p class="mb-0">{{ resources.restartChoiceText }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="dismiss()">{{ resources.cancelChoiceLabel }}</button>
+  <button mat-button type="button" (click)="choose(choices.StopReplies)">{{ resources.stopAndRestartLabel }}</button>
+  <button mat-flat-button type="button" cdkFocusInitial (click)="choose(choices.WhenFinished)">{{ resources.restartWhenFinishedLabel }}</button>
+</mat-dialog-actions>

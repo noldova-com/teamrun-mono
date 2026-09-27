@@ -32,9 +32,14 @@ LICENSE file in the root directory of this source tree.
         <p class="tr-muted mt-1">{{ resources.formatUpdateProgress(value.progressPercent ?? 0) }}</p>
       }
       @if (value.canInstall) {
-        <button mat-flat-button class="mt-3" type="button" [disabled]="busy()" (click)="command.emit(commands.Install)">
-          {{ resources.restartToUpdateLabel }}
-        </button>
+        @if (waitingFor(); as count) {
+          <p class="mt-3" role="status">{{ resources.formatRestartWaiting(count) }}</p>
+          <button mat-stroked-button class="mt-2" type="button" (click)="cancelWaiting.emit()">{{ resources.cancelRestartLabel }}</button>
+        } @else {
+          <button mat-flat-button class="mt-3" type="button" [disabled]="busy()" (click)="command.emit(commands.Install)">
+            {{ resources.restartToUpdateLabel }}
+          </button>
+        }
       } @else if (value.status !== statuses.Downloaded) {
         <div class="flex flex-wrap gap-2 mt-3">
           <button mat-stroked-button type="button" [disabled]="busy()" (click)="command.emit(commands.Check)">
