@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 -->
 
 <div class="tr-tabs tr-tabs-document flex" role="tablist">
-  <div #strip class="tr-tab-strip flex min-w-0 flex-1" (wheel)="onWheel($event)" (mousedown)="onTabMouseDown($event)">
+  <div #strip class="tr-tab-strip flex min-w-0 flex-1" data-drop-tabs (wheel)="onWheel($event)" (mousedown)="onTabMouseDown($event)">
     @for (conversationId of layout.documents(); track conversationId) {
       <button type="button" class="tr-tab max-w-[16rem]" role="tab" [class.tr-tab-active]="isShown(conversationId)"
         [class.tr-tab-preview]="layout.previewDocument() === conversationId" (dblclick)="keepOpen(conversationId)"
@@ -53,6 +53,26 @@ LICENSE file in the root directory of this source tree.
         </span>
       </button>
     }
+    @for (panel of group().panels; track panel; let index = $index) {
+      <tr-panel-menu #menu [panel]="panel" />
+      <button type="button" class="tr-tab tr-panel-tab max-w-[16rem]" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
+        [class.tr-tab-active]="navigation.panel() === panel" [attr.aria-selected]="navigation.panel() === panel"
+        [class.tr-drop-before]="drag.isDropBefore(group().id, index)" [class.tr-dragging]="drag.dragging() === panel"
+        [matContextMenuTriggerFor]="menu.menu() ?? null" (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)"
+        (auxclick)="onPanelAuxClick($event, panel)">
+        <span class="tr-tab-label flex items-center gap-1.5">
+          <mat-icon class="tr-tab-icon">{{ resources.panelIcons[panel] }}</mat-icon>
+          <span class="truncate">{{ resources.panelLabels[panel] }}</span>
+        </span>
+        <span class="tr-tab-actions">
+          <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="closePanel($event, panel)"
+            (pointerdown)="$event.stopPropagation()">
+            <mat-icon class="tr-tab-icon">{{ resources.icons["close"] }}</mat-icon>
+          </span>
+        </span>
+      </button>
+    }
+    <span class="min-w-2 flex-1" [class.tr-drop-before]="drag.isDropBefore(group().id, group().panels.length)"></span>
   </div>
   <span class="tr-tabs-actions">
     <button mat-icon-button class="tr-small-icon-button tr-documents-menu" [matMenuTriggerFor]="documentsMenu"
@@ -72,6 +92,11 @@ LICENSE file in the root directory of this source tree.
   @for (image of navigation.images(); track image.id) {
     <button mat-menu-item (click)="navigation.showImage(image.id)">
       <mat-icon>{{ resources.icons['image'] }}</mat-icon>{{ image.data.image.label }}
+    </button>
+  }
+  @for (panel of group().panels; track panel) {
+    <button mat-menu-item class="tr-documents-panel-item" (click)="layout.activatePanel(panel)">
+      <mat-icon>{{ resources.panelIcons[panel] }}</mat-icon>{{ resources.panelLabels[panel] }}
     </button>
   }
   <button mat-menu-item (click)="closeAll()">{{ resources.closeAllLabel }}</button>

@@ -1,0 +1,52 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+<section class="tr-panel-card flex min-h-0 flex-1 flex-col" [class.tr-dock]="frame().side !== null" [class.tr-panel]="frame().side === null"
+  [attr.data-drop-group]="group().id">
+  <div class="tr-tabs flex shrink-0" data-drop-tabs (mousedown)="onTabMouseDown($event)">
+    <div class="flex min-w-0 flex-1 overflow-hidden" role="tablist">
+      @for (panel of group().panels; track panel; let index = $index) {
+        <tr-panel-menu #menu [panel]="panel" />
+        <button type="button" class="tr-tab" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
+          [class.tr-tab-active]="panel === group().activePanel" [class.tr-drop-before]="drag.isDropBefore(group().id, index)"
+          [class.tr-dragging]="drag.dragging() === panel" [attr.aria-selected]="panel === group().activePanel"
+          [matContextMenuTriggerFor]="menu.menu() ?? null"
+          (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)">
+          <span class="tr-tab-label">{{ resources.panelLabels[panel] }}</span>
+          <span class="tr-tab-actions">
+            <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="close($event, panel)"
+              (pointerdown)="$event.stopPropagation()">
+              <mat-icon class="tr-tab-icon">{{ resources.icons["close"] }}</mat-icon>
+            </span>
+          </span>
+        </button>
+      }
+      <span class="flex-1" [class.tr-drop-before]="drag.isDropBefore(group().id, group().panels.length)"></span>
+    </div>
+    <div class="tr-tabs-actions">
+      @if (group().activePanel; as active) {
+        <tr-panel-menu #actions [panel]="active" />
+        <button mat-icon-button class="tr-small-icon-button tr-panel-actions" [matTooltip]="resources.panelActionsLabel"
+          [attr.aria-label]="resources.panelActionsLabel" [matMenuTriggerFor]="actions.menu() ?? null">
+          <mat-icon>{{ resources.icons["panelActions"] }}</mat-icon>
+        </button>
+      }
+      @if (dockSide(); as side) {
+        <button mat-icon-button class="tr-small-icon-button tr-dock-collapse" [matTooltip]="resources.collapseDockLabel"
+          [attr.aria-label]="resources.collapseDockLabel" (click)="layout.toggleDock(side)">
+          <mat-icon>{{ resources.dockCollapseIcons[side] }}</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+  <div class="tr-dock-body min-h-0 flex-1 overflow-hidden">
+    @if (group().activePanel; as active) {
+      <tr-panel-content [panel]="active" />
+    }
+  </div>
+</section>

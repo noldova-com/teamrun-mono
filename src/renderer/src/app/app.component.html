@@ -25,6 +25,9 @@ LICENSE file in the root directory of this source tree.
           <mat-icon class="tr-muted tr-nav-icon">{{ resources.icons['image'] }}</mat-icon>
           <span class="truncate tr-emphasis">{{ image.data.image.label }}</span>
         }
+      } @else if (navigation.panel(); as panel) {
+        <mat-icon class="tr-muted tr-nav-icon">{{ resources.panelIcons[panel] }}</mat-icon>
+        <span class="truncate tr-emphasis">{{ resources.panelLabels[panel] }}</span>
       } @else {
         @if (store.selectedProject(); as project) {
           <mat-icon class="tr-muted tr-nav-icon">{{ resources.icons["folder"] }}</mat-icon>
@@ -37,47 +40,17 @@ LICENSE file in the root directory of this source tree.
       }
     </header>
   </div>
-  @if (drag.dragging(); as panel) {
-    <div class="tr-drag-ghost pointer-events-none flex items-center gap-1 px-2 py-1"
-      [style.left.px]="drag.point()[0] + ghostOffset" [style.top.px]="drag.point()[1] + ghostOffset">
-      <mat-icon class="tr-nav-icon">{{ resources.panelIcons[panel] }}</mat-icon>
-      <span>{{ resources.panelLabels[panel] }}</span>
-    </div>
-  }
-  <div class="tr-shell-panels relative grid min-h-0" [style.grid-template-columns]="columns()">
-    @if (drag.dragging() !== null) {
-      @if (preview(); as box) {
-        <div class="tr-drop-preview pointer-events-none absolute bottom-0 z-40" [attr.data-preview]="box.side" [style.left]="box.left"
-          [style.right]="box.right" [style.top]="box.top" [style.width]="box.width" [style.height]="box.height"></div>
-      }
-      @for (guide of guides(); track guide.side) {
-        <button type="button" class="tr-dock-guide tr-dock-guide-edge absolute z-40 grid place-items-center" [style.left]="guide.centerX"
-          [style.top]="guide.centerY" [class.tr-dock-guide-active]="drag.target()?.side === guide.side" [attr.data-guide]="guide.side"
-          [attr.data-drop-side]="guide.side" [attr.aria-label]="resources.dockGuideLabels[guide.side]">
-          <mat-icon>{{ resources.dockGuideIcons[guide.side] }}</mat-icon>
-        </button>
-      }
-    }
-    <tr-dock [side]="leftSide" class="col-start-1" />
-    <div class="col-start-2 grid min-h-0" [style.grid-template-rows]="rows()">
-      <div class="tr-panel tr-panel-card row-start-1 flex min-h-0 flex-col">
+  <div class="relative min-h-0">
+    <tr-dock [side]="leftSide" />
+    <tr-dock [side]="rightSide" />
+    <tr-dock [side]="bottomSide" />
+    @let documents = geometry().documents.bounds;
+    <div class="tr-panel tr-panel-card tr-documents absolute flex min-h-0 flex-col" [attr.data-drop-group]="documentsId"
+      [style.left.px]="documents.x" [style.top.px]="documents.y" [style.width.px]="documents.width" [style.height.px]="documents.height">
       <tr-document-tabs />
       <main class="relative grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto]">
-        @if (drag.dragging() !== null) {
-          <div class="pointer-events-none absolute inset-0 z-40 grid place-items-center">
-            <div class="tr-dock-compass pointer-events-auto grid grid-cols-3 grid-rows-2 gap-0.5 p-1">
-              @for (side of sides; track side) {
-                <button type="button" class="tr-dock-guide tr-dock-guide-arm grid place-items-center"
-                  [class.tr-dock-guide-active]="drag.target()?.side === side" [attr.data-arm]="side" [attr.data-drop-side]="side"
-                  [attr.aria-label]="resources.dockGuideLabels[side]">
-                  <mat-icon>{{ resources.dockGuideIcons[side] }}</mat-icon>
-                </button>
-              }
-              <span class="tr-dock-compass-hub grid place-items-center">
-                <mat-icon>{{ resources.compassIcon }}</mat-icon>
-              </span>
-            </div>
-          </div>
+        @if (navigation.panel(); as panel) {
+          <tr-panel-content class="absolute inset-0" [panel]="panel" />
         }
         @if (navigation.view() === settingsView) {
           <tr-settings-page class="absolute inset-0 min-h-0" />
@@ -117,9 +90,15 @@ LICENSE file in the root directory of this source tree.
           }
         </div>
       </main>
-      </div>
-      <tr-dock [side]="bottomSide" class="row-start-2" />
     </div>
-    <tr-dock [side]="rightSide" class="col-start-3" />
+    @for (frame of geometry().groups; track frame.group.id) {
+      <tr-tab-group [frame]="frame" />
+    }
+    @for (handle of geometry().handles; track handle.leadingId) {
+      <tr-resize-handle class="tr-split-handle" [edge]="handle.edge" [size]="handle.leadingLength" [style.left.px]="handle.bounds.x"
+        [style.top.px]="handle.bounds.y" [style.width.px]="handle.bounds.width" [style.height.px]="handle.bounds.height"
+        (resized)="layout.resizeSplit(handle.split.id, handle.weightsFor($event))" (reset)="layout.resizeSplit(handle.split.id, handle.balancedWeights)" />
+    }
+    <tr-dock-guides />
   </div>
 </div>

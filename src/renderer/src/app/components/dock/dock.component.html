@@ -7,8 +7,8 @@ LICENSE file in the root directory of this source tree.
 -->
 
 @if (dock().collapsed) {
-  <div class="tr-dock-strip tr-panel-card flex h-full items-center gap-1 p-1" [class.flex-col]="isVertical()"
-    [attr.data-drop-side]="side()">
+  <div class="tr-dock-strip tr-panel-card flex flex-1 items-center gap-1 p-1" [class.flex-col]="isVertical()" [attr.data-drop-group]="cornerId()"
+    data-drop-tabs>
     @for (panel of dock().panels; track panel) {
       <button mat-icon-button class="tr-small-icon-button tr-dock-strip-button" [matTooltip]="resources.panelLabels[panel]"
         [matTooltipPosition]="tooltipPosition()" [attr.aria-label]="resources.panelLabels[panel]" (click)="layout.openPanel(panel)">
@@ -17,48 +17,5 @@ LICENSE file in the root directory of this source tree.
     }
   </div>
 } @else {
-  <section class="tr-dock tr-panel-card flex min-h-0 flex-1 flex-col" [attr.data-drop-side]="side()">
-    <div class="tr-tabs flex shrink-0" role="tablist" [attr.data-drop-side]="side()" (mousedown)="onTabMouseDown($event)">
-      <div class="flex min-w-0 flex-1 overflow-hidden">
-        @for (panel of dock().panels; track panel; let index = $index) {
-          <button type="button" class="tr-tab" role="tab" [class.tr-tab-active]="panel === dock().activePanel"
-            [class.tr-drop-before]="drag.isDropBefore(side(), index)" [class.tr-dragging]="drag.dragging() === panel"
-            [attr.aria-selected]="panel === dock().activePanel" [attr.data-tab-index]="index"
-            (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)">
-            <span class="tr-tab-label">{{ resources.panelLabels[panel] }}</span>
-            <span class="tr-tab-actions">
-              <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="close($event, panel)"
-                (pointerdown)="$event.stopPropagation()">
-                <mat-icon class="tr-tab-icon">{{ resources.icons["close"] }}</mat-icon>
-              </span>
-            </span>
-          </button>
-        }
-        <span class="flex-1" [class.tr-drop-before]="drag.isDropBefore(side(), dock().panels.length)"></span>
-      </div>
-      <div class="tr-tabs-actions">
-        <button mat-icon-button class="tr-small-icon-button tr-dock-collapse" [matTooltip]="resources.collapseDockLabel"
-          [attr.aria-label]="resources.collapseDockLabel" (click)="layout.toggleDock(side())">
-          <mat-icon>{{ resources.dockCollapseIcons[side()] }}</mat-icon>
-        </button>
-      </div>
-    </div>
-    <div class="tr-dock-body min-h-0 flex-1 overflow-hidden">
-      @switch (dock().activePanel) {
-        @case (explorer) {
-          <tr-sidebar />
-        }
-        @case (changes) {
-          <tr-changes-panel />
-        }
-        @case (activity) {
-          <tr-activity-panel />
-        }
-        @default {
-          <p class="tr-muted p-4">{{ resources.emptyPanelText }}</p>
-        }
-      }
-    </div>
-  </section>
   <tr-resize-handle [edge]="handleEdge()" [size]="dock().size" (resized)="resize($event)" (reset)="layout.resizeDock(side(), null)" />
 }

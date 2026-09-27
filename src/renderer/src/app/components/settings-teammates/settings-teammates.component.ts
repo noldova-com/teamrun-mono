@@ -73,7 +73,7 @@ export class SettingsTeammatesComponent {
     const defaults = this.preferences.defaultComposer() ?? new ComposerSettings(this.store.providers()[0]!.id, null, null, null);
     this.preferences.rememberComposer(conversation.id,
       new ComposerSettings(defaults.provider, defaults.model, defaults.effort, defaults.providerAccountId, teammate.id));
-    this.navigation.closeSettings();
+    this.navigation.showChat();
     await this.documents.keepOpen(conversation.id);
   }
 }

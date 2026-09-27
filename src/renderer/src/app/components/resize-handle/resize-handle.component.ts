@@ -12,7 +12,9 @@ import {
   ElementRef,
   type InputSignal,
   type OutputEmitterRef,
+  type Signal,
   type WritableSignal,
+  computed,
   inject,
   input,
   output,
@@ -29,13 +31,19 @@ import { Resources } from "../../resources";
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "tr-resize-handle",
+    role: "separator",
+    tabindex: "0",
     "[attr.data-edge]": "edge()",
+    "[attr.aria-orientation]": "orientation()",
+    "[attr.aria-label]": "resources.resizeHandleLabel",
+    "[attr.aria-valuetext]": "valueText()",
     "[class.tr-resizing]": "isDragging()",
     "[attr.title]": "resources.resizeHandleLabel",
     "(pointerdown)": "start($event)",
     "(pointermove)": "move($event)",
     "(pointerup)": "end($event)",
     "(pointercancel)": "end($event)",
+    "(keydown)": "step($event)",
     "(dblclick)": "reset.emit()"
   },
   templateUrl: "./resize-handle.component.html"
@@ -47,6 +55,11 @@ export class ResizeHandleComponent {
   public readonly reset: OutputEmitterRef<void> = output<void>();
   protected readonly resources: typeof Resources = Resources;
   protected readonly isDragging: WritableSignal<boolean> = signal(false);
+  protected readonly orientation: Signal<string> = computed(() => (this.isHorizontal() ? Resources.verticalOrientation : Resources.horizontalOrientation));
+  protected readonly valueText: Signal<string | null> = computed(() => {
+    const size = this.size();
+    return Object.isNull(size) ? null : Resources.formatPixelSize(size);
+  });
   private readonly host: ElementRef<HTMLElement> = inject<ElementRef<HTMLElement>>(ElementRef);
   private origin: { position: number; size: number } | null = null;
 
@@ -68,6 +81,21 @@ export class ResizeHandleComponent {
       return;
     const delta = (this.positionOf(event) - this.origin.position) * this.direction();
     this.resized.emit(Math.round(this.origin.size + delta));
+  }
+
+  protected step(event: KeyboardEvent): void {
+    if (event.key === Resources.enterKey) {
+      event.preventDefault();
+      this.reset.emit();
+      return;
+    }
+    const forward = this.isHorizontal() ? Resources.arrowRightKey : Resources.arrowDownKey;
+    const backward = this.isHorizontal() ? Resources.arrowLeftKey : Resources.arrowUpKey;
+    if (event.key !== forward && event.key !== backward)
+      return;
+    event.preventDefault();
+    const delta = (event.key === forward ? Resources.resizeStep : -Resources.resizeStep) * this.direction();
+    this.resized.emit(Math.round((this.size() ?? this.measure()) + delta));
   }
 
   protected end(event: PointerEvent): void {

@@ -88,7 +88,7 @@ Nested theme previews, including the Gallery, must resolve base and derived colo
 
 ## 3. Panels and surfaces
 
-Each dock and document area uses a panel card with a tab bar and active content. Docks use the shell surface; documents use the panel surface. Collapsed docks show view icons. Section 8 owns card geometry.
+Each tab group uses a panel card with a tab bar and active content. Groups in a dock use the shell surface; groups in the middle use the panel surface. Collapsed docks show view icons. Section 8 owns card geometry.
 
 Do not add dividers below the native window row or every tab bar, or between every container. Optional section-header separators, functional borders, table separators and code-header dividers remain allowed.
 
@@ -101,8 +101,9 @@ Radius tokens are `hover` = 3px, `small` = 4px, `medium` = 6px and `large` = 8px
 - Show a tab bar for every panel, including a panel with one view. The document strip scrolls horizontally when necessary, keeps the active tab visible and offers an overflow list. Dock actions remain reachable at the end of their strip.
 - A tab uses a pill fill for selection and hover. Selected labels use ordinary text; unselected labels use the opaque tab-text token. Hover must not erase the selection or keyboard-focus cue. A running reply can replace the close glyph with a spinner, but hovering or focusing the tab reveals its close action.
 - Middle-click closes the targeted conversation, Settings or dock tab with the same behavior as its close control, without first activating a background tab or starting autoscroll. Keyboard users have an equivalent close command. Closing the active tab moves focus to an appropriate surviving tab or panel.
-- Every panel can dock on the left, on the right or at the bottom, or open in the middle as a tab beside conversations, and moves between these places the same way.
-- Dragging shows a destination marker, docking guides and a preview. The dragged representation may dim; its name remains available in the accessible interaction. Provide keyboard/menu alternatives for moving, pinning and docking views.
+- The window has four regions: the left, right and bottom docks and the middle. Each region holds one or more tab groups, side by side or stacked. Every panel can be placed in any region, including beside the conversations or as a tab among them; conversations, Settings and images stay together in one group in the middle.
+- Dragging a tab shows docking guides over the tab group under the pointer: the center target adds the tab to that group, and four arrows split the group, placing the tab to its left, right, top or bottom. A guide for each side docks the tab along the whole left, right or bottom side, centered in the area the tab would take there. Hovering a target previews the area the tab will occupy; dropping away from every target changes nothing. The dragged representation may dim; its name remains available in the accessible interaction. Provide keyboard/menu alternatives for moving, splitting, pinning and docking views.
+- Splits resize with a handle between groups. A group closes when its last tab leaves, and its space returns to its neighbors. The layout, including splits and their sizes, is restored after a restart, and **Reset the layout** returns to the default.
 - Preview tabs use italic labels, with one preview per strip. Opening another preview replaces it; an explicit keep action, double-click or sending a message keeps the conversation tab. All of these actions have a keyboard-accessible equivalent.
 - Restore the conversation's reading anchor and expansion/wrap choices. Message/image loading must not flash at intrinsic size or move the reader to unrelated content; a located search result stays visible during surrounding layout changes.
 - Conversations read oldest to newest. Activity and Changes read newest first. Each can load more history as needed, with details loaded on expansion. Their shared retention principle does not require the same chronological order.
@@ -119,7 +120,7 @@ Use the shared spacing scale of 4, 8, 12, 16 and 24px and section 8's component 
 - Overlays fit within the viewport below native chrome, with an outer margin. Reduce preferred widths as needed; bound height and scroll content while keeping essential actions reachable.
 - Fields/selects shrink to their container; settings rows and dialog actions wrap or stack. Errors wrap within their owner. Truncated labels retain their full accessible name.
 - The conversation column is fluid and centred up to its preferred maximum. Message prose wraps; code and genuinely two-dimensional tables/diffs may scroll horizontally within their own region. A long string must not widen the document card or the entire window.
-- Prefer enough room for the document before the docks. When space decreases, shrink the left dock first, then the right, and the bottom on the vertical axis. Preserve the user's saved dock sizes so they return when space becomes available. If preferred minima cannot fit, collapse docks into reachable controls rather than overflowing the window or producing negative pane sizes.
+- Prefer enough room for the document before the docks. When space decreases, shrink the left dock first, then the right, and the bottom on the vertical axis. Preserve the user's saved dock and split sizes so they return when space becomes available. Groups in a split keep a minimum size and share the rest of their region in proportion. If preferred minima cannot fit, collapse docks into reachable controls rather than overflowing the window or producing negative pane sizes.
 - Resize within available window bounds. Navigation, hidden-dock controls, the composer and dialog actions stay reachable at the smallest supported window and enlarged zoom; drafts, selections and reading position survive layout changes.
 - Native window controls and application overlay controls occupy separate usable regions. Image-viewer Close, Copy and Download controls must never be covered by the operating system's close/minimize controls.
 
@@ -152,11 +153,12 @@ This table owns component geometry and radii. Typography follows section 1, radi
 | Component | Default geometry | Text role | Surface and behavior |
 |---|---|---|---|
 | Window row | 35px high | Panel; title 600 | Shell; window controls and breadcrumb, with no divider beneath |
-| Panel card | 1px border; large radius; 4px gaps and outer side/bottom margin | Inherited | Shell for docks, panel for documents; meets the window row above |
+| Panel card | 1px border; large radius; 4px gaps and outer side/bottom margin | Inherited | Shell for groups in a dock, panel for groups in the middle; meets the window row above |
 | Dock sizing | Preferred minimum 160px on its resize axis; collapsed strip 44px | Inherited | Preserve saved sizes; collapse when necessary to keep the document and controls reachable |
+| Split | Groups at least 160px wide and 100px high; a 4px sash between them | Inherited | Groups share the rest of the split by their saved proportions and shrink in proportion to their minimums when those cannot fit |
 | Document area | Preferred minimum 220px across and down | Inherited | Priority when allocating pane space; effective size must fit the usable window |
 | Conversation column | Fluid width up to 55rem | Message | Centred in the document; prose wraps and wide code/tables scroll within their own regions |
-| Tab bar | 32px minimum high; 2px start inset | Panel | One per card; grows for an overflow scrollbar; dock action at the end |
+| Tab bar | 32px minimum high; 2px start inset | Panel | One per card; grows for an overflow scrollbar; panel actions at the end, and the dock's hide action on its top-right group |
 | Tab | 32px minimum high; 24px pill; 2px side inset; 8px label inset; 28px action allowance; 24px action slot; 20px close pad; small radius | Panel | Selected/hover fill; selected text or opaque tab text; accessible close target fits the action slot |
 | Sidebar row | 26px minimum high; 8px text inset; 16px icon; 8px icon gap; small radius | Panel | Hover/selected surface; project name or twistie toggles children; conversation indentation 28px; initially ten conversations, then Show N more; pinned conversations appear under Pinned once |
 | Section header | 28px minimum high; text inset 24px; separator inset 4px | Label, 600 | No fill; optional separator above |
@@ -182,7 +184,7 @@ This table owns component geometry and radii. Typography follows section 1, radi
 | Settings item | Padding 12px 14px 18px; description gap 3px; control gap 9px; medium radius | Panel; title 600 | Subtle hover surface; text and controls wrap |
 | Settings heading | Automatic height; 10px surrounding space, 15px start inset | Settings group heading, 600 | Heading foreground; grows with its proportional line height |
 | Icon button | 22px visual pad around a 16px glyph; small radius | Accessible name | Toolbar hover; pointer hit region at least 24px unless a documented exception applies |
-| Dock guide, compass arm and hub | 40px square around a 24px glyph; small radius; medium-radius plate with 2px gaps | Accessible action name | Raised surface; accent for the chosen destination |
+| Docking guide | 40px square around a 24px glyph; small radius; a group's center target and split arrows share a medium-radius plate with 2px gaps, moved clear of the side guides | Accessible action name | Raised surface; accent for the chosen target, whose landing area is previewed |
 | Progress | 2px bar; 16px spinner; reveal after 300ms where delay avoids flicker | Accessible status | Progress token; empty track; completion/error remain understandable without animation |
 | Message copy | 16px glyph inside an adequate icon-button target | Accessible name | Muted normal icon, readable hover/focus; check and Copied feedback for 1.5s; remains discoverable |
 | Message bubble (user) | Automatic height; medium radius | Message | Raised surface, aligned right; rendered Markdown remains selectable |

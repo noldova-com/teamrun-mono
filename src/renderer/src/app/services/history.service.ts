@@ -54,7 +54,7 @@ export class HistoryService {
       if (Object.isUndefined(conversationId) || !this.store.hasConversation(conversationId))
         continue;
       this.index.set(target);
-      this.navigation.closeSettings();
+      this.navigation.showChat();
       await this.store.selectConversation(conversationId);
       return;
     }

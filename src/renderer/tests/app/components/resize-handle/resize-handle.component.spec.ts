@@ -9,6 +9,7 @@
 import { TestBed } from "@angular/core/testing";
 
 import { PanelEdge } from "../../../../src/app/enums/panel-edge";
+import { Resources } from "../../../../src/app/resources";
 import { ResizeHandleComponent } from "../../../../src/app/components/resize-handle/resize-handle.component";
 
 describe("ResizeHandleComponent", () => {
@@ -62,5 +63,43 @@ describe("ResizeHandleComponent", () => {
     pointer(element, "pointermove", 0, 440);
     pointer(element, "pointercancel", 0, 440);
     expect(sizes).toEqual([260]);
+  });
+
+  it("resizes by a step with the arrow keys along its axis and resets on Enter", () => {
+    const fixture = TestBed.createComponent(ResizeHandleComponent);
+    fixture.componentRef.setInput("edge", PanelEdge.Right);
+    fixture.componentRef.setInput("size", 400);
+    const sizes: number[] = [];
+    let resets = 0;
+    fixture.componentInstance.resized.subscribe(t => sizes.push(t));
+    fixture.componentInstance.reset.subscribe(() => { resets += 1; });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const press = (key: string): KeyboardEvent => {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      element.dispatchEvent(event);
+      return event;
+    };
+
+    expect([element.getAttribute("role"), element.getAttribute("tabindex"), element.getAttribute("aria-orientation")]).toEqual(["separator", "0", "vertical"]);
+    expect(element.getAttribute("aria-valuetext")).toBe("400 pixels");
+    expect(element.getAttribute("aria-label")).toBe(Resources.resizeHandleLabel);
+    expect(press("ArrowRight").defaultPrevented).toBe(true);
+    press("ArrowLeft");
+    expect(press("ArrowUp").defaultPrevented).toBe(false);
+    expect(sizes).toEqual([400 + Resources.resizeStep, 400 - Resources.resizeStep]);
+    expect(press("Enter").defaultPrevented).toBe(true);
+    expect(resets).toBe(1);
+
+    fixture.componentRef.setInput("edge", PanelEdge.Top);
+    fixture.componentRef.setInput("size", null);
+    fixture.detectChanges();
+    element.parentElement!.getBoundingClientRect = () => new DOMRect(0, 0, 800, 200);
+    expect(element.getAttribute("aria-orientation")).toBe("horizontal");
+    expect(element.hasAttribute("aria-valuetext")).toBe(false);
+    press("ArrowUp");
+    press("ArrowDown");
+    press("ArrowLeft");
+    expect(sizes.slice(2)).toEqual([200 + Resources.resizeStep, 200 - Resources.resizeStep]);
   });
 });

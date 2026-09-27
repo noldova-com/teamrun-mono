@@ -8,33 +8,23 @@
 
 import "@noldova/teamrun-foundation-core";
 
-import { DockSide } from "../enums/dock-side";
-import { PanelId } from "../enums/panel-id";
 import { Resources } from "../resources";
-import { Dock } from "./dock";
+import { ArrangementReader } from "./arrangement.reader";
 import { DocumentTabs } from "./document-tabs";
+import { PanelArrangement } from "./panel-arrangement";
 
 export class Layout {
-  public readonly docks: ReadonlyMap<DockSide, Dock>;
+  public readonly arrangement: PanelArrangement;
   public readonly documents: DocumentTabs;
   public readonly collapsedProjects: readonly string[];
   public readonly pinnedConversations: readonly string[];
   public readonly projectOrder: readonly string[];
   public readonly conversationOrder: ReadonlyMap<string, readonly string[]>;
 
-  public constructor(docks: readonly Dock[], documents: DocumentTabs, collapsedProjects: readonly string[] = [],
+  public constructor(arrangement: PanelArrangement, documents: DocumentTabs, collapsedProjects: readonly string[] = [],
     pinnedConversations: readonly string[] = [], projectOrder: readonly string[] = [],
     conversationOrder: ReadonlyMap<string, readonly string[]> = new Map()) {
-    const map = new Map<DockSide, Dock>();
-    const seen = new Set<PanelId>();
-    for (const side of Object.values(DockSide)) {
-      const given = docks.find(t => t.side === side) ?? Dock.createEmpty(side);
-      const panels = given.panels.filter(t => !seen.has(t));
-      for (const panel of panels)
-        seen.add(panel);
-      map.set(side, new Dock(side, panels, given.activePanel, given.size, given.collapsed));
-    }
-    this.docks = map;
+    this.arrangement = arrangement;
     this.documents = documents;
     this.collapsedProjects = Layout.distinct(collapsedProjects);
     this.pinnedConversations = Layout.distinct(pinnedConversations);
@@ -44,35 +34,20 @@ export class Layout {
   }
 
   public static createDefault(): Layout {
-    return Layout.createWith(DocumentTabs.createEmpty());
-  }
-
-  public resetDocks(): Layout {
-    return Layout.createWith(this.documents, this.collapsedProjects, this.pinnedConversations, this.projectOrder, this.conversationOrder);
-  }
-
-  private static createWith(documents: DocumentTabs, collapsedProjects: readonly string[] = [], pinnedConversations: readonly string[] = [],
-    projectOrder: readonly string[] = [], conversationOrder: ReadonlyMap<string, readonly string[]> = new Map()): Layout {
-    const docks = Object.values(DockSide).map(side => {
-      const panels = Object.values(PanelId).filter(t => Resources.defaultDockSides[t] === side);
-      return new Dock(side, panels, null, null, Resources.defaultCollapsedDocks.includes(side));
-    });
-    return new Layout(docks, documents, collapsedProjects, pinnedConversations, projectOrder, conversationOrder);
+    return new Layout(PanelArrangement.createDefault(), DocumentTabs.createEmpty());
   }
 
   public static fromJson(value: unknown): Layout {
     if (!Object.isObject(value) || Array.isArray(value))
       return Layout.createDefault();
     const record: Record<string, unknown> = { ...value };
-    const docksValue = record[Resources.docksField];
-    const docks: Record<string, unknown> = Object.isObject(docksValue) && !Array.isArray(docksValue) ? { ...docksValue } : {};
 
     const collapsed = Layout.readIds(record[Resources.collapsedProjectsField]);
     const pinned = Layout.readIds(record[Resources.pinnedConversationsField]);
     const order = Layout.readIds(record[Resources.projectOrderField]);
     const conversationOrder = Layout.readOrders(record[Resources.conversationOrderField]);
 
-    return new Layout(Object.values(DockSide).map(side => Dock.fromJson(side, docks[side])), DocumentTabs.fromJson(record[Resources.documentsField]), collapsed,
+    return new Layout(new ArrangementReader().read(record), DocumentTabs.fromJson(record[Resources.documentsField]), collapsed,
       pinned, order, conversationOrder);
   }
 
@@ -91,68 +66,19 @@ export class Layout {
   }
 
   public toJson(): Record<string, unknown> {
-    const docks: Record<string, unknown> = {};
-    for (const [side, dock] of this.docks)
-      docks[side] = dock.toJson();
     return {
-      [Resources.docksField]: docks, [Resources.documentsField]: this.documents.toJson(), [Resources.collapsedProjectsField]: this.collapsedProjects,
+      ...this.arrangement.toJson(), [Resources.documentsField]: this.documents.toJson(), [Resources.collapsedProjectsField]: this.collapsedProjects,
       [Resources.pinnedConversationsField]: this.pinnedConversations, [Resources.projectOrderField]: this.projectOrder,
       [Resources.conversationOrderField]: Object.fromEntries([...this.conversationOrder].map(([projectId, ids]) => [projectId, [...ids]]))
     };
   }
 
-  public dock(side: DockSide): Dock {
-    const dock = this.docks.get(side);
-    if (Object.isUndefined(dock))
-      throw new RangeError(side);
-    return dock;
+  public withArrangement(arrangement: PanelArrangement): Layout {
+    return arrangement === this.arrangement ? this : this.copy(this.documents, this.collapsedProjects, this.pinnedConversations, this.projectOrder, arrangement);
   }
 
-  public dockOf(panel: PanelId): Dock | null {
-    for (const dock of this.docks.values())
-      if (dock.has(panel))
-        return dock;
-    return null;
-  }
-
-  public isOpen(panel: PanelId): boolean {
-    return !Object.isNull(this.dockOf(panel));
-  }
-
-  public openPanel(panel: PanelId): Layout {
-    const dock = this.dockOf(panel) ?? this.dock(Resources.defaultDockSides[panel]);
-    return this.withDock(dock.add(panel).withCollapsed(false));
-  }
-
-  public closePanel(panel: PanelId): Layout {
-    const dock = this.dockOf(panel);
-    return Object.isNull(dock) ? this : this.withDock(dock.remove(panel));
-  }
-
-  public movePanel(panel: PanelId, side: DockSide, index: number = Number.MAX_SAFE_INTEGER): Layout {
-    const from = this.dockOf(panel);
-    const without = Object.isNull(from) ? this : this.withDock(from.remove(panel));
-    return without.withDock(without.dock(side).add(panel, index).withCollapsed(false));
-  }
-
-  public togglePanel(panel: PanelId): Layout {
-    const dock = this.dockOf(panel);
-    const shown = !Object.isNull(dock) && !dock.collapsed && dock.activePanel === panel;
-    return shown ? this.closePanel(panel) : this.openPanel(panel);
-  }
-
-  public activatePanel(panel: PanelId): Layout {
-    const dock = this.dockOf(panel);
-    return Object.isNull(dock) ? this : this.withDock(dock.activate(panel));
-  }
-
-  public toggleDock(side: DockSide): Layout {
-    const dock = this.dock(side);
-    return this.withDock(dock.withCollapsed(!dock.collapsed));
-  }
-
-  public resizeDock(side: DockSide, size: number | null): Layout {
-    return this.withDock(this.dock(side).withSize(size));
+  public resetArrangement(): Layout {
+    return this.withArrangement(PanelArrangement.createDefault());
   }
 
   public showDocument(conversationId: string, preview: boolean = false): Layout {
@@ -198,7 +124,7 @@ export class Layout {
   }
 
   public orderConversations(projectId: string, order: readonly string[]): Layout {
-    return this.copy(this.documents, this.collapsedProjects, this.pinnedConversations, this.projectOrder, [...this.docks.values()],
+    return this.copy(this.documents, this.collapsedProjects, this.pinnedConversations, this.projectOrder, this.arrangement,
       new Map(this.conversationOrder).set(projectId, order));
   }
 
@@ -211,14 +137,9 @@ export class Layout {
     return this.copy(this.documents, collapsed);
   }
 
-  private withDock(dock: Dock): Layout {
-    const docks = [...this.docks.values()].map(t => (t.side === dock.side ? dock : t));
-    return this.copy(this.documents, this.collapsedProjects, this.pinnedConversations, this.projectOrder, docks);
-  }
-
   private copy(documents: DocumentTabs, collapsedProjects: readonly string[] = this.collapsedProjects,
     pinnedConversations: readonly string[] = this.pinnedConversations, projectOrder: readonly string[] = this.projectOrder,
-    docks: readonly Dock[] = [...this.docks.values()], conversationOrder: ReadonlyMap<string, readonly string[]> = this.conversationOrder): Layout {
-    return new Layout(docks, documents, collapsedProjects, pinnedConversations, projectOrder, conversationOrder);
+    arrangement: PanelArrangement = this.arrangement, conversationOrder: ReadonlyMap<string, readonly string[]> = this.conversationOrder): Layout {
+    return new Layout(arrangement, documents, collapsedProjects, pinnedConversations, projectOrder, conversationOrder);
   }
 }

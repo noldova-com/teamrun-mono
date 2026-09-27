@@ -58,17 +58,17 @@ export class SidebarComponent {
   });
 
   protected open(conversationId: string): void {
-    this.navigation.closeSettings();
+    this.navigation.showChat();
     void this.documents.open(conversationId, this.preferences.openMode());
   }
 
   protected keepOpen(conversationId: string): void {
-    this.navigation.closeSettings();
+    this.navigation.showChat();
     void this.documents.keepOpen(conversationId);
   }
 
   protected startConversation(): void {
-    this.navigation.closeSettings();
+    this.navigation.showChat();
     void this.store.startConversation();
   }
 

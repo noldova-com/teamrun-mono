@@ -19,6 +19,7 @@ import { DockSide } from "./enums/dock-side";
 import { PanelEdge } from "./enums/panel-edge";
 import { PanelId } from "./enums/panel-id";
 import { ShortcutAction } from "./enums/shortcut-action";
+import { SplitAxis } from "./enums/split-axis";
 import { FontChoice } from "./enums/font-choice";
 import { ThemeToken } from "./models/theme-token";
 import { AvatarColor } from "./enums/avatar-color";
@@ -361,7 +362,10 @@ export class Resources {
   public static readonly dateTimeFormatField: string = "dateTimeFormat";
   public static readonly hideSidebarLabel: string = "Hide the sidebar";
   public static readonly showSidebarLabel: string = "Show the sidebar";
-  public static readonly resizeHandleLabel: string = "Drag to resize, double-click to reset";
+  public static readonly resizeHandleLabel: string = "Drag or use the arrow keys to resize; double-click or press Enter to reset";
+  public static readonly resizeStep: number = 16;
+  public static readonly verticalOrientation: string = "vertical";
+  public static readonly horizontalOrientation: string = "horizontal";
   public static readonly primaryButton: number = 0;
   public static readonly middleButton: number = 1;
   public static readonly historyLimit: number = 50;
@@ -393,6 +397,15 @@ export class Resources {
   public static readonly openField: string = "open";
   public static readonly activeField: string = "active";
   public static readonly previewField: string = "preview";
+  public static readonly rootField: string = "root";
+  public static readonly middleField: string = "middle";
+  public static readonly documentsGroupField: string = "documentsGroup";
+  public static readonly axisField: string = "axis";
+  public static readonly childrenField: string = "children";
+  public static readonly weightsField: string = "weights";
+  public static readonly invalidSplitMessage: string = "A split needs two or more parts, each with a weight.";
+  public static readonly missingDocumentsGroupMessage: string = "The middle of the window needs the conversations group.";
+  public static readonly repeatedPanelMessage: string = "A panel can be in only one place.";
   public static readonly dockMinimumSize: number = 160;
   public static readonly dockMaximumSize: number = 900;
   public static readonly dockStripSize: number = 44;
@@ -400,10 +413,11 @@ export class Resources {
   public static readonly shellPadding: number = 4;
   public static readonly documentMinimumSize: number = 220;
   public static readonly windowRowHeight: number = 35;
-  public static readonly hiddenTrack: string = "0";
+  public static readonly guideSize: number = 40;
+  public static readonly guideInset: number = 8;
+  public static readonly compassSize: number = 132;
   public static readonly closePanelLabel: string = "Close";
   public static readonly collapseDockLabel: string = "Hide the panel";
-  public static readonly emptyPanelText: string = "Nothing here yet.";
   public static readonly noChangesText: string = "No files were edited in this conversation.";
   public static readonly noActivityText: string = "No activity in this conversation.";
   public static readonly closeTabLabel: string = "Close the tab";
@@ -420,6 +434,20 @@ export class Resources {
   public static readonly tabIndexData: string = "tabIndex";
   public static readonly dropSideSelector: string = "[data-drop-side]";
   public static readonly tabIndexSelector: string = "[data-tab-index]";
+  public static readonly dropGroupData: string = "dropGroup";
+  public static readonly dropEdgeData: string = "dropEdge";
+  public static readonly dropGroupSelector: string = "[data-drop-group]";
+  public static readonly dropEdgeSelector: string = "[data-drop-edge]";
+  public static readonly dropCenterSelector: string = "[data-drop-center]";
+  public static readonly dropTabsSelector: string = "[data-drop-tabs]";
+  public static readonly addAsTabLabel: string = "Add as a tab";
+  public static readonly addAsTabIcon: string = "tab";
+  public static readonly panelActionsLabel: string = "Panel actions";
+  public static readonly moveToLabel: string = "Move to";
+  public static readonly splitLabel: string = "Split";
+  public static readonly dockLabel: string = "Dock";
+  public static readonly documentsGroupLabel: string = "Conversations";
+  public static readonly groupLabelJoiner: string = ", ";
   public static readonly panelsMenuLabel: string = "Panels";
   public static readonly resetLayoutLabel: string = "Reset the layout";
   public static readonly panelShortcutActions: Readonly<Record<PanelId, ShortcutAction>> = {
@@ -438,8 +466,18 @@ export class Resources {
     [DockSide.Right]: "dock_to_right",
     [DockSide.Bottom]: "dock_to_bottom"
   };
-  public static readonly compassIcon: string = "drag_pan";
-  public static readonly fullCenter: string = "50%";
+  public static readonly splitGuideLabels: Readonly<Record<PanelEdge, string>> = {
+    [PanelEdge.Left]: "Split to the left",
+    [PanelEdge.Right]: "Split to the right",
+    [PanelEdge.Top]: "Split above",
+    [PanelEdge.Bottom]: "Split below"
+  };
+  public static readonly splitGuideIcons: Readonly<Record<PanelEdge, string>> = {
+    [PanelEdge.Left]: "splitscreen_left",
+    [PanelEdge.Right]: "splitscreen_right",
+    [PanelEdge.Top]: "splitscreen_top",
+    [PanelEdge.Bottom]: "splitscreen_bottom"
+  };
   public static readonly flashDuration: number = 1600;
   public static readonly arrowLeftKey: string = "ArrowLeft";
   public static readonly arrowRightKey: string = "ArrowRight";
@@ -688,6 +726,31 @@ export class Resources {
     [DockSide.Left]: PanelEdge.Right,
     [DockSide.Right]: PanelEdge.Left,
     [DockSide.Bottom]: PanelEdge.Top
+  };
+
+  public static readonly dockEdges: Readonly<Record<DockSide, PanelEdge>> = {
+    [DockSide.Left]: PanelEdge.Left,
+    [DockSide.Right]: PanelEdge.Right,
+    [DockSide.Bottom]: PanelEdge.Bottom
+  };
+
+  public static readonly edgeAxes: Readonly<Record<PanelEdge, SplitAxis>> = {
+    [PanelEdge.Left]: SplitAxis.Horizontal,
+    [PanelEdge.Right]: SplitAxis.Horizontal,
+    [PanelEdge.Top]: SplitAxis.Vertical,
+    [PanelEdge.Bottom]: SplitAxis.Vertical
+  };
+
+  public static readonly leadingEdges: readonly PanelEdge[] = [PanelEdge.Left, PanelEdge.Top];
+
+  public static readonly splitHandleEdges: Readonly<Record<SplitAxis, PanelEdge>> = {
+    [SplitAxis.Horizontal]: PanelEdge.Right,
+    [SplitAxis.Vertical]: PanelEdge.Bottom
+  };
+
+  public static readonly groupMinimumLengths: Readonly<Record<SplitAxis, number>> = {
+    [SplitAxis.Horizontal]: 160,
+    [SplitAxis.Vertical]: 100
   };
 
   public static readonly dockCollapseIcons: Readonly<Record<DockSide, string>> = {
@@ -1010,7 +1073,11 @@ export class Resources {
     fullAccess: "bolt",
     copy: "content_copy",
     rewind: "history",
-    openDocuments: "more_horiz"
+    openDocuments: "more_horiz",
+    panelActions: "more_horiz",
+    moveTo: "tab_move",
+    split: "splitscreen",
+    dock: "dock_to_right"
   };
 
   public static readonly accessModeLabels: Readonly<Record<AccessMode, string>> = {
@@ -1040,10 +1107,6 @@ export class Resources {
     return `[data-message-id="${messageId}"]`;
   }
 
-  public static formatDockColumns(left: string, right: string): string {
-    return `${left} minmax(0, 1fr) ${right}`;
-  }
-
   public static formatDeleteText(title: string): string {
     return `"${title}" and its messages are removed. This cannot be undone.`;
   }
@@ -1056,28 +1119,20 @@ export class Resources {
     return `Show ${count} more`;
   }
 
-  public static formatDockRows(bottom: string): string {
-    return `minmax(0, 1fr) ${bottom}`;
-  }
-
   public static formatThemeUnreadable(id: string): string {
     return `The built-in theme "${id}" could not be read.`;
   }
 
+  public static formatPanelTabSelector(panel: PanelId): string {
+    return `.tr-tab[data-panel="${panel}"]`;
+  }
+
+  public static formatPixelSize(value: number): string {
+    return `${value} pixels`;
+  }
+
   public static formatPixels(value: number): string {
     return `${value}px`;
-  }
-
-  public static formatNearCenter(size: string): string {
-    return `calc(${size} / 2)`;
-  }
-
-  public static formatFarCenter(size: string): string {
-    return `calc(100% - ${size} / 2)`;
-  }
-
-  public static formatMiddleCenter(left: string, right: string): string {
-    return `calc(${left} + (100% - ${left} - ${right}) / 2)`;
   }
 
   public static formatWithKeys(label: string, keys: string): string {

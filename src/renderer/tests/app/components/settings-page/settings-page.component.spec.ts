@@ -78,7 +78,7 @@ describe("SettingsPageComponent", () => {
       expect(element.textContent).toContain(text);
     }
 
-    navigation.closeSettings();
+    navigation.showChat();
     expect(navigation.view()).toBe(AppView.Chat);
     store.dispose();
   });

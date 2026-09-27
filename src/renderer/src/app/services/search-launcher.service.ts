@@ -31,7 +31,7 @@ export class SearchLauncher {
     opened.afterClosed().subscribe(hit => {
       if (Object.isUndefined(hit))
         return;
-      this.navigation.closeSettings();
+      this.navigation.showChat();
       void this.store.showMessage(hit);
     });
   }

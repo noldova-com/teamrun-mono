@@ -9,5 +9,6 @@
 export enum AppView {
   Chat = "Chat",
   Settings = "Settings",
-  Image = "Image"
+  Image = "Image",
+  Panel = "Panel"
 }

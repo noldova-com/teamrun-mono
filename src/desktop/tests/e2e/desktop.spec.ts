@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DesktopFixture } from "./fixtures/desktop.fixture.ts";
 
@@ -20,6 +20,27 @@ test.beforeEach(async ({}, info) => {
 test.afterEach(async () => {
   await desktop.dispose();
 });
+
+async function centerOf(locator: Locator): Promise<{ x: number; y: number }> {
+  const box = await locator.boundingBox();
+  if (!box)
+    throw new Error("The element is not drawn.");
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+async function dragTab(page: Page, panel: string, over: Locator, target: () => Locator): Promise<void> {
+  const from = await centerOf(page.locator(`.tr-tab[data-panel="${panel}"]`));
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 24, from.y + 24, { steps: 4 });
+  const middle = await centerOf(over);
+  await page.mouse.move(middle.x, middle.y, { steps: 8 });
+  const to = await centerOf(target());
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await expect(page.locator(".tr-drop-preview")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator(".tr-dock-guide")).toHaveCount(0);
+}
 
 test("captures the full renderer viewport when the native window starts smaller", async () => {
   await desktop.setWindowSize(1000, 680);
@@ -72,6 +93,74 @@ test("preserves drafts and tabs across Settings, navigation, sending and restart
   await expect(desktop.page.locator("tr-composer textarea")).toHaveValue("");
   expect(desktop.provider.requests).toHaveLength(1);
   await desktop.capture("main-window");
+});
+
+test("arranges panels in every region by dragging and from the tab menu, and restores the arrangement", async () => {
+  let page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+  await page.locator("tr-composer textarea").fill("Kept while the panels move");
+  const documents = (): Locator => page.locator(".tr-documents");
+  const middleGroup = (panel: string): Locator => page.locator(`tr-tab-group:not([data-side]):has(.tr-tab[data-panel="${panel}"])`);
+
+  await dragTab(page, "Changes", documents().locator("main"), () => page.locator('.tr-dock-compass [data-drop-edge="Right"]'));
+  await expect(middleGroup("Changes").locator("tr-changes-panel")).toBeVisible();
+  await expect(page.locator("tr-dock[data-side='Right']")).toBeHidden();
+  await expect(page.locator("tr-composer textarea")).toHaveValue("Kept while the panels move");
+  await desktop.capture("docking-split-beside-conversation");
+
+  await page.locator("tr-dock[data-side='Bottom'] .tr-dock-strip-button").click();
+  await dragTab(page, "Activity", documents().locator("main"), () => page.locator(".tr-dock-compass [data-drop-center]"));
+  await expect(page.locator('.tr-panel-tab[data-panel="Activity"]')).toHaveAttribute("aria-selected", "true");
+  await expect(documents().locator("main tr-activity-panel")).toBeVisible();
+  await expect(page.locator("header")).toContainText("Activity");
+  await desktop.capture("docking-tab-among-conversations");
+
+  await dragTab(page, "Explorer", documents().locator("main"), () => page.locator('[data-guide="Bottom"]'));
+  await expect(page.locator("tr-tab-group[data-side='Bottom'] tr-sidebar")).toBeVisible();
+  await expect(page.locator("tr-dock[data-side='Left']")).toBeHidden();
+
+  await page.locator('.tr-panel-tab[data-panel="Activity"]').focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menuitem", { name: "Move to" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("menuitem", { name: "Split to the left" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(middleGroup("Activity").locator("tr-activity-panel")).toBeVisible();
+  await expect(page.locator('.tr-tab[data-panel="Activity"]')).toBeFocused();
+  await expect(page.locator("tr-document-tabs .tr-panel-tab")).toHaveCount(0);
+  const conversation = await documents().boundingBox();
+  const activity = await middleGroup("Activity").boundingBox();
+  expect(activity!.y).toBeGreaterThan(conversation!.y + conversation!.height);
+  expect(activity!.x).toBe(conversation!.x);
+
+  const sash = await centerOf(page.locator("tr-resize-handle.tr-split-handle[data-edge='Bottom']"));
+  await page.mouse.move(sash.x, sash.y);
+  await page.mouse.down();
+  await page.mouse.move(sash.x, sash.y - 120, { steps: 6 });
+  await page.mouse.up();
+  const resized = await documents().boundingBox();
+  expect(Math.round(resized!.height)).toBe(Math.round(conversation!.height) - 120);
+  await desktop.capture("docking-arranged");
+
+  await desktop.restart();
+  page = desktop.page;
+  await expect(middleGroup("Changes").locator("tr-changes-panel")).toBeVisible();
+  await expect(middleGroup("Activity").locator("tr-activity-panel")).toBeVisible();
+  await expect(page.locator("tr-tab-group[data-side='Bottom'] tr-sidebar")).toBeVisible();
+  expect(Math.round((await documents().boundingBox())!.height)).toBe(Math.round(resized!.height));
+  await expect(page.locator("tr-composer textarea")).toHaveValue("Kept while the panels move");
+  await desktop.capture("docking-restored");
+
+  await page.getByRole("button", { name: "Panels", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Reset the layout" }).click();
+  await expect(page.locator("tr-tab-group[data-side='Left'] tr-sidebar")).toBeVisible();
+  await expect(page.locator('tr-tab-group[data-side="Right"] .tr-tab[data-panel="Changes"]')).toBeVisible();
+  await expect(page.locator("tr-dock[data-side='Bottom'] .tr-dock-strip")).toBeVisible();
+  await expect(page.locator("tr-tab-group:not([data-side])")).toHaveCount(0);
 });
 
 test("quits when its window is gone before it could save", async () => {

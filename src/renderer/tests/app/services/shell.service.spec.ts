@@ -23,36 +23,38 @@ const resize = (width: number, height: number): void => {
 };
 
 describe("ShellService", () => {
-  it("binds the fitted tracks, follows the window, and caps what a sash may take", () => {
+  it("lays the shell out for the window and the arrangement, and caps what a sash may take", () => {
     MemoryStorage.install(window);
     resize(1920, 1080);
     const viewport = TestBed.inject(ViewportService);
     const shell = TestBed.inject(ShellService);
     const layout = TestBed.inject(LayoutService);
     const gap = Resources.shellGap;
+    const padding = Resources.shellPadding;
+    const left = Resources.defaultDockSizes.Left;
+    const right = Resources.defaultDockSizes.Right;
 
     expect(viewport.width()).toBe(1920);
     expect(viewport.height()).toBe(1080);
-    expect(shell.columns()).toBe(`${Resources.defaultDockSizes.Left + gap}px minmax(0, 1fr) ${Resources.defaultDockSizes.Right + gap}px`);
-    expect(shell.rows()).toBe(`minmax(0, 1fr) ${Resources.dockStripSize + gap}px`);
+    const middle = shell.geometry().middle;
+    expect([middle.x, middle.y, middle.width, middle.height])
+      .toEqual([padding + left + gap, 0, 1920 - 2 * padding - left - right - 2 * gap, 1080 - Resources.windowRowHeight - padding - Resources.dockStripSize - gap]);
+    expect(shell.geometry().dock(DockSide.Left).width).toBe(left);
     expect(shell.maximumSize(DockSide.Left)).toBe(Resources.dockMaximumSize - gap);
 
     resize(1000, 700);
-    const across = shell.across();
-    expect(across.document).toBe(Resources.documentMinimumSize);
-    expect(across.track(DockSide.Right)).toBe(Resources.defaultDockSizes.Right + gap);
-    expect(across.track(DockSide.Left)).toBe(1000 - Resources.shellPadding * 2 - across.track(DockSide.Right) - Resources.documentMinimumSize);
-    expect(shell.columns()).toBe(`${across.track(DockSide.Left)}px minmax(0, 1fr) ${across.track(DockSide.Right)}px`);
-    expect(shell.maximumSize(DockSide.Left)).toBe(across.track(DockSide.Left) - gap);
+    expect(shell.geometry().middle.width).toBe(Resources.documentMinimumSize);
+    expect(shell.geometry().dock(DockSide.Right).width).toBe(right);
+    const squeezed = 1000 - 2 * padding - right - gap - Resources.documentMinimumSize;
+    expect(shell.geometry().dock(DockSide.Left).width).toBe(squeezed - gap);
+    expect(shell.maximumSize(DockSide.Left)).toBe(squeezed - gap);
 
-    resize(1920, 1080);
-    expect(shell.columns()).toBe(`${Resources.defaultDockSizes.Left + gap}px minmax(0, 1fr) ${Resources.defaultDockSizes.Right + gap}px`);
-
+    const before = shell.geometry();
+    layout.showDocument("c1");
+    expect(shell.geometry()).toBe(before);
     layout.resizeDock(DockSide.Right, 800);
-    expect(shell.across().track(DockSide.Right)).toBe(800 + gap);
-    resize(1200, 1080);
-    expect(shell.across().track(DockSide.Right)).toBe(800 + gap);
-    expect(shell.across().track(DockSide.Left)).toBe(1200 - Resources.shellPadding * 2 - (800 + gap) - Resources.documentMinimumSize);
-    expect(shell.across().document).toBe(Resources.documentMinimumSize);
+    expect(shell.geometry()).not.toBe(before);
+    resize(1920, 1080);
+    expect(shell.geometry().dock(DockSide.Right).width).toBe(800);
   });
 });
