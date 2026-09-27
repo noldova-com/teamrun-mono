@@ -10,8 +10,10 @@ import { TestBed } from "@angular/core/testing";
 import type { JsonValue } from "@noldova/teamrun-foundation-json";
 
 import { AttachmentInput, AuthStatus, Conversation, ConversationMember, ErrorCode, MessageAttachment, MessageSendParams, MessageSendResult, MessageStatus,
-  MethodName, ProviderAccount, ProviderListModelsParams, ProviderModel } from "@noldova/teamrun-protocol";
+  MethodName, ProviderAccount, ProviderListModelsParams, ProviderModel, UpdateCheckpoint, UpdateCheckpointPhase, UpdateCheckpointResult } from "@noldova/teamrun-protocol";
 
+import type { FakeTeamRunBridge } from "../../../fixtures/fake-teamrun-bridge";
+import { MemoryDraftStore } from "../../../fixtures/memory-draft-store";
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { TeammateFixture } from "../../../fixtures/teammate-fixture";
@@ -19,6 +21,7 @@ import { PreferencesService } from "../../../../src/app/services/preferences.ser
 import { ComposerSettings } from "../../../../src/app/models/composer-settings";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../../src/app/services/chat-store.service";
+import { COMPOSER_DRAFT_STORE } from "../../../../src/app/services/composer-drafts.service";
 import { DraftService } from "../../../../src/app/services/draft.service";
 import { ComposerComponent } from "../../../../src/app/components/composer/composer.component";
 
@@ -447,4 +450,48 @@ describe("ComposerComponent", () => {
     expect(drafts.pending()).toBeNull();
     store.dispose();
   });
+
+  it("saves the draft for updating or quitting when no provider is available", async () => {
+    const result = await prepareRestart(SampleData.createBridge().answer(MethodName.ProviderList, () => []));
+    expect(result).toEqual({ ready: true, draft: "kept across the restart", composer: null });
+  });
+
+  it("saves the draft while the model list is loading and keeps the remembered composer choice", async () => {
+    const remembered = new ComposerSettings("codex", "gpt-5", "high", "a1");
+    const bridge = SampleData.createBridge().answer(MethodName.ProviderModelCatalog, () => new Promise<JsonValue>(() => undefined));
+    const result = await prepareRestart(bridge, remembered);
+    expect(result).toEqual({ ready: true, draft: "kept across the restart", composer: remembered });
+  });
+
+  it("remembers a complete composer choice when saving for a restart", async () => {
+    const result = await prepareRestart(SampleData.createBridge());
+    expect(result.ready).toBe(true);
+    expect(result.composer?.provider).toBe("codex");
+  });
+
+  async function prepareRestart(bridge: FakeTeamRunBridge, remembered: ComposerSettings | null = null)
+    : Promise<{ ready: boolean; draft: string | undefined; composer: ComposerSettings | null }> {
+    const storage = new MemoryDraftStore();
+    TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }, { provide: COMPOSER_DRAFT_STORE, useValue: storage }] });
+    const store = TestBed.inject(ChatStore);
+    await store.initialize();
+    await store.selectConversation("c1");
+    const preferences = TestBed.inject(PreferencesService);
+    if (remembered)
+      preferences.rememberComposer("c1", remembered);
+    const fixture = TestBed.createComponent(ComposerComponent);
+    await fixture.whenStable();
+    const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLTextAreaElement>("textarea")!;
+    box.value = "kept across the restart";
+    box.dispatchEvent(new Event("input"));
+    await fixture.whenStable();
+    for (const listener of bridge.checkpointListeners)
+      listener(new UpdateCheckpoint("restart", UpdateCheckpointPhase.Prepare).toJson());
+    await vi.waitFor(() => expect(bridge.checkpoints.length).toBe(1));
+    const ready = UpdateCheckpointResult.fromJson(bridge.checkpoints[0]).ready;
+    for (const listener of bridge.checkpointListeners)
+      listener(new UpdateCheckpoint("restart", UpdateCheckpointPhase.Resume).toJson());
+    store.dispose();
+    return { ready, draft: storage.drafts.get("c1")?.text, composer: preferences.composerFor("c1") };
+  }
 });
