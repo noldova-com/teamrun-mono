@@ -80,18 +80,38 @@ jobs:
           test "$(node --version)" = v26.7.0
           test "$(npm --version)" = 11.19.0
           test "$(node --print process.arch)" = "$EXPECTED_ARCHITECTURE"
+          mkdir -p "$RUNNER_TEMP/teamrun-ci"
+
+      - name: Restore installed dependencies
+        id: dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            node_modules
+            src/renderer/node_modules
+          key: dependencies-${{ runner.os }}-${{ matrix.architecture }}-node-26.7.0-npm-11.19.0-${{ hashFiles('package.json', 'package-lock.json', 'src/renderer/package.json', 'src/renderer/package-lock.json') }}
 
       - name: Install dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
         run: |
-          mkdir -p "$RUNNER_TEMP/teamrun-ci"
           trap 'cat "$RUNNER_TEMP/teamrun-ci/install.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/install.stderr.log" >&2' EXIT
           npm ci --no-audit --no-fund > "$RUNNER_TEMP/teamrun-ci/install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/install.stderr.log"
 
       - name: Install renderer dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
         working-directory: src/renderer
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/renderer-install.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/renderer-install.stderr.log" >&2' EXIT
           npm ci --no-audit --no-fund --timing --logs-dir "$RUNNER_TEMP/teamrun-ci/npm-renderer" > "$RUNNER_TEMP/teamrun-ci/renderer-install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/renderer-install.stderr.log"
+
+      - name: Save installed dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            node_modules
+            src/renderer/node_modules
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
 
       - name: Build packages and renderer
         run: |
