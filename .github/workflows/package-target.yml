@@ -63,10 +63,7 @@ jobs:
         with:
           node-version: '26.7.0'
           architecture: ${{ inputs.architecture }}
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            src/renderer/package-lock.json
+          package-manager-cache: false
 
       - name: Verify toolchain and architecture
         run: |
