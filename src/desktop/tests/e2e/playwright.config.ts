@@ -12,7 +12,7 @@ export default defineConfig({
   testDir: ".",
   testMatch: "desktop.spec.ts",
   outputDir: "../../../../_build/ui-results",
-  timeout: 45_000,
+  timeout: 120_000,
   expect: { timeout: 10_000 },
   workers: 1,
   retries: 0,

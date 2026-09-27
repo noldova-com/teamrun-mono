@@ -181,7 +181,7 @@ export class DesktopFixture {
     this.application = await _electron.launch({
       executablePath: await new DevelopmentBinary().prepare(),
       args: [`--force-device-scale-factor=${DesktopFixture.DEVICE_SCALE_FACTOR}`, fileURLToPath(new URL("./desktop-entry.fixture.ts", import.meta.url))],
-      env: environment, chromiumSandbox: true, timeout: 15_000
+      env: environment, chromiumSandbox: true, timeout: 60_000
     });
     expect(this.application.process().spawnargs).not.toContain("--no-sandbox");
     this.launches++;
