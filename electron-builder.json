@@ -49,6 +49,7 @@
       "AppImage"
     ],
     "artifactName": "TeamRun-linux-${arch}.${ext}",
+    "description": "AI coding agents working as a team.",
     "executableName": "teamrun",
     "executableArgs": [],
     "extraFiles": [

@@ -13,7 +13,6 @@ import type PackageInfo from "../build/package-info.ts";
 
 export default class PackagedManifest {
   private static readonly PACKAGE_NAME: string = "teamrun";
-  private static readonly PACKAGE_DESCRIPTION: string = "AI coding agents working as a team.";
   private static readonly PACKAGE_AUTHOR: string = "Noldova";
   private static readonly PACKAGE_LICENSE: string = "MIT";
   private static readonly MODULE_TYPE: string = "module";
@@ -23,7 +22,7 @@ export default class PackagedManifest {
   public readonly name: string = PackagedManifest.PACKAGE_NAME;
   public readonly productName: string = Config.PRODUCT_NAME;
   public readonly version: string = Config.VERSION;
-  public readonly description: string = PackagedManifest.PACKAGE_DESCRIPTION;
+  public readonly description: string = Config.PRODUCT_NAME;
   public readonly author: string = PackagedManifest.PACKAGE_AUTHOR;
   public readonly license: string = PackagedManifest.PACKAGE_LICENSE;
   public readonly private: boolean = true;

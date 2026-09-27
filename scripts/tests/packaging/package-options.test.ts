@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
 
+import configuration from "../../../electron-builder.json" with { type: "json" };
 import PackageOptions from "../../packaging/package-options.ts";
 import PackageException from "../../packaging/package.exception.ts";
 import PackagedManifest from "../../packaging/packaged-manifest.ts";
@@ -120,6 +121,11 @@ class PackageOptionsTests {
       assert.ok(!JSON.stringify(manifest).includes("file:"));
       assert.ok(!("devDependencies" in manifest));
       assert.ok(!("scripts" in manifest));
+    });
+
+    test("installers carry the product name while the Linux desktop entry keeps the tagline", () => {
+      assert.equal(new PackagedManifest({}, []).description, "TeamRun");
+      assert.equal(configuration.linux.description, "AI coding agents working as a team.");
     });
     
     test("help is recognized without enabling signing or directory mode", () => {
