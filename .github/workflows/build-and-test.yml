@@ -65,10 +65,7 @@ jobs:
         with:
           node-version: '26.7.0'
           architecture: ${{ matrix.architecture }}
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            src/renderer/package-lock.json
+          package-manager-cache: false
 
       - name: Verify toolchain versions and architecture
         env:
