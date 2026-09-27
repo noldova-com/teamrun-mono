@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { signal } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { AppUpdateState, AppUpdateStatus } from "@noldova/teamrun-protocol";
 
@@ -15,6 +16,7 @@ import { AppView } from "../../../../src/app/enums/app-view";
 import { SettingsSection } from "../../../../src/app/enums/settings-section";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { NavigationService } from "../../../../src/app/services/navigation.service";
+import { UpdateRestartService } from "../../../../src/app/services/update-restart.service";
 
 describe("WindowControlsComponent", () => {
   it("shows the update indicator while an update is available, downloading or ready, and opens About", async () => {
@@ -51,5 +53,27 @@ describe("WindowControlsComponent", () => {
     const navigation = TestBed.inject(NavigationService);
     expect(navigation.view()).toBe(AppView.Settings);
     expect(navigation.section()).toBe(SettingsSection.About);
+  });
+
+  it("tells when a restart waits for running replies", async () => {
+    const bridge = SampleData.createBridge();
+    const waitingFor = signal<number | null>(2);
+    TestBed.configureTestingModule({
+      imports: [WindowControlsComponent],
+      providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }, { provide: UpdateRestartService, useValue: { waitingFor } }]
+    });
+    const fixture = TestBed.createComponent(WindowControlsComponent);
+    await fixture.whenStable();
+    const element: HTMLElement = fixture.nativeElement;
+    const label = (): string | null => element.querySelector(".tr-update-open")?.getAttribute("aria-label") ?? null;
+    bridge.emitUpdate(new AppUpdateState(AppUpdateStatus.Downloaded, "0.0.4", "0.0.5", 100, null, null, false, true));
+    await fixture.whenStable();
+    expect(label()).toBe("Restarts for update 0.0.5 when 2 replies finish");
+    waitingFor.set(1);
+    await fixture.whenStable();
+    expect(label()).toBe("Restarts for update 0.0.5 when 1 reply finishes");
+    waitingFor.set(null);
+    await fixture.whenStable();
+    expect(label()).toBe("Update 0.0.5 ready to install");
   });
 });

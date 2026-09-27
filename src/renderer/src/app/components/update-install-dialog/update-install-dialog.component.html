@@ -1,0 +1,23 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+<h2 mat-dialog-title>{{ resources.installDialogTitle }}</h2>
+<mat-dialog-content>
+  <p class="mt-0">{{ resources.installDialogText }}</p>
+  <mat-progress-bar class="mt-3" mode="indeterminate" [attr.aria-label]="resources.installDialogTitle" />
+  <ol class="mt-4 flex flex-col gap-2 pb-3" aria-live="polite">
+    @for (step of steps; track step; let index = $index) {
+      <li class="flex items-center gap-2" [class.tr-muted]="index > current()" [attr.aria-current]="index === current() ? 'step' : null">
+        <mat-icon [class.tr-primary]="index === current()">
+          {{ index < current() ? resources.icons["selected"] : index === current() ? resources.icons["currentStep"] : resources.icons["unselected"] }}
+        </mat-icon>
+        <span>{{ resources.installStepLabels[step] }}</span>
+      </li>
+    }
+  </ol>
+</mat-dialog-content>

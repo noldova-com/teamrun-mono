@@ -15,7 +15,7 @@ LICENSE file in the root directory of this source tree.
   <mat-icon>{{ resources.icons["openExternal"] }}</mat-icon>
   {{ resources.websiteLabel }}
 </button>
-<tr-app-updates [state]="updates.state()" [pending]="updates.isPending()" [error]="updates.error()"
-  (command)="updates.execute($event)" (openReleases)="bridge.openExternal(resources.releasesUrl)" />
+<tr-app-updates [state]="updates.state()" [pending]="updates.isPending()" [error]="updates.error()" [waitingFor]="restart.waitingFor()"
+  (command)="run($event)" (cancelWaiting)="restart.cancelWaiting()" (openReleases)="bridge.openExternal(resources.releasesUrl)" />
 <h3 class="mb-1 mt-8">{{ resources.licensesTitle }}</h3>
 <p class="tr-muted">{{ resources.licensesText }}</p>

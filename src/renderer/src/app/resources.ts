@@ -32,6 +32,18 @@ export class Resources {
   public static readonly galleryAvatarIds: readonly string[] = ["avatar-sample-0", "avatar-sample-7", "avatar-sample-6", "avatar-sample-5", "avatar-sample-4", "avatar-sample-18", "avatar-sample-19", "avatar-sample-30", "avatar-sample-31", "avatar-sample-3", "avatar-sample-2", "avatar-sample-1"];
   public static readonly galleryAvatarColorsLabel: string = "Avatar colors";
   public static readonly restartToUpdateLabel: string = "Restart to update";
+  public static readonly restartChoiceTitle: string = "Restart to update?";
+  public static readonly restartChoiceText: string = "TeamRun can restart once the work finishes, or stop it now.";
+  public static readonly restartWhenFinishedLabel: string = "Restart when finished";
+  public static readonly stopAndRestartLabel: string = "Stop and restart";
+  public static readonly cancelChoiceLabel: string = "Cancel";
+  public static readonly cancelRestartLabel: string = "Cancel restart";
+  public static readonly installDialogTitle: string = "Installing update";
+  public static readonly installDialogText: string = "TeamRun will restart when the installation finishes.";
+  public static readonly installStepLabels: Readonly<Record<AppUpdateStatus.Preparing | AppUpdateStatus.Installing, string>> = {
+    [AppUpdateStatus.Preparing]: "Saving workspaces and stopping runtimes",
+    [AppUpdateStatus.Installing]: "Installing the update"
+  };
   public static readonly updateInstallTestFeedLabel: string = "Local test feed";
   public static readonly restartPreparing: string = "Saving workspace before restarting…";
   public static readonly restartPreparationFailed: string = "The workspace could not be saved for restart. Finish pending work or resolve the draft error, then try again.";
@@ -70,6 +82,7 @@ export class Resources {
     [AppUpdateStatus.Downloading]: "Downloading:",
     [AppUpdateStatus.Downloaded]: "Downloaded:",
     [AppUpdateStatus.Preparing]: "Preparing restart…",
+    [AppUpdateStatus.Installing]: "Installing update…",
     [AppUpdateStatus.Error]: "Update failed"
   };
   public static readonly galleryUpdateStates: readonly AppUpdateState[] = [
@@ -101,6 +114,18 @@ export class Resources {
 
   public static formatUpdateAttention(version: string): string {
     return `Update ${version} needs attention`;
+  }
+
+  public static formatUpdateWaiting(version: string, count: number): string {
+    return count === 1 ? `Restarts for update ${version} when 1 reply finishes` : `Restarts for update ${version} when ${count} replies finish`;
+  }
+
+  public static formatRunningReplies(count: number): string {
+    return count === 1 ? "1 reply is still running." : `${count} replies are still running.`;
+  }
+
+  public static formatRestartWaiting(count: number): string {
+    return count === 1 ? "Restarts when 1 reply finishes" : `Restarts when ${count} replies finish`;
   }
 
   public static formatUpdateProgress(percent: number): string {
@@ -975,6 +1000,7 @@ export class Resources {
     expandLess: "expand_less",
     selected: "check",
     unselected: "radio_button_unchecked",
+    currentStep: "progress_activity",
     tool: "build",
     openExternal: "open_in_new",
     newChat: "edit_square",

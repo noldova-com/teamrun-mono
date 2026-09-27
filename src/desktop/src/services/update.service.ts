@@ -134,7 +134,10 @@ export class UpdateService {
       return this.current;
     this.setState(AppUpdateStatus.Preparing, version, Resources.fullUpdateProgress, Resources.updatePreparing);
     try {
-      await this.restart.install(version, () => this.backend.install());
+      await this.restart.install(version, () => {
+        this.setState(AppUpdateStatus.Installing, version, Resources.fullUpdateProgress, Resources.updateInstalling);
+        return this.backend.install();
+      });
     }
     catch (error) {
       this.setState(AppUpdateStatus.Error, version, Resources.fullUpdateProgress,
