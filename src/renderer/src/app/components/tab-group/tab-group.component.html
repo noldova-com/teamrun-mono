@@ -12,11 +12,12 @@ LICENSE file in the root directory of this source tree.
     <div class="flex min-w-0 flex-1 overflow-hidden" role="tablist">
       @for (panel of group().panels; track panel; let index = $index) {
         <tr-panel-menu #menu [panel]="panel" />
-        <button type="button" class="tr-tab" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
+        <button #tab type="button" class="tr-tab" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
           [class.tr-tab-active]="panel === group().activePanel" [class.tr-drop-before]="drag.isDropBefore(group().id, index)"
           [class.tr-dragging]="drag.dragging() === panel" [attr.aria-selected]="panel === group().activePanel"
           [matContextMenuTriggerFor]="menu.menu() ?? null"
-          (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)">
+          (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)"
+          (keydown)="menu.openFromKeyboard($event, tab)">
           <span class="tr-tab-label">{{ resources.panelLabels[panel] }}</span>
           <span class="tr-tab-actions">
             <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="close($event, panel)"

@@ -55,11 +55,11 @@ LICENSE file in the root directory of this source tree.
     }
     @for (panel of group().panels; track panel; let index = $index) {
       <tr-panel-menu #menu [panel]="panel" />
-      <button type="button" class="tr-tab tr-panel-tab max-w-[16rem]" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
+      <button #tab type="button" class="tr-tab tr-panel-tab max-w-[16rem]" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
         [class.tr-tab-active]="navigation.panel() === panel" [attr.aria-selected]="navigation.panel() === panel"
         [class.tr-drop-before]="drag.isDropBefore(group().id, index)" [class.tr-dragging]="drag.dragging() === panel"
         [matContextMenuTriggerFor]="menu.menu() ?? null" (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)"
-        (auxclick)="onPanelAuxClick($event, panel)">
+        (auxclick)="onPanelAuxClick($event, panel)" (keydown)="menu.openFromKeyboard($event, tab)">
         <span class="tr-tab-label flex items-center gap-1.5">
           <mat-icon class="tr-tab-icon">{{ resources.panelIcons[panel] }}</mat-icon>
           <span class="truncate">{{ resources.panelLabels[panel] }}</span>

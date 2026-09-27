@@ -443,6 +443,8 @@ export class Resources {
   public static readonly addAsTabLabel: string = "Add as a tab";
   public static readonly addAsTabIcon: string = "tab";
   public static readonly panelActionsLabel: string = "Panel actions";
+  public static readonly panelMenuKey: string = "F10";
+  public static readonly contextMenuEvent: "contextmenu" = "contextmenu";
   public static readonly moveToLabel: string = "Move to";
   public static readonly splitLabel: string = "Split";
   public static readonly dockLabel: string = "Dock";

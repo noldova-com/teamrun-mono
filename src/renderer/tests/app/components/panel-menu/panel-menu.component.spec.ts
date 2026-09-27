@@ -27,7 +27,10 @@ import { PanelMenuComponent } from "../../../../src/app/components/panel-menu/pa
 @Component({
   imports: [MatMenuModule, PanelMenuComponent],
   template: `<tr-panel-menu #menu [panel]="panel()" />
-    <button type="button" class="tr-tab" [attr.data-panel]="panel()" [matMenuTriggerFor]="menu.menu() ?? null">{{ panel() }}</button>`
+    <button type="button" class="tr-tab" [attr.data-panel]="panel()" [matMenuTriggerFor]="menu.menu() ?? null">{{ panel() }}</button>
+    <button #tab type="button" class="tr-context" [matContextMenuTriggerFor]="menu.menu() ?? null" (keydown)="menu.openFromKeyboard($event, tab)">
+      {{ panel() }}
+    </button>`
 })
 class PanelMenuHost {
   public readonly panel = signal(PanelId.Changes);
@@ -102,5 +105,26 @@ describe("PanelMenuComponent", () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(layout.arrangement().groupOf(PanelId.Explorer)?.activePanel).toBe(PanelId.Explorer);
+  });
+
+  it("opens below its tab with Shift+F10 and leaves other keys alone", async () => {
+    MemoryStorage.install(window);
+    TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const fixture = TestBed.createComponent(PanelMenuHost);
+    fixture.detectChanges();
+    const tab = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(".tr-context")!;
+    const press = (key: string, shiftKey: boolean): KeyboardEvent => {
+      const event = new KeyboardEvent("keydown", { key, shiftKey, bubbles: true, cancelable: true });
+      tab.dispatchEvent(event);
+      return event;
+    };
+
+    expect(press("F10", false).defaultPrevented).toBe(false);
+    expect(press("Enter", true).defaultPrevented).toBe(false);
+    expect(document.querySelector(".mat-mdc-menu-panel")).toBeNull();
+    expect(press("F10", true).defaultPrevented).toBe(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(item(Resources.moveToLabel)).not.toBeNull();
   });
 });

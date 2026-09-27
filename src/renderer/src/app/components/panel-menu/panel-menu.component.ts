@@ -52,6 +52,14 @@ export class PanelMenuComponent {
   public readonly panel: InputSignal<PanelId> = input.required<PanelId>();
   public readonly menu: Signal<MatMenu | undefined> = viewChild<MatMenu>("panelMenu");
 
+  public openFromKeyboard(event: KeyboardEvent, tab: HTMLElement): void {
+    if (event.key !== Resources.panelMenuKey || !event.shiftKey)
+      return;
+    event.preventDefault();
+    const bounds = tab.getBoundingClientRect();
+    tab.dispatchEvent(new MouseEvent(Resources.contextMenuEvent, { bubbles: true, cancelable: true, clientX: bounds.left, clientY: bounds.bottom }));
+  }
+
   protected labelOf(group: TabGroup): string {
     return group.isDocuments ? Resources.documentsGroupLabel : group.panels.map(t => Resources.panelLabels[t]).join(Resources.groupLabelJoiner);
   }
