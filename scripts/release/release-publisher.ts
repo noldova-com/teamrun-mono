@@ -23,6 +23,7 @@ export default class ReleasePublisher {
   private static readonly ATTEMPTS: number = 3;
   private static readonly RETRY_DELAY: number = 2_000;
   private static readonly TRANSIENT_STATUSES: readonly number[] = [500, 502, 503, 504];
+  private static readonly ERROR_MESSAGE_LIMIT: number = 500;
   private static readonly PAGE_SIZE: number = 100;
   private static readonly MAX_PAGES: number = 10;
   private static readonly TOKEN_REQUIRED: string = "A GitHub publication token is required.";
@@ -58,8 +59,7 @@ export default class ReleasePublisher {
       await this.assertNewer();
       for (let attempt = 0; attempt < ReleasePublisher.ATTEMPTS && release === null; attempt++) {
         const response = await this.send(`${ReleasePublisher.API}/releases`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tag_name: this.candidate.tag,
-          target_commitish: this.candidate.revision, name: `TeamRun ${this.candidate.version.value}`, body: notes,
+          body: JSON.stringify({ tag_name: this.candidate.tag, name: `TeamRun ${this.candidate.version.value}`, body: notes,
           draft: true, prerelease: false, make_latest: "false" }) }, true);
         release = response === null ? await this.findRelease() : this.parse(await response.json());
         if (release === null)
@@ -192,7 +192,7 @@ export default class ReleasePublisher {
   }
 
   private parse(value: unknown): ReleaseResponse {
-    return new ReleaseResponse(value, this.candidate.tag, this.candidate.revision);
+    return new ReleaseResponse(value, this.candidate.tag);
   }
 
   private async mutate(url: string, method: string, body?: string | Blob, contentType: string = "application/json"): Promise<void> {
@@ -218,12 +218,28 @@ export default class ReleasePublisher {
     }
     if (response.ok)
       return response;
-    await response.arrayBuffer();
+    const message = await this.errorMessage(response);
     if (allowTransient && ReleasePublisher.TRANSIENT_STATUSES.includes(response.status)) {
       console.error(`Release request returned HTTP ${response.status}; verifying remote state before retry.`);
       return null;
     }
-    throw new PackageException(`Release request failed: HTTP ${response.status}.`);
+    const target = new URL(url);
+    throw new PackageException(`Release request failed: HTTP ${response.status} for ${options.method ?? "GET"} ${target.pathname}${target.search}`
+      + (message === null ? "." : `: ${message}`));
+  }
+
+  private async errorMessage(response: Response): Promise<string | null> {
+    let value: unknown;
+    try {
+      value = JSON.parse(await response.text());
+    }
+    catch {
+      return null;
+    }
+    if (typeof value !== "object" || value === null || !("message" in value) || typeof value.message !== "string")
+      return null;
+    const message = value.message.replace(/\s+/g, " ").trim();
+    return message ? message.slice(0, ReleasePublisher.ERROR_MESSAGE_LIMIT) : null;
   }
 
   private async delay(attempt: number): Promise<void> {

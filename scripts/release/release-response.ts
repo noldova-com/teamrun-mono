@@ -17,11 +17,11 @@ export default class ReleaseResponse {
   public readonly isDraft: boolean;
   public readonly assets: readonly object[];
 
-  public constructor(value: unknown, tag: string, revision: string) {
+  public constructor(value: unknown, tag: string) {
     if (typeof value !== "object" || value === null || !("id" in value) || typeof value.id !== "number" || !Number.isSafeInteger(value.id)
       || value.id <= 0 || !("draft" in value) || typeof value.draft !== "boolean" || !("tag_name" in value) || value.tag_name !== tag
-      || !("target_commitish" in value) || value.target_commitish !== revision || !("prerelease" in value) || value.prerelease !== false
-      || !("assets" in value) || !Array.isArray(value.assets) || value.assets.length > ReleaseResponse.MAX_ASSETS)
+      || !("prerelease" in value) || value.prerelease !== false || !("assets" in value) || !Array.isArray(value.assets)
+      || value.assets.length > ReleaseResponse.MAX_ASSETS)
       throw new PackageException(ReleaseResponse.INVALID_RELEASE);
     const assets: unknown[] = value.assets;
     const names = new Set<string>();
