@@ -6,7 +6,7 @@ This document defines TeamRun's architecture. Work, open findings and acceptance
 
 ## 1. Product boundary
 
-TeamRun is a local desktop workspace for conversations with coding agents about project folders. Its initial migration scope includes conversation history, provider accounts, named teammates, streamed replies, approvals, attachments, project-file evidence and explicit rewind. The desktop and CLI share the same local runtime and durable record.
+TeamRun is a local desktop workspace for conversations with coding agents about project folders. Its initial migration scope includes conversation history, provider accounts, named teammates, streamed replies, approvals, attachments, project-file evidence and explicit rewind. It also provides integrated terminals in project folders. The desktop and CLI share the same local runtime and durable record.
 
 The local record does not require a TeamRun cloud account or synchronization service. Reading local history can work offline; a provider may still require authentication and network access to answer. Provider-native sessions assist continuity but are not the authority for TeamRun's conversation history.
 
@@ -22,7 +22,7 @@ The package layout has the following owners and dependency boundaries.
 | `src/protocol` | Shared validated models, requests, responses and events | Browser-safe foundation packages; no database, process or UI-framework implementation |
 | `src/core` | Domain services, persistence, conversation engine, approvals, attachments and workspace evidence | Protocol and foundation; defines the provider-facing contract without importing concrete adapters |
 | `src/providers` | Launch and drive provider tooling; translate its protocols into TeamRun results and events | Implements core's provider contract; contains provider-specific SDK/protocol and process details |
-| `src/runtime` | Compose services/adapters, own a data directory, authenticate local clients and supervise execution | Core, providers, protocol and foundation; also supplies client connection/launch facilities |
+| `src/runtime` | Compose services/adapters, own a data directory, authenticate local clients, supervise execution and host integrated terminals | Core, providers, protocol and foundation, plus the pseudo-terminal library; also supplies client connection/launch facilities |
 | `src/cli` | Terminal commands and event-following client | Protocol and runtime's client facilities; no separate conversation engine or direct database writes |
 | `src/desktop` | Electron main process, preload, OS integration and update coordination | Protocol and runtime's client facilities; Electron remains confined to this boundary |
 | `src/renderer` | Angular presentation, view state and local drafts | Protocol and browser-safe foundation; privileged operations go through the preload bridge |
@@ -132,7 +132,7 @@ An approval is registered before its event is published and is addressed by its 
 
 Provider approvals and any user-enabled auto-approval mode must describe their actual scope and lifetime. They do not imply that the provider asks before every file write, and they are not an OS sandbox. A prompt or role instruction cannot grant permissions. Future TeamRun-owned tools must apply authorization at their privileged execution boundary.
 
-## 8. Attachments and project-file operations
+## 8. Attachments, project-file operations and terminals
 
 Validate attachment count, original bytes and type at the privileged boundary and in the UI. Limits are ten attachments per send, 10 MiB per native image, 100 MiB per other file and 1,000 MiB combined. Bound encoding overhead separately and respect the selected provider's request-size and format limits.
 
@@ -148,13 +148,21 @@ Rewind explicitly separates removing conversation messages, resetting/forking pr
 
 Forgetting a project or deleting a conversation removes TeamRun records according to their contract; it does not delete the user's project directory. Working-file restoration is a separate explicitly requested operation with its affected scope made clear.
 
+The runtime owns integrated terminals. A terminal runs the person's login shell in a project folder with their own permissions, like any terminal application, and grants nothing beyond that. Clients attach through the authenticated protocol: the renderer sends input and size changes and receives output events, never a process or pseudo-terminal handle. Terminal output is untrusted text; it cannot reach TeamRun's pages or bridge, and links in it open through the external-link path.
+
+A person can open several terminals and restart each one without restarting TeamRun. Every new or restarted shell reads the current environment from the operating system, the user and system variables on Windows and a login shell's profile on macOS and Linux, so tools installed while TeamRun runs are available at once. Reloading a window keeps terminals running. Quitting TeamRun or installing an update ends them, asking first while a command is running, as for running replies; terminals are not restored after a restart. Agents cannot read or type into a person's terminals; giving them access is a separate decision.
+
+The runtime keeps every line of each terminal's output in the data directory and deletes it with the terminal. Because it can contain secrets, it never enters diagnostics or verification evidence.
+
+Pseudo-terminals use Microsoft's `node-pty`, pinned exactly to `1.2.0-beta.15`: the stable release has no Linux binaries, while this version ships prebuilt binaries for all six targets and loads them without install scripts. It stays behind the runtime's terminal adapter, so a later release replaces it in one place. The renderer draws terminals with `@xterm/xterm`. Packages keep native terminal files outside the application archive, and signed builds sign them.
+
 ## 9. Renderer synchronization and history
 
 The renderer presents confirmed domain state and owns only client-specific view state and drafts. Snapshot loading and event delivery can overlap: replay or reconcile relevant events against a loaded snapshot and use selection generations so an old response cannot replace a newer conversation. Reconnect reloads potentially missed state. Open replies and approvals remain tracked independently of the currently visible message page.
 
 Separate catalog invalidation from internal execution bookkeeping. Updating a native session id must not force every client to reload all projects/accounts. Domain changes that affect displayed catalogs still invalidate the appropriate data.
 
-History is paged and virtualized. Bound message/summary bodies and expanded details independently. The initial budgets are fifty records per page and up to 150 retained bodies or summaries per active history window; payload bytes, decoded images and asynchronous work need separate limits.
+History is paged and virtualized. Bound message/summary bodies and expanded details independently. The initial budgets are fifty records per page and up to 150 retained bodies or summaries per active history window; payload bytes, decoded images and asynchronous work need separate limits. A terminal keeps all of its output: its view holds the live screen and recent lines, and older lines load from the runtime page by page as the person scrolls back.
 
 A lightweight visited-row index may retain identity, sequence, measured height and explicit control choices, but no message content. Document its per-entry cost and growth with visited history. Conversation indexes last for their open tab and are released when it closes or is replaced; Activity/Changes indexes last for the selected panel/conversation. Evicting content must not discard layout records or change the reader's scroll range. Overscan and follow-scroll thresholds are implementation settings verified against the UI standards.
 

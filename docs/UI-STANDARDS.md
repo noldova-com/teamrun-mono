@@ -20,7 +20,7 @@ There are three adjustable base sizes, each ranging from 12 to 18 CSS pixels. Se
 | Label | Derived from panel size: the larger of 12px and panel size minus 1px | 12px | At least the font size plus 4px; tooltips use at least the font size plus 7px |
 | Settings group heading | Twice the panel size | 26px | At least 1.25 times the font size |
 
-Panel text applies to navigation, menus, fields, options and dialog text. Label text applies to section headers, button labels, tooltips and secondary teammate details. Messages, their cards and the composer use the message role; code blocks and diffs use the code role. Inline code in the composer retains the input font's metrics so editing and selection stay aligned.
+Panel text applies to navigation, menus, fields, options and dialog text. Label text applies to section headers, button labels, tooltips and secondary teammate details. Messages, their cards and the composer use the message role; code blocks, diffs and terminals use the code role. Inline code in the composer retains the input font's metrics so editing and selection stay aligned.
 
 Use weight 400 for ordinary text and 600 for conversation titles, section headers, setting/dialog titles, choice pills and resolved mentions. Row/tab selection does not change weight; choice pills retain 600 in both states.
 
@@ -101,12 +101,14 @@ Radius tokens are `hover` = 3px, `small` = 4px, `medium` = 6px and `large` = 8px
 - Show a tab bar for every panel, including a panel with one view. The document strip scrolls horizontally when necessary, keeps the active tab visible and offers an overflow list. Dock actions remain reachable at the end of their strip.
 - A tab uses a pill fill for selection and hover. Selected labels use ordinary text; unselected labels use the opaque tab-text token. Hover must not erase the selection or keyboard-focus cue. A running reply can replace the close glyph with a spinner, but hovering or focusing the tab reveals its close action.
 - Middle-click closes the targeted conversation, Settings or dock tab with the same behavior as its close control, without first activating a background tab or starting autoscroll. Keyboard users have an equivalent close command. Closing the active tab moves focus to an appropriate surviving tab or panel.
+- Every panel can dock on the left, on the right or at the bottom, or open in the middle as a tab beside conversations, and moves between these places the same way.
 - Dragging shows a destination marker, docking guides and a preview. The dragged representation may dim; its name remains available in the accessible interaction. Provide keyboard/menu alternatives for moving, pinning and docking views.
 - Preview tabs use italic labels, with one preview per strip. Opening another preview replaces it; an explicit keep action, double-click or sending a message keeps the conversation tab. All of these actions have a keyboard-accessible equivalent.
 - Restore the conversation's reading anchor and expansion/wrap choices. Message/image loading must not flash at intrinsic size or move the reader to unrelated content; a located search result stays visible during surrounding layout changes.
 - Conversations read oldest to newest. Activity and Changes read newest first. Each can load more history as needed, with details loaded on expansion. Their shared retention principle does not require the same chronological order.
 - The conversation's Go to latest control is centred at the bottom; Activity and Changes place it at the top centre. Returning to latest resumes following new content. Scrolling away suspends following until the user returns. Loading and retry feedback belong to the requesting panel and do not insert extra scrollable height.
 - Eviction retains known row geometry and control choices. Remeasurement after width/font changes preserves the reading anchor. Metadata lifetime follows the architecture's history contract.
+- A terminal follows new output until the person scrolls away. Scrolling up continues through all earlier output, loaded as needed, without switching to another view, and search covers all of it. **Restart** starts a fresh shell in the same terminal. Closing or restarting a terminal whose command is still running asks first.
 
 The [architecture's history contract](ARCHITECTURE.md#9-renderer-synchronization-and-history) owns retention and initial budgets. Implementations define and test payload/image limits, overscan and follow-scroll thresholds; this document owns visible behavior.
 
