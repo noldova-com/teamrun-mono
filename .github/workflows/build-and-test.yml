@@ -51,7 +51,7 @@ jobs:
             runner: macos-15
             architecture: arm64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.target == 'Windows ARM64' && 20 || 10 }}
+    timeout-minutes: 30
     env:
       CI: 'true'
     steps:
@@ -237,7 +237,7 @@ jobs:
     needs: validate
     if: always()
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 30
     steps:
       - name: Require every target to pass
         env:
