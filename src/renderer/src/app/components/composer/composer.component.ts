@@ -179,16 +179,13 @@ export class ComposerComponent {
   }
 
   private async captureForRestart(): Promise<boolean> {
+    if (this.preparing() || this.savedDrafts.loading())
+      return false;
     const conversationId = this.store.selectedConversationId();
     const provider = this.provider();
-    if (this.preparing() || this.modelsLoading() || this.savedDrafts.loading())
-      return false;
-    if (!Object.isNull(conversationId)) {
-      if (!this.savedDrafts.isLoadedFor(conversationId) || Object.isNull(provider))
-        return false;
+    if (!Object.isNull(conversationId) && !Object.isNull(provider) && !this.modelsLoading() && this.savedDrafts.isLoadedFor(conversationId))
       this.preferences.rememberComposer(conversationId,
         new ComposerSettings(provider, this.model(), this.effort(), this.accountId(), this.responderId()));
-    }
     return this.savedDrafts.flush();
   }
 
