@@ -14,12 +14,14 @@ import ReleaseResponse from "../../release/release-response.ts";
 class ReleaseResponseTests {
   public static register(): void {
     test("validates numbered release identity and unique asset identities at the API boundary", () => {
-      const valid = { id: 42, draft: true, tag_name: "v1.2.3", target_commitish: "a".repeat(40), prerelease: false, assets: [] };
-      const parse = (value: unknown): ReleaseResponse => new ReleaseResponse(value, "v1.2.3", "a".repeat(40));
+      const valid = { id: 42, draft: true, tag_name: "v1.2.3", prerelease: false, assets: [] };
+      const parse = (value: unknown): ReleaseResponse => new ReleaseResponse(value, "v1.2.3");
       const release = parse(valid);
       assert.equal(release.id, 42);
       assert.equal(release.isDraft, true);
       assert.deepEqual(release.assets, []);
+      for (const target of ["main", "a".repeat(40)])
+        assert.equal(parse({ ...valid, target_commitish: target }).id, 42);
       const invalid: unknown[] = [null, 1];
       for (const key of Object.keys(valid)) {
         const value: Record<string, unknown> = { ...valid };
@@ -27,7 +29,7 @@ class ReleaseResponseTests {
         invalid.push(value);
       }
       for (const [key, value] of [["id", "42"], ["id", 1.5], ["id", 0], ["draft", "true"], ["tag_name", "v1.2.4"],
-        ["target_commitish", "moved"], ["prerelease", true], ["assets", {}], ["assets", Array(101).fill(null)]] as const)
+        ["prerelease", true], ["assets", {}], ["assets", Array(101).fill(null)]] as const)
         invalid.push({ ...valid, [key]: value });
       for (const value of invalid)
         assert.throws(() => parse(value), /metadata does not match/);

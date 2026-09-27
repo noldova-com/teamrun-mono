@@ -24,8 +24,7 @@ export default class GitHubReleaseFixture {
   }
 
   public seed(draft: boolean = true): void {
-    this.release = { id: 42, draft, tag_name: this.candidate.tag, target_commitish: this.candidate.revision,
-      prerelease: false, assets: this.assets };
+    this.release = { id: 42, draft, tag_name: this.candidate.tag, target_commitish: "main", prerelease: false, assets: this.assets };
   }
 
   public async request(input: string | URL | Request, options?: RequestInit): Promise<Response> {
@@ -61,6 +60,7 @@ export default class GitHubReleaseFixture {
       assert.ok("draft" in data && data.draft === true);
       assert.ok("prerelease" in data && data.prerelease === false);
       assert.ok("make_latest" in data && data.make_latest === "false");
+      assert.ok(!("target_commitish" in data));
       this.seed();
       return Response.json(this.release);
     }

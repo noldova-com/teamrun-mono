@@ -230,6 +230,29 @@ class ReleasePublisherTests {
         assert.ok(!github.calls.some(t => t.startsWith("PATCH")), scenario);
       }
     });
+
+    test("names a refused request and GitHub's bounded reason without exposing the token", async t => {
+      const fixture = await ReleaseFixture.create();
+      t.after(() => fixture.close());
+      const filename = path.join(fixture.directory, "installer.exe");
+      await writeFile(filename, "fixture bytes");
+      const file = await ReleaseFile.read(filename);
+      const releases = "/repos/noldova-com/teamrun/releases";
+      const reason = JSON.stringify({ message: "Resource not accessible\n  by integration", documentation_url: "https://docs.github.com" });
+      for (const [status, body, detail] of [[403, reason, ": Resource not accessible by integration"],
+        [422, JSON.stringify({ message: "x".repeat(600) }), `: ${"x".repeat(500)}`], [403, JSON.stringify({ message: " " }), "."],
+        [403, JSON.stringify({ message: 1 }), "."], [403, JSON.stringify({ documentation_url: "https://docs.github.com" }), "."],
+        [403, "null", "."], [403, "1", "."], [404, "<html>Not Found</html>", "."], [403, null, "."]] as const) {
+        const github = new GitHubReleaseFixture(fixture.candidate);
+        github.intercept = async (_url, options) => options.method === "POST" ? new Response(body, { status }) : undefined;
+        await assert.rejects(new ReleasePublisher(fixture.candidate, "fixture-token", github.request.bind(github)).publish([file], "Notes"),
+          { message: `Release request failed: HTTP ${status} for POST ${releases}${detail}` });
+      }
+      const github = new GitHubReleaseFixture(fixture.candidate);
+      github.intercept = async url => url.pathname.endsWith("/releases") ? new Response(null, { status: 404 }) : undefined;
+      await assert.rejects(new ReleasePublisher(fixture.candidate, "fixture-token", github.request.bind(github)).publish([file], "Notes"),
+        { message: `Release request failed: HTTP 404 for GET ${releases}?per_page=100&page=1.` });
+    });
   }
 }
 
