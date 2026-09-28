@@ -8,9 +8,11 @@
 
 import { join } from "node:path";
 
-import { JsonReader } from "@noldova/teamrun-foundation-json";
+import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
+import { JsonException, JsonReader } from "@noldova/teamrun-foundation-json";
+import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { ApprovalAsk } from "@noldova/teamrun-core";
+import { ApprovalAsk, RequestDispatcher } from "@noldova/teamrun-core";
 import { ConversationMember, ConversationMemberParams, EventName, Harness,
   Teammate, TeammateCreateParams, TeammateUpdateParams, TeammateIdParams } from "@noldova/teamrun-protocol";
 import {
@@ -212,6 +214,26 @@ export class RequestDispatcherTests {
     Assert.areEqual("boom", internal.info?.message);
     Assert.areEqual("plain text", plain.info?.message);
     Assert.areEqual("r6", plain.id);
+  }
+
+  @TestMethod
+  public describesFailuresForOtherDispatchers(): void {
+    const service = RequestDispatcher.describe(new ServiceException(ErrorCode.Conflict, "Busy.", ["t1"]));
+    const json = RequestDispatcher.describe(new JsonException("Not a string.", "$.data"));
+    const named = RequestDispatcher.describe(new ArgumentException("Blank.", "terminalId"));
+    const unnamed = RequestDispatcher.describe(new ArgumentException("Blank."));
+    const other = RequestDispatcher.describe(new Error("Broken."));
+
+    Assert.areEqual(ErrorCode.Conflict, service.name);
+    Assert.areEqual("t1", service.arguments[0]);
+    Assert.areEqual(ErrorCode.InvalidParams, json.name);
+    Assert.areEqual("$.data", json.arguments[0]);
+    Assert.areEqual(ErrorCode.InvalidParams, named.name);
+    Assert.areEqual("terminalId", named.arguments[0]);
+    Assert.areEqual(ErrorCode.InvalidParams, unnamed.name);
+    Assert.areEqual(0, unnamed.arguments.length);
+    Assert.areEqual(ErrorCode.Internal, other.name);
+    Assert.areEqual("Broken.", other.message);
   }
 
   private static async succeed(host: CoreHost, method: MethodName, payload: unknown): Promise<unknown> {

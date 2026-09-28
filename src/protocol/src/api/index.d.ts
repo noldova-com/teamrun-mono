@@ -695,7 +695,48 @@ export declare enum MethodName {
    * Decides a pending approval by choosing one of its options. Parameters: `ApprovalDecideParams`.
    * Result: `Approval`.
    */
-  ApprovalDecide = "ApprovalDecide"
+  ApprovalDecide = "ApprovalDecide",
+  /**
+   * Lists the terminals the calling connection opened, oldest first. Parameters: `null`. Result: an array of
+   * `TerminalState`.
+   */
+  TerminalList = "TerminalList",
+  /**
+   * Starts the default shell in a project's folder with a fresh environment read from the operating system. The
+   * terminal belongs to the calling connection: only it receives the terminal's events and can use it, and the
+   * terminal ends when that connection closes. Parameters: `TerminalOpenParams`. Result: `TerminalState`. Fails with
+   * `NotFound` for an unknown project or a missing folder, and `Unavailable` when the shell cannot start.
+   */
+  TerminalOpen = "TerminalOpen",
+  /**
+   * Types into a terminal's shell. Parameters: `TerminalInputParams`. Result: `null`. Fails with `Conflict` after the
+   * shell exited.
+   */
+  TerminalInput = "TerminalInput",
+  /**
+   * Resizes a terminal. The new size applies after the output already received, at the `TerminalChanged` event that
+   * reports it; resizing to the current size does nothing. Parameters: `TerminalResizeParams`. Result: `null`.
+   */
+  TerminalResize = "TerminalResize",
+  /**
+   * Starts the terminal's shell again, ending the running one first. The screen joins the stored lines and the new
+   * shell starts on an empty screen, reported by `TerminalChanged`. Parameters: `TerminalIdParams`. Result:
+   * `TerminalState`.
+   */
+  TerminalRestart = "TerminalRestart",
+  /**
+   * Ends a terminal's shell and deletes its stored lines. Parameters: `TerminalIdParams`. Result: `null`.
+   */
+  TerminalClose = "TerminalClose",
+  /**
+   * Reads a terminal's current screen, for a window that attaches to a running terminal. Parameters:
+   * `TerminalIdParams`. Result: `TerminalScreen`.
+   */
+  TerminalScreen = "TerminalScreen",
+  /**
+   * Reads a page of a terminal's stored lines. Parameters: `TerminalLinesParams`. Result: `TerminalLinePage`.
+   */
+  TerminalLines = "TerminalLines"
 }
 
 /**
@@ -744,7 +785,17 @@ export declare enum EventName {
   /**
    * A conversation was cut: every message from a sequence on is gone. Payload: `ConversationRewoundPayload`.
    */
-  ConversationRewound = "ConversationRewound"
+  ConversationRewound = "ConversationRewound",
+  /**
+   * A terminal's shell printed output, which the runtime's emulator has processed. Sent only to the connection that
+   * owns the terminal. Payload: `TerminalOutputPayload`.
+   */
+  TerminalOutput = "TerminalOutput",
+  /**
+   * A terminal's size, exit code or run changed. Sent only to the connection that owns the terminal. Payload:
+   * `TerminalState`.
+   */
+  TerminalChanged = "TerminalChanged"
 }
 
 /**
@@ -1358,6 +1409,122 @@ export declare class Resources {
    * Name of the field naming a chosen approval option: `optionId`.
    */
   public static readonly optionIdField: string;
+  /**
+   * Name of the field referencing a terminal: `terminalId`.
+   */
+  public static readonly terminalIdField: string;
+  /**
+   * Name of a terminal size's width field: `columns`.
+   */
+  public static readonly columnsField: string;
+  /**
+   * Name of a terminal size's height field: `rows`.
+   */
+  public static readonly rowsField: string;
+  /**
+   * Name of a terminal's shell name field: `shell`.
+   */
+  public static readonly shellField: string;
+  /**
+   * Name of a terminal's exit code field: `exitCode`.
+   */
+  public static readonly exitCodeField: string;
+  /**
+   * Name of a terminal's restart count field: `restartCount`.
+   */
+  public static readonly restartCountField: string;
+  /**
+   * Name of the field carrying a terminal's range of stored lines: `stored`.
+   */
+  public static readonly storedField: string;
+  /**
+   * Name of the field carrying where a range or page starts: `start`.
+   */
+  public static readonly startField: string;
+  /**
+   * Name of the field carrying where a range ends: `end`.
+   */
+  public static readonly endField: string;
+  /**
+   * Name of a page's terminal lines field: `lines`.
+   */
+  public static readonly linesField: string;
+  /**
+   * Name of a terminal line's wrapped field: `wrapped`.
+   */
+  public static readonly wrappedField: string;
+  /**
+   * Name of a terminal line's style runs field: `runs`.
+   */
+  public static readonly runsField: string;
+  /**
+   * Name of a text run's length field: `length`.
+   */
+  public static readonly lengthField: string;
+  /**
+   * Name of a text run's text color field: `foreground`.
+   */
+  public static readonly foregroundField: string;
+  /**
+   * Name of a text run's background color field: `background`.
+   */
+  public static readonly backgroundField: string;
+  /**
+   * Name of a text run's style flags field: `style`.
+   */
+  public static readonly styleField: string;
+  /**
+   * Name of a terminal screen's state field: `state`.
+   */
+  public static readonly stateField: string;
+  /**
+   * Name of a terminal screen's serialized screen field: `screen`.
+   */
+  public static readonly screenField: string;
+  /**
+   * The narrowest terminal in columns: 2, the least a terminal emulator draws.
+   */
+  public static readonly minimumTerminalColumns: number;
+  /**
+   * The widest terminal in columns: 1000.
+   */
+  public static readonly maximumTerminalColumns: number;
+  /**
+   * The tallest terminal in rows: 1000.
+   */
+  public static readonly maximumTerminalRows: number;
+  /**
+   * The color value that means the terminal's default color: -1.
+   */
+  public static readonly defaultTerminalColor: number;
+  /**
+   * How many palette colors a terminal has; palette colors are 0 through 255.
+   */
+  public static readonly terminalPaletteSize: number;
+  /**
+   * The value added to a 24-bit RGB color: `0x1000000`, so `0x1ff0000` is red.
+   */
+  public static readonly terminalRgbColor: number;
+  /**
+   * The largest color value: `0x1ffffff`, white as an RGB color.
+   */
+  public static readonly maximumTerminalColor: number;
+  /**
+   * Every `TerminalTextStyle` flag combined: `0x1ff`.
+   */
+  public static readonly terminalTextStyles: number;
+  /**
+   * Message for a range of terminal lines that ends before it starts.
+   */
+  public static readonly terminalLineRangeReversed: string;
+  /**
+   * Message for text runs whose lengths do not add up to their line's text.
+   */
+  public static readonly terminalRunsMismatch: string;
+  /**
+   * Message for a page of terminal lines that reaches outside the stored lines.
+   */
+  public static readonly terminalPageOutsideStored: string;
   /**
    * Message for provenance present on a message that is not a provider's, or absent on one that is.
    */
@@ -4493,4 +4660,669 @@ export declare enum RoleApplication {
    * Explicit prompt fallback.
    */
   Prompt = "Prompt"
+}
+
+/**
+ * Style flags of terminal text; a `TerminalTextRun` combines them with bitwise OR.
+ */
+export declare enum TerminalTextStyle {
+  /**
+   * Bold text (SGR 1).
+   */
+  Bold = 1,
+  /**
+   * Faint text (SGR 2).
+   */
+  Dim = 2,
+  /**
+   * Italic text (SGR 3).
+   */
+  Italic = 4,
+  /**
+   * Underlined text (SGR 4).
+   */
+  Underline = 8,
+  /**
+   * Blinking text (SGR 5).
+   */
+  Blink = 16,
+  /**
+   * Text and background colors swapped (SGR 7).
+   */
+  Inverse = 32,
+  /**
+   * Hidden text (SGR 8).
+   */
+  Invisible = 64,
+  /**
+   * Crossed-out text (SGR 9).
+   */
+  Strikethrough = 128,
+  /**
+   * Text with a line above it (SGR 53).
+   */
+  Overline = 256
+}
+
+/**
+ * The size of a terminal in character cells.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalSize {
+  /**
+   * The width in columns; 2 through 1000.
+   */
+  public readonly columns: number;
+  /**
+   * The height in rows; 1 through 1000.
+   */
+  public readonly rows: number;
+
+  /**
+   * Initializes the size.
+   * @param columns The width in columns; an integer from 2 through 1000.
+   * @param rows The height in rows; an integer from 1 through 1000.
+   * @throws ArgumentOutOfRangeException when a dimension is not an integer in its range.
+   */
+  public constructor(columns: number, rows: number);
+
+  /**
+   * Reads the size from untrusted JSON.
+   * @param value The untrusted value, expected to carry `columns` and `rows`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The size.
+   * @throws JsonException when a field is missing or not an integer; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when a dimension is out of range.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalSize;
+
+  /**
+   * Compares two sizes.
+   * @param other The size to compare with.
+   * @returns Whether both have the same columns and rows.
+   */
+  public equals(other: TerminalSize): boolean;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `columns` and `rows`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * A range of a terminal's stored lines, by line number from `start` up to but excluding `end`. Line numbers keep
+ * counting when stored lines are cleared, so a number always names the same line.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalLineRange {
+  /**
+   * The number of the first line; a non-negative integer.
+   */
+  public readonly start: number;
+  /**
+   * The number after the last line; an integer not below `start`.
+   */
+  public readonly end: number;
+
+  /**
+   * Initializes the range.
+   * @param start The number of the first line; a non-negative integer.
+   * @param end The number after the last line; an integer not below `start`, which it equals when the range is empty.
+   * @throws ArgumentOutOfRangeException when `start` is negative or either value is not an integer.
+   * @throws ArgumentException when `end` is below `start`.
+   */
+  public constructor(start: number, end: number);
+
+  /**
+   * Reads the range from untrusted JSON.
+   * @param value The untrusted value, expected to carry `start` and `end`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The range.
+   * @throws JsonException when a field is missing or not an integer; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when `start` is negative.
+   * @throws ArgumentException when `end` is below `start`.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalLineRange;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `start` and `end`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * What the runtime reports about one terminal: which shell runs where, its size, whether the shell exited, and how far
+ * its events and stored lines have come. `TerminalList`, `TerminalOpen` and `TerminalRestart` answer with it, and
+ * `TerminalChanged` carries it.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalState {
+  /**
+   * The terminal id.
+   */
+  public readonly id: string;
+  /**
+   * The id of the `Project` whose folder the shell started in.
+   */
+  public readonly projectId: string;
+  /**
+   * The shell's display name, such as `PowerShell` or `zsh`.
+   */
+  public readonly shell: string;
+  /**
+   * The terminal's size.
+   */
+  public readonly size: TerminalSize;
+  /**
+   * The shell's exit code, or `null` while it runs.
+   */
+  public readonly exitCode: number | null;
+  /**
+   * How many times the shell was started again; 0 until the first restart.
+   */
+  public readonly restartCount: number;
+  /**
+   * The sequence of the last terminal event this state includes; 0 before the first event. A client that loads this
+   * state ignores events with this sequence or a lower one.
+   */
+  public readonly sequence: number;
+  /**
+   * The lines stored so far, which have left the screen.
+   */
+  public readonly stored: TerminalLineRange;
+
+  /**
+   * Initializes the state.
+   * @param id The terminal id; must not be blank.
+   * @param projectId The id of the `Project` whose folder the shell started in; must not be blank.
+   * @param shell The shell's display name; must not be blank.
+   * @param size The terminal's size.
+   * @param exitCode The shell's exit code, an integer, or `null` while it runs.
+   * @param restartCount How many times the shell was started again; a non-negative integer.
+   * @param sequence The sequence of the last event this state includes; a non-negative integer.
+   * @param stored The lines stored so far.
+   * @throws ArgumentException when `id`, `projectId` or `shell` is blank.
+   * @throws ArgumentOutOfRangeException when `exitCode` is not an integer or a count is negative or not an integer.
+   */
+  public constructor(
+    id: string,
+    projectId: string,
+    shell: string,
+    size: TerminalSize,
+    exitCode: number | null,
+    restartCount: number,
+    sequence: number,
+    stored: TerminalLineRange);
+
+  /**
+   * Reads the state from untrusted JSON.
+   * @param value The untrusted value, expected to carry `id`, `projectId`, `shell`, `size`, the nullable `exitCode`,
+   * `restartCount`, `sequence` and `stored`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The state.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException or ArgumentOutOfRangeException when a value breaks the constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalState;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `id`, `projectId`, `shell`, `size`, `exitCode`, `restartCount`, `sequence` and `stored`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * A stretch of a terminal line's text drawn with one style.
+ * @remarks
+ * Colors are -1 for the terminal's default color, 0 through 255 for a palette color, and `0x1000000` plus a 24-bit
+ * RGB value for any other color. Instances are immutable. `fromJson` validates untrusted input and reports the
+ * offending field's path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalTextRun {
+  /**
+   * How many UTF-16 code units of the line's text the run covers; at least 1.
+   */
+  public readonly length: number;
+  /**
+   * The text color.
+   */
+  public readonly foreground: number;
+  /**
+   * The background color.
+   */
+  public readonly background: number;
+  /**
+   * The `TerminalTextStyle` flags combined with bitwise OR; 0 for plain text.
+   */
+  public readonly style: number;
+
+  /**
+   * Initializes the run.
+   * @param length How many UTF-16 code units the run covers; a positive integer.
+   * @param foreground The text color, as described for the class.
+   * @param background The background color, as described for the class.
+   * @param style `TerminalTextStyle` flags combined with bitwise OR.
+   * @throws ArgumentOutOfRangeException when the length is not positive, a color is not a valid color value, or the
+   * style has a bit that is not a `TerminalTextStyle` flag.
+   */
+  public constructor(length: number, foreground: number, background: number, style: number);
+
+  /**
+   * Reads the run from untrusted JSON.
+   * @param value The untrusted value, expected to carry `length`, `foreground`, `background` and `style`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The run.
+   * @throws JsonException when a field is missing or not an integer; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when a value breaks the constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalTextRun;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `length`, `foreground`, `background` and `style`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * One stored terminal line, with the wrapping it had when it left the screen. It is text to show, never markup.
+ * @remarks
+ * Instances are immutable; the runs are copied on construction. `fromJson` validates untrusted input and reports the
+ * offending field's path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalLine {
+  /**
+   * The line's text without trailing blanks that have no color.
+   */
+  public readonly text: string;
+  /**
+   * Whether the line continues the line before it, which was too long for the terminal's width.
+   */
+  public readonly wrapped: boolean;
+  /**
+   * The styles of the text, in order; their lengths add up to the text's length.
+   */
+  public readonly runs: readonly TerminalTextRun[];
+
+  /**
+   * Initializes the line.
+   * @param text The text; empty for a blank line.
+   * @param wrapped Whether the line continues the one before it.
+   * @param runs The styles of the text, in order; copied.
+   * @throws ArgumentException when the runs' lengths do not add up to the text's length.
+   */
+  public constructor(text: string, wrapped: boolean, runs: readonly TerminalTextRun[]);
+
+  /**
+   * Reads the line from untrusted JSON.
+   * @param value The untrusted value, expected to carry `text`, `wrapped` and `runs`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The line.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException or ArgumentOutOfRangeException when a value breaks a constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalLine;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `text`, `wrapped` and `runs`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of `TerminalOpen`.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalOpenParams {
+  /**
+   * The id of the `Project` whose folder the shell starts in.
+   */
+  public readonly projectId: string;
+  /**
+   * The terminal's starting size.
+   */
+  public readonly size: TerminalSize;
+
+  /**
+   * Initializes the parameters.
+   * @param projectId The `Project` id; must not be blank.
+   * @param size The terminal's starting size.
+   * @throws ArgumentException when `projectId` is blank.
+   */
+  public constructor(projectId: string, size: TerminalSize);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `projectId` and `size`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when the size is out of range.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalOpenParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `projectId` and `size`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of the terminal methods that name only a terminal: `TerminalRestart`, `TerminalClose` and
+ * `TerminalScreen`.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalIdParams {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+
+  /**
+   * Initializes the parameters.
+   * @param terminalId The terminal id; must not be blank.
+   * @throws ArgumentException when `terminalId` is blank.
+   */
+  public constructor(terminalId: string);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when the field is missing or blank; the exception names the field's path.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalIdParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of `TerminalInput`.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalInputParams {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+  /**
+   * What the person typed or pasted, including control characters such as `\r` for Enter.
+   */
+  public readonly data: string;
+
+  /**
+   * Initializes the parameters.
+   * @param terminalId The terminal id; must not be blank.
+   * @param data The input; must not be empty.
+   * @throws ArgumentException when `terminalId` is blank or `data` is empty.
+   */
+  public constructor(terminalId: string, data: string);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId` and `data`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException when `data` is empty.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalInputParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId` and `data`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of `TerminalResize`.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalResizeParams {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+  /**
+   * The new size.
+   */
+  public readonly size: TerminalSize;
+
+  /**
+   * Initializes the parameters.
+   * @param terminalId The terminal id; must not be blank.
+   * @param size The new size.
+   * @throws ArgumentException when `terminalId` is blank.
+   */
+  public constructor(terminalId: string, size: TerminalSize);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId` and `size`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when the size is out of range.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalResizeParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId` and `size`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of `TerminalLines`: up to `limit` stored lines from line number `start` on.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalLinesParams {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+  /**
+   * The number of the first line to read; a non-negative integer.
+   */
+  public readonly start: number;
+  /**
+   * How many lines at most; 1 through 500.
+   */
+  public readonly limit: number;
+
+  /**
+   * Initializes the parameters.
+   * @param terminalId The terminal id; must not be blank.
+   * @param start The number of the first line to read; a non-negative integer.
+   * @param limit How many lines at most; 1 through 500.
+   * @throws ArgumentException when `terminalId` is blank.
+   * @throws ArgumentOutOfRangeException when `start` is negative or `limit` is out of range.
+   */
+  public constructor(terminalId: string, start: number, limit: number);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId`, `start` and `limit`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when a number is out of range.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalLinesParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId`, `start` and `limit`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Result of `TerminalLines`: the stored lines found from a line number on, and the range stored now. When the
+ * requested lines were cleared, the page starts at the first line still stored.
+ * @remarks
+ * Instances are immutable; the lines are copied on construction. `fromJson` validates untrusted input and reports the
+ * offending field's path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalLinePage {
+  /**
+   * The number of the page's first line.
+   */
+  public readonly start: number;
+  /**
+   * The lines, in order; empty when none are stored from `start` on.
+   */
+  public readonly lines: readonly TerminalLine[];
+  /**
+   * The lines stored when the page was read.
+   */
+  public readonly stored: TerminalLineRange;
+
+  /**
+   * Initializes the page.
+   * @param start The number of the page's first line.
+   * @param lines The lines, in order; copied.
+   * @param stored The lines stored when the page was read.
+   * @throws ArgumentOutOfRangeException when `start` is not an integer.
+   * @throws ArgumentException when the page reaches outside `stored`.
+   */
+  public constructor(start: number, lines: readonly TerminalLine[], stored: TerminalLineRange);
+
+  /**
+   * Reads the page from untrusted JSON.
+   * @param value The untrusted value, expected to carry `start`, `lines` and `stored`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The page.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException or ArgumentOutOfRangeException when a value breaks a constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalLinePage;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `start`, `lines` and `stored`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Result of `TerminalScreen`: a terminal's state and its current screen. Writing `screen` to an emulator of the
+ * state's size restores the screen, the cursor and the modes programs set, including a full-screen program's
+ * alternate screen.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalScreen {
+  /**
+   * The terminal's state; its `sequence` is the last event the screen includes.
+   */
+  public readonly state: TerminalState;
+  /**
+   * The screen as terminal output; untrusted text for a terminal emulator, never markup.
+   */
+  public readonly screen: string;
+
+  /**
+   * Initializes the screen.
+   * @param state The terminal's state.
+   * @param screen The screen as terminal output.
+   */
+  public constructor(state: TerminalState, screen: string);
+
+  /**
+   * Reads the screen from untrusted JSON.
+   * @param value The untrusted value, expected to carry `state` and `screen`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The screen.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException or ArgumentOutOfRangeException when the state breaks its constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalScreen;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `state` and `screen`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Payload of `TerminalOutput`: output of a terminal's shell, in the order the runtime's emulator processed it.
+ * @remarks
+ * The output is untrusted text for a terminal emulator, never markup. Instances are immutable. `fromJson` validates
+ * untrusted input and reports the offending field's path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalOutputPayload {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+  /**
+   * The event's sequence; each terminal event's sequence is one more than the one before.
+   */
+  public readonly sequence: number;
+  /**
+   * The output.
+   */
+  public readonly data: string;
+  /**
+   * The lines stored after the output was processed.
+   */
+  public readonly stored: TerminalLineRange;
+
+  /**
+   * Initializes the payload.
+   * @param terminalId The terminal id; must not be blank.
+   * @param sequence The event's sequence; a positive integer.
+   * @param data The output; must not be empty.
+   * @param stored The lines stored after the output was processed.
+   * @throws ArgumentException when `terminalId` is blank or `data` is empty.
+   * @throws ArgumentOutOfRangeException when `sequence` is not a positive integer.
+   */
+  public constructor(terminalId: string, sequence: number, data: string, stored: TerminalLineRange);
+
+  /**
+   * Reads the payload from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId`, `sequence`, `data` and `stored`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The payload.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentException or ArgumentOutOfRangeException when a value breaks the constructor's rules.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalOutputPayload;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId`, `sequence`, `data` and `stored`.
+   */
+  public toJson(): JsonObject;
 }

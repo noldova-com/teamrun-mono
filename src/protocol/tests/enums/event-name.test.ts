@@ -21,6 +21,8 @@ export class EventNameTests {
     Assert.areEqual("ApprovalUpdated", EventName.ApprovalUpdated);
     Assert.areEqual("ProviderAccountUpdated", EventName.ProviderAccountUpdated);
     Assert.areEqual("ConversationRewound", EventName.ConversationRewound);
+    Assert.areEqual("TerminalOutput", EventName.TerminalOutput);
+    Assert.areEqual("TerminalChanged", EventName.TerminalChanged);
   }
 
   @TestMethod

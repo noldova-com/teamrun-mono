@@ -20,4 +20,12 @@ export class ResourcesTests {
     Assert.areEqual("127.0.0.1:80", Resources.formatTcpEndpoint("127.0.0.1", 80));
     Assert.areEqual("The argument --providers does not accept \"x\".", Resources.formatUnknownArgumentValue("--providers", "x"));
   }
+
+  @TestMethod
+  public formatsTerminalMessages(): void {
+    Assert.areEqual("TerminalExplode is not a terminal method.", Resources.formatUnknownTerminalMethod("TerminalExplode"));
+    Assert.areEqual("TeamRun could not read the environment variables from Windows. Why.", Resources.formatWindowsEnvironmentFailed("Why."));
+    Assert.areEqual("Windows PowerShell ended with exit code null.", Resources.formatWindowsEnvironmentExit(null));
+    Assert.areEqual("pt_BR.UTF-8", Resources.formatUtf8Locale("pt", "BR"));
+  }
 }

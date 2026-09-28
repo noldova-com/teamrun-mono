@@ -16,5 +16,7 @@ export enum EventName {
   ApprovalCreated = "ApprovalCreated",
   ApprovalUpdated = "ApprovalUpdated",
   ProviderAccountUpdated = "ProviderAccountUpdated",
-  ConversationRewound = "ConversationRewound"
+  ConversationRewound = "ConversationRewound",
+  TerminalOutput = "TerminalOutput",
+  TerminalChanged = "TerminalChanged"
 }

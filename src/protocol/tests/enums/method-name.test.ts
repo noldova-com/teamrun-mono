@@ -33,6 +33,14 @@ export class MethodNameTests {
     Assert.areEqual("MessageCancel", MethodName.MessageCancel);
     Assert.areEqual("ApprovalList", MethodName.ApprovalList);
     Assert.areEqual("ApprovalDecide", MethodName.ApprovalDecide);
+    Assert.areEqual("TerminalList", MethodName.TerminalList);
+    Assert.areEqual("TerminalOpen", MethodName.TerminalOpen);
+    Assert.areEqual("TerminalInput", MethodName.TerminalInput);
+    Assert.areEqual("TerminalResize", MethodName.TerminalResize);
+    Assert.areEqual("TerminalRestart", MethodName.TerminalRestart);
+    Assert.areEqual("TerminalClose", MethodName.TerminalClose);
+    Assert.areEqual("TerminalScreen", MethodName.TerminalScreen);
+    Assert.areEqual("TerminalLines", MethodName.TerminalLines);
   }
 
   @TestMethod

@@ -95,5 +95,19 @@ export class ProtocolApiTests {
     Assert.isDefined(api.WireDecoder);
     Assert.isDefined(api.WireMessage);
     Assert.isDefined(api.WireMessageKind);
+    Assert.isDefined(api.TerminalTextStyle);
+    Assert.isDefined(api.TerminalLine);
+    Assert.isDefined(api.TerminalLineRange);
+    Assert.isDefined(api.TerminalSize);
+    Assert.isDefined(api.TerminalState);
+    Assert.isDefined(api.TerminalTextRun);
+    Assert.isDefined(api.TerminalIdParams);
+    Assert.isDefined(api.TerminalInputParams);
+    Assert.isDefined(api.TerminalLinePage);
+    Assert.isDefined(api.TerminalLinesParams);
+    Assert.isDefined(api.TerminalOpenParams);
+    Assert.isDefined(api.TerminalResizeParams);
+    Assert.isDefined(api.TerminalScreen);
+    Assert.isDefined(api.TerminalOutputPayload);
   }
 }

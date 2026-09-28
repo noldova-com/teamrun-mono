@@ -150,6 +150,104 @@ export class Resources {
   public static readonly stoppedBySignal: string = "signal";
   public static readonly stoppedByInputEnd: string = "input end";
 
+  public static readonly macPlatform: string = "darwin";
+  public static readonly versionSeparator: string = ".";
+  public static readonly shellNameParameterName: string = "name";
+  public static readonly executableParameterName: string = "executable";
+  public static readonly variableNameParameterName: string = "name";
+  public static readonly endMillisecondsParameterName: string = "endMilliseconds";
+  public static readonly highWatermarkParameterName: string = "highWatermark";
+  public static readonly lowWatermarkParameterName: string = "lowWatermark";
+  public static readonly terminalsDirectoryName: string = "terminals";
+  public static readonly terminalDirectoryMode: number = 0o700;
+  public static readonly terminalHistoryExtension: string = ".jsonl";
+  public static readonly terminalHistoryFlags: string = "w+";
+  public static readonly terminalHistoryMode: number = 0o600;
+  public static readonly terminalHistoryBlockLines: number = 64;
+  public static readonly terminalHistoryReadBytes: number = 64 * 1024;
+  public static readonly lineFeedByte: number = 0x0a;
+  public static readonly terminalCaptureScrollback: number = 512;
+  public static readonly terminalCompactionLines: number = 256;
+  public static readonly terminalEndMilliseconds: number = 2_000;
+  public static readonly terminalHighWatermark: number = 512 * 1024;
+  public static readonly terminalLowWatermark: number = 128 * 1024;
+  public static readonly forceKillSignal: string = "SIGKILL";
+  public static readonly conptyBackend: "conpty" = "conpty";
+  public static readonly normalBufferType: "normal" = "normal";
+  public static readonly eraseInDisplayFinal: string = "J";
+  public static readonly privatePrefix: string = "?";
+  public static readonly fullResetFinal: string = "c";
+  public static readonly eraseSavedLinesParameter: number = 3;
+  public static readonly blankCell: string = " ";
+  public static readonly terminalTermName: string = "xterm-256color";
+  public static readonly termVariable: string = "TERM";
+  public static readonly colorTermVariable: string = "COLORTERM";
+  public static readonly trueColorValue: string = "truecolor";
+  public static readonly languageVariable: string = "LANG";
+  public static readonly characterTypeVariable: string = "LC_CTYPE";
+  public static readonly localeVariables: readonly string[] = ["LANG", "LC_ALL", "LC_CTYPE"];
+  public static readonly utf8Locale: string = "UTF-8";
+  public static readonly launchVariables: readonly string[] = ["ELECTRON_RUN_AS_NODE", "APPIMAGE", "APPDIR", "ARGV0", "OWD"];
+  public static readonly originalDesktopVariable: string = "ORIGINAL_XDG_CURRENT_DESKTOP";
+  public static readonly desktopVariable: string = "XDG_CURRENT_DESKTOP";
+  public static readonly shellVariable: string = "SHELL";
+  public static readonly defaultUnixShell: string = "/bin/sh";
+  public static readonly loginShellArgument: string = "-l";
+  public static readonly pathVariable: string = "Path";
+  public static readonly windowsPathSeparator: string = ";";
+  public static readonly trailingPathSeparators: RegExp = /;+$/;
+  public static readonly environmentReferencePattern: RegExp = /%([^%]+)%/g;
+  public static readonly programFilesVariable: string = "ProgramFiles";
+  public static readonly systemRootVariable: string = "SystemRoot";
+  public static readonly powerShellName: string = "PowerShell";
+  public static readonly powerShellExecutable: string = "pwsh.exe";
+  public static readonly powerShellDirectorySegments: readonly string[] = ["PowerShell", "7"];
+  public static readonly localAppDataVariable: string = "LOCALAPPDATA";
+  public static readonly appAliasDirectorySegments: readonly string[] = ["Microsoft", "WindowsApps"];
+  public static readonly windowsPowerShellName: string = "Windows PowerShell";
+  public static readonly windowsPowerShellSegments: readonly string[] = ["System32", "WindowsPowerShell", "v1.0", "powershell.exe"];
+  public static readonly windowsEnvironmentArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
+  public static readonly windowsEnvironmentMilliseconds: number = 10_000;
+  public static readonly windowsEnvironmentEnd: string = "End";
+  public static readonly windowsEnvironmentFieldSeparator: string = " ";
+  public static readonly windowsEnvironmentFieldCount: number = 4;
+  public static readonly plainValueKind: string = "String";
+  public static readonly expandableValueKind: string = "ExpandString";
+  public static readonly base64Pattern: RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+  public static readonly base64Encoding: BufferEncoding = "base64";
+  public static readonly utf16Encoding: BufferEncoding = "utf16le";
+  public static readonly outputLinePattern: RegExp = /\r?\n/;
+  public static readonly windowsEnvironmentScript: string = [
+    "$ErrorActionPreference = 'Stop'",
+    "$utf8 = [Text.Encoding]::UTF8",
+    "$scopes = @(@('System', [Microsoft.Win32.Registry]::LocalMachine, 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment'), " +
+      "@('User', [Microsoft.Win32.Registry]::CurrentUser, 'Environment'), " +
+      "@('Session', [Microsoft.Win32.Registry]::CurrentUser, 'Volatile Environment'))",
+    "foreach ($scope in $scopes) {",
+    "  $key = $scope[1].OpenSubKey($scope[2])",
+    "  if ($null -eq $key) { continue }",
+    "  foreach ($name in $key.GetValueNames()) {",
+    "    $kind = $key.GetValueKind($name)",
+    "    if ($name -eq '' -or ($kind -ne 'String' -and $kind -ne 'ExpandString')) { continue }",
+    "    $value = [string]$key.GetValue($name, '', 'DoNotExpandEnvironmentNames')",
+    "    [Console]::Out.WriteLine(($scope[0], $kind, [Convert]::ToBase64String($utf8.GetBytes($name)), [Convert]::ToBase64String($utf8.GetBytes($value))) -join ' ')",
+    "  }",
+    "  $key.Close()",
+    "}",
+    "[Console]::Out.WriteLine('End')"
+  ].join("\n");
+  public static readonly windowsEnvironmentNotStarted: string = "Windows PowerShell could not start.";
+  public static readonly windowsEnvironmentTimedOut: string = "Windows PowerShell did not answer in time.";
+  public static readonly windowsEnvironmentUnreadable: string = "Windows PowerShell returned output TeamRun could not read.";
+  public static readonly systemRootMissing: string = "Windows did not provide the SystemRoot variable, so TeamRun cannot find Windows PowerShell.";
+  public static readonly terminalNotFound: string = "The terminal does not exist.";
+  public static readonly terminalShellNotRunning: string = "The terminal's shell is not running. Restart the terminal to use it again.";
+  public static readonly terminalProjectNotFound: string = "The project does not exist.";
+  public static readonly terminalFolderMissing: string = "The project's folder does not exist.";
+  public static readonly terminalsStopped: string = "TeamRun is closing its terminals, so no terminal can start now.";
+  public static readonly storedLinesFailed: string = "The terminal's stored lines could not be written.";
+  public static readonly storedLinesDamaged: string = "The terminal's stored lines are damaged.";
+
   public static formatVersionMismatch(client: string, runtime: string): string {
     return `The client speaks protocol ${client}, which runtime protocol ${runtime} cannot serve.`;
   }
@@ -184,6 +282,22 @@ export class Resources {
 
   public static formatProcessImageArguments(processId: number): readonly string[] {
     return [`/proc/${processId}/exe`];
+  }
+
+  public static formatUnknownTerminalMethod(method: string): string {
+    return `${method} is not a terminal method.`;
+  }
+
+  public static formatWindowsEnvironmentFailed(reason: string): string {
+    return `TeamRun could not read the environment variables from Windows. ${reason}`;
+  }
+
+  public static formatWindowsEnvironmentExit(exitCode: number | null): string {
+    return `Windows PowerShell ended with exit code ${String(exitCode)}.`;
+  }
+
+  public static formatUtf8Locale(language: string, region: string): string {
+    return `${language}_${region}.UTF-8`;
   }
 
 }

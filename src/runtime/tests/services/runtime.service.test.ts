@@ -6,13 +6,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SqlQuery } from "@noldova/teamrun-foundation-data-sql";
 import { JsonException } from "@noldova/teamrun-foundation-json";
 
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { Conversation, EventName, Message, MessageSendResult, MessageStatus, MethodName, Project, ProtocolVersion, Request } from "@noldova/teamrun-protocol";
+import {
+  Conversation, ErrorCode, EventName, Message, MessageSendResult, MessageStatus, MethodName, Project, ProtocolVersion, Request, TerminalInputParams,
+  TerminalOpenParams, TerminalSize, TerminalState
+} from "@noldova/teamrun-protocol";
 import { EndpointKind, InstallationRegistry, InvalidOperationException, ProcessInspector, ProcessProbe, ProcessRegistry, RuntimeAlreadyRunningException, RuntimeService, RuntimeSettings } from "@noldova/teamrun-runtime";
 
 import { RecordingClientListener } from "../fixtures/recording-client-listener.fixture.js";
@@ -179,5 +183,53 @@ export class RuntimeServiceTests {
     finally {
       await host.shutdown();
     }
+  }
+
+  @TestMethod
+  public async hostsTerminalsOnlyForTheConnectionThatOpensThem(): Promise<void> {
+    await using host = new RuntimeTestHost();
+    const settings = host.createSettings();
+    mkdirSync(settings.terminalsPath, { recursive: true });
+    writeFileSync(join(settings.terminalsPath, "left.jsonl"), "{}\n");
+    const service = host.createService(settings);
+    await service.start();
+    const leftovers = readdirSync(settings.terminalsPath).length;
+    const desktop = new RecordingClientListener();
+    const cli = new RecordingClientListener();
+    const owner = await host.connect(service, "desktop", desktop);
+    const other = await host.connect(service, "cli", cli);
+    mkdirSync(host.directory.resolve("repo"));
+    const project = Project.fromJson((await owner.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
+
+    const opened = TerminalState.fromJson((await owner.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
+    await owner.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
+    await Wait.until(() => existsSync(join(settings.terminalsPath, `${opened.id}.jsonl`)));
+    const refused = await other.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "exit 0\r").toJson());
+    const listed = await other.call(MethodName.TerminalList, null);
+    owner.close();
+    await Wait.until(() => readdirSync(settings.terminalsPath).length === 0);
+
+    Assert.areEqual(0, leftovers);
+    Assert.isTrue(desktop.names.includes(EventName.TerminalOutput));
+    Assert.isFalse(cli.names.some(t => t.startsWith("Terminal")));
+    Assert.areEqual(ErrorCode.NotFound, refused.info?.name);
+    Assert.areEqual("[]", JSON.stringify(listed.payload));
+  }
+
+  @TestMethod
+  public async endsTerminalsWhenItStops(): Promise<void> {
+    await using host = new RuntimeTestHost();
+    const service = host.createService();
+    await service.start();
+    const client = await host.connect(service, "desktop");
+    mkdirSync(host.directory.resolve("repo"));
+    const project = Project.fromJson((await client.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
+    const opened = TerminalState.fromJson((await client.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
+    await client.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
+    await Wait.until(() => existsSync(join(service.settings.terminalsPath, `${opened.id}.jsonl`)));
+
+    await service.stop("test");
+
+    Assert.areEqual(0, readdirSync(service.settings.terminalsPath).length);
   }
 }

@@ -13,6 +13,9 @@
     "@noldova/teamrun-foundation-json": "__VERSION__",
     "@noldova/teamrun-foundation-services": "__VERSION__",
     "@noldova/teamrun-protocol": "__VERSION__",
-    "@noldova/teamrun-providers": "__VERSION__"
+    "@noldova/teamrun-providers": "__VERSION__",
+    "@xterm/addon-serialize": "0.14.0",
+    "@xterm/headless": "6.0.0",
+    "node-pty": "1.2.0-beta.15"
   }
 }

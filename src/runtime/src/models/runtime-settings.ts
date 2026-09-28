@@ -60,4 +60,8 @@ export class RuntimeSettings {
     return join(this.dataDirectory, Resources.processesFileName);
   }
 
+  public get terminalsPath(): string {
+    return join(this.dataDirectory, Resources.terminalsDirectoryName);
+  }
+
 }

@@ -8,12 +8,28 @@
 
 import type { Socket } from "node:net";
 
-import type { IEventListener, ProviderRegistry, RequestDispatcher } from "@noldova/teamrun-core";
+import type { IEventListener, IProjectsService, ProviderRegistry, RequestDispatcher } from "@noldova/teamrun-core";
 import type { Exception } from "@noldova/teamrun-foundation-exceptions";
 import type { JsonObject, JsonValue } from "@noldova/teamrun-foundation-json";
 import type { ServiceResponseInfo } from "@noldova/teamrun-foundation-services";
-import type { Event, IRequestDispatcher, ProtocolVersion, Response, WireMessage } from "@noldova/teamrun-protocol";
-import type { ExecutableLocator, IProcessTracker } from "@noldova/teamrun-providers";
+import type {
+  Event,
+  IRequestDispatcher,
+  Project,
+  ProtocolVersion,
+  Request,
+  Response,
+  TerminalLine,
+  TerminalLinePage,
+  TerminalLineRange,
+  TerminalScreen,
+  TerminalSize,
+  TerminalState,
+  WireMessage
+} from "@noldova/teamrun-protocol";
+import type { CommandRunner, ExecutableLocator, IProcessTracker, ProcessCommand } from "@noldova/teamrun-providers";
+import type { IBufferCell, IBufferLine } from "@xterm/headless";
+import type { IPty } from "node-pty";
 
 /**
  * Process roles participating in one installation's update.
@@ -672,6 +688,12 @@ export declare class RuntimeSettings {
    * The path of the file that records the provider processes started by runtimes.
    */
   public get processesPath(): string;
+
+  /**
+   * The folder that holds each open terminal's stored lines, one file per terminal; the runtime empties it when it
+   * starts.
+   */
+  public get terminalsPath(): string;
 }
 
 /**
@@ -1103,6 +1125,323 @@ export declare class Resources {
   public static formatRuntimeProductMismatch(expected: string, actual: string): string;
 
   /**
+   * The macOS platform name: `darwin`.
+   */
+  public static readonly macPlatform: string;
+  /**
+   * The separator of an operating system release's parts: `.`.
+   */
+  public static readonly versionSeparator: string;
+  /**
+   * Parameter name reported for a blank shell name.
+   */
+  public static readonly shellNameParameterName: string;
+  /**
+   * Parameter name reported for a blank executable.
+   */
+  public static readonly executableParameterName: string;
+  /**
+   * Parameter name reported for a blank environment variable name.
+   */
+  public static readonly variableNameParameterName: string;
+  /**
+   * Parameter name reported for an invalid wait for a shell to end.
+   */
+  public static readonly endMillisecondsParameterName: string;
+  /**
+   * Parameter name reported for an invalid output amount that pauses a shell.
+   */
+  public static readonly highWatermarkParameterName: string;
+  /**
+   * Parameter name reported for an invalid output amount that lets a shell continue.
+   */
+  public static readonly lowWatermarkParameterName: string;
+  /**
+   * The data directory's folder for stored terminal lines: `terminals`.
+   */
+  public static readonly terminalsDirectoryName: string;
+  /**
+   * The permissions of the stored-lines folder: owner only.
+   */
+  public static readonly terminalDirectoryMode: number;
+  /**
+   * The extension of a stored-lines file: `.jsonl`, one JSON line per stored line.
+   */
+  public static readonly terminalHistoryExtension: string;
+  /**
+   * How a stored-lines file is opened: created or emptied, for reading and writing.
+   */
+  public static readonly terminalHistoryFlags: string;
+  /**
+   * The permissions of a stored-lines file: owner only, because output can contain secrets.
+   */
+  public static readonly terminalHistoryMode: number;
+  /**
+   * How many stored lines share one remembered file position: 64.
+   */
+  public static readonly terminalHistoryBlockLines: number;
+  /**
+   * How many bytes a page read takes from the file at a time: 64 KiB.
+   */
+  public static readonly terminalHistoryReadBytes: number;
+  /**
+   * The byte that ends a stored line in the file.
+   */
+  public static readonly lineFeedByte: number;
+  /**
+   * How many lines the emulator keeps above its screen before they are stored: 512.
+   */
+  public static readonly terminalCaptureScrollback: number;
+  /**
+   * How many lines above the screen make the emulator drop its stored lines: 256.
+   */
+  public static readonly terminalCompactionLines: number;
+  /**
+   * How long to wait for a shell to end after each attempt: 2 seconds.
+   */
+  public static readonly terminalEndMilliseconds: number;
+  /**
+   * The unprocessed output that pauses a shell: 512 KiB.
+   */
+  public static readonly terminalHighWatermark: number;
+  /**
+   * The unprocessed output that lets a paused shell continue: 128 KiB.
+   */
+  public static readonly terminalLowWatermark: number;
+  /**
+   * The signal that forces a shell to end outside Windows: `SIGKILL`.
+   */
+  public static readonly forceKillSignal: string;
+  /**
+   * The emulator's name for the Windows pseudo-console: `conpty`.
+   */
+  public static readonly conptyBackend: "conpty";
+  /**
+   * The emulator's name for the normal screen: `normal`.
+   */
+  public static readonly normalBufferType: "normal";
+  /**
+   * The final character of Erase in Display: `J`.
+   */
+  public static readonly eraseInDisplayFinal: string;
+  /**
+   * The prefix of private control sequences: `?`.
+   */
+  public static readonly privatePrefix: string;
+  /**
+   * The final character of a full reset: `c`.
+   */
+  public static readonly fullResetFinal: string;
+  /**
+   * The Erase in Display parameter that erases the saved lines: 3.
+   */
+  public static readonly eraseSavedLinesParameter: number;
+  /**
+   * The text of an empty cell: a space.
+   */
+  public static readonly blankCell: string;
+  /**
+   * The terminal type shells see outside Windows: `xterm-256color`.
+   */
+  public static readonly terminalTermName: string;
+  /**
+   * The terminal type variable: `TERM`.
+   */
+  public static readonly termVariable: string;
+  /**
+   * The color support variable: `COLORTERM`.
+   */
+  public static readonly colorTermVariable: string;
+  /**
+   * The value that announces 24-bit color: `truecolor`.
+   */
+  public static readonly trueColorValue: string;
+  /**
+   * The language variable: `LANG`.
+   */
+  public static readonly languageVariable: string;
+  /**
+   * The character type variable: `LC_CTYPE`.
+   */
+  public static readonly characterTypeVariable: string;
+  /**
+   * The variables that set a locale: `LANG`, `LC_ALL` and `LC_CTYPE`.
+   */
+  public static readonly localeVariables: readonly string[];
+  /**
+   * The locale that sets only UTF-8 characters: `UTF-8`.
+   */
+  public static readonly utf8Locale: string;
+  /**
+   * The variables TeamRun's launch adds to its own processes, which shells do not see.
+   */
+  public static readonly launchVariables: readonly string[];
+  /**
+   * The variable where Electron keeps the desktop name it replaced: `ORIGINAL_XDG_CURRENT_DESKTOP`.
+   */
+  public static readonly originalDesktopVariable: string;
+  /**
+   * The desktop name variable: `XDG_CURRENT_DESKTOP`.
+   */
+  public static readonly desktopVariable: string;
+  /**
+   * The shell variable: `SHELL`.
+   */
+  public static readonly shellVariable: string;
+  /**
+   * The shell used when no login shell is recorded: `/bin/sh`.
+   */
+  public static readonly defaultUnixShell: string;
+  /**
+   * The argument that starts a login shell: `-l`.
+   */
+  public static readonly loginShellArgument: string;
+  /**
+   * The Windows search path variable: `Path`.
+   */
+  public static readonly pathVariable: string;
+  /**
+   * The separator of Windows search path entries: `;`.
+   */
+  public static readonly windowsPathSeparator: string;
+  /**
+   * Matches separators at the end of a search path.
+   */
+  public static readonly trailingPathSeparators: RegExp;
+  /**
+   * Matches a `%NAME%` reference in a Windows environment value.
+   */
+  public static readonly environmentReferencePattern: RegExp;
+  /**
+   * The program files variable: `ProgramFiles`.
+   */
+  public static readonly programFilesVariable: string;
+  /**
+   * The Windows folder variable: `SystemRoot`.
+   */
+  public static readonly systemRootVariable: string;
+  /**
+   * The display name of PowerShell 7.
+   */
+  public static readonly powerShellName: string;
+  /**
+   * The executable of PowerShell 7.
+   */
+  public static readonly powerShellExecutable: string;
+  /**
+   * Where PowerShell 7 installs under the program files folder.
+   */
+  public static readonly powerShellDirectorySegments: readonly string[];
+  /**
+   * The local application data variable: `LOCALAPPDATA`.
+   */
+  public static readonly localAppDataVariable: string;
+  /**
+   * Where Microsoft Store apps keep their execution aliases under the local application data folder.
+   */
+  public static readonly appAliasDirectorySegments: readonly string[];
+  /**
+   * The display name of Windows PowerShell.
+   */
+  public static readonly windowsPowerShellName: string;
+  /**
+   * Where Windows PowerShell is under the Windows folder.
+   */
+  public static readonly windowsPowerShellSegments: readonly string[];
+  /**
+   * The Windows PowerShell arguments before the encoded registry script.
+   */
+  public static readonly windowsEnvironmentArguments: readonly string[];
+  /**
+   * How long reading the registry may take: 10 seconds.
+   */
+  public static readonly windowsEnvironmentMilliseconds: number;
+  /**
+   * The line that ends the registry script's output: `End`.
+   */
+  public static readonly windowsEnvironmentEnd: string;
+  /**
+   * The separator of a registry output line's fields: a space.
+   */
+  public static readonly windowsEnvironmentFieldSeparator: string;
+  /**
+   * How many fields a registry output line has: 4.
+   */
+  public static readonly windowsEnvironmentFieldCount: number;
+  /**
+   * The registry kind of a plain string value: `String`.
+   */
+  public static readonly plainValueKind: string;
+  /**
+   * The registry kind of an expandable string value: `ExpandString`.
+   */
+  public static readonly expandableValueKind: string;
+  /**
+   * Matches canonical base64 text.
+   */
+  public static readonly base64Pattern: RegExp;
+  /**
+   * The base64 encoding name.
+   */
+  public static readonly base64Encoding: BufferEncoding;
+  /**
+   * The UTF-16 encoding name, used for PowerShell's encoded commands.
+   */
+  public static readonly utf16Encoding: BufferEncoding;
+  /**
+   * Matches the end of an output line on any platform.
+   */
+  public static readonly outputLinePattern: RegExp;
+  /**
+   * The Windows PowerShell script that prints the machine, user and sign-in session environment variables.
+   */
+  public static readonly windowsEnvironmentScript: string;
+  /**
+   * The reason given when Windows PowerShell cannot start.
+   */
+  public static readonly windowsEnvironmentNotStarted: string;
+  /**
+   * The reason given when the registry read times out.
+   */
+  public static readonly windowsEnvironmentTimedOut: string;
+  /**
+   * The reason given when the registry read prints output that cannot be read.
+   */
+  public static readonly windowsEnvironmentUnreadable: string;
+  /**
+   * Message for a Windows environment without `SystemRoot`.
+   */
+  public static readonly systemRootMissing: string;
+  /**
+   * Message for a terminal that does not exist or belongs to another connection.
+   */
+  public static readonly terminalNotFound: string;
+  /**
+   * Message for input to a terminal whose shell is not running.
+   */
+  public static readonly terminalShellNotRunning: string;
+  /**
+   * Message for opening a terminal in a project that does not exist.
+   */
+  public static readonly terminalProjectNotFound: string;
+  /**
+   * Message for opening a terminal in a project whose folder is missing.
+   */
+  public static readonly terminalFolderMissing: string;
+  /**
+   * Message for opening a terminal while the runtime or the connection is closing.
+   */
+  public static readonly terminalsStopped: string;
+  /**
+   * Message for stored lines that could not be written; the exception's cause is the file system failure.
+   */
+  public static readonly storedLinesFailed: string;
+  /**
+   * Message for a stored-lines file that ends before its lines.
+   */
+  public static readonly storedLinesDamaged: string;
+
+  /**
    * Formats the version-mismatch refusal.
    * @param client The client's protocol version.
    * @param runtime The runtime's protocol version.
@@ -1157,12 +1496,41 @@ export declare class Resources {
    * Composes the `ps` arguments that name one process's command.
    */
   public static formatPsArguments(processId: number): readonly string[];
+
+  /**
+   * Formats the refusal of a method the terminal host does not answer.
+   * @param method The method.
+   * @returns The text.
+   */
+  public static formatUnknownTerminalMethod(method: string): string;
+
+  /**
+   * Formats the message for environment variables that could not be read from Windows.
+   * @param reason Why they could not be read.
+   * @returns The text.
+   */
+  public static formatWindowsEnvironmentFailed(reason: string): string;
+
+  /**
+   * Formats the reason given when Windows PowerShell fails.
+   * @param exitCode Its exit code, or `null` when a signal ended it.
+   * @returns The text.
+   */
+  public static formatWindowsEnvironmentExit(exitCode: number | null): string;
+
+  /**
+   * Formats a UTF-8 locale name.
+   * @param language The language, such as `en`.
+   * @param region The region, such as `US`.
+   * @returns The locale, such as `en_US.UTF-8`.
+   */
+  public static formatUtf8Locale(language: string, region: string): string;
 }
 
 /**
  * One client connection on the server side: lines in, wire messages out.
  */
-export declare class ClientSession {
+export declare class ClientSession implements ITerminalOwner {
   /**
    * Initializes the session over an accepted socket.
    * @param socket The socket.
@@ -1269,9 +1637,13 @@ export declare class RuntimeServer implements ISessionListener, IEventListener {
    * @param listener Receives session-count changes.
    * @param isBusy Reports background provider work that prevents admission pausing; defaults to false.
    * @param pauseLeaseMilliseconds Pause lifetime; defaults to 30 seconds. Repeated owner calls renew it.
+   * @param shutdown Stops the runtime for an update, or `null` when the server cannot stop for one.
+   * @param terminals Answers terminal requests for the connection that sends them and ends a closed connection's
+   * terminals, or `null` when the server has no terminals.
    * @throws ArgumentException when the path or the token is blank.
    */
-  public constructor(endpointKind: EndpointKind, socketPath: string, token: string, dispatcher: IRequestDispatcher, listener: IServerListener, isBusy?: () => boolean, pauseLeaseMilliseconds?: number, shutdown?: IUpdateShutdown | null);
+  public constructor(endpointKind: EndpointKind, socketPath: string, token: string, dispatcher: IRequestDispatcher, listener: IServerListener, isBusy?: () => boolean, pauseLeaseMilliseconds?: number, shutdown?: IUpdateShutdown | null,
+    terminals?: TerminalHost | null);
 
   /**
    * Where the server listens, or `null` when it does not.
@@ -1317,7 +1689,7 @@ export declare class RuntimeServer implements ISessionListener, IEventListener {
   public onLine(session: ClientSession, line: string): void;
 
   /**
-   * Forgets a closed session.
+   * Forgets a closed session and ends its terminals.
    * @param session The session.
    */
   public onClosed(session: ClientSession): void;
@@ -1549,8 +1921,11 @@ export declare class RuntimeService implements IServerListener, IIdleParticipant
    * @param settings The settings.
    * @param registry The provider adapters.
    * @param processes The provider processes started by runtimes; leftovers of dead runtimes are ended at start.
+   * @param installation The installation's registry of processes, or `null` outside an installation.
+   * @param shells Finds the shell a new terminal starts; the platform's default shell by default.
    */
-  public constructor(settings: RuntimeSettings, registry: ProviderRegistry, processes: ProcessRegistry, installation?: InstallationRegistry | null);
+  public constructor(settings: RuntimeSettings, registry: ProviderRegistry, processes: ProcessRegistry, installation?: InstallationRegistry | null,
+    shells?: IShellLocator);
 
   /**
    * Creates an immutable verified recovery copy after update shutdown.
@@ -1643,4 +2018,674 @@ export declare class TokenGenerator {
    * @returns The token.
    */
   public generate(): string;
+}
+
+/**
+ * Where a Windows environment variable is defined.
+ */
+export declare enum RegistryScope {
+  /**
+   * The machine's variables, which apply to every user.
+   */
+  System = "System",
+  /**
+   * The signed-in user's variables.
+   */
+  User = "User",
+  /**
+   * The variables Windows sets for each sign-in, such as `USERNAME` and `USERPROFILE`, which take precedence over the
+   * machine's.
+   */
+  Session = "Session"
+}
+
+/**
+ * The connection a terminal belongs to: it receives the terminal's events, and the terminal ends when it closes.
+ */
+export interface ITerminalOwner {
+  /**
+   * Whether the connection has closed.
+   */
+  readonly isClosed: boolean;
+
+  /**
+   * Sends a message to the connection; ignored once it has closed.
+   * @param message The message.
+   */
+  write(message: WireMessage): void;
+}
+
+/**
+ * Receives what a shell running in a pseudo-terminal prints and when it ends.
+ */
+export interface IPseudoTerminalListener {
+  /**
+   * Receives output as the shell printed it.
+   * @param source The pseudo-terminal that received the output.
+   * @param data The output.
+   */
+  onData(source: PseudoTerminal, data: string): void;
+
+  /**
+   * Receives the shell's end, after all of its output.
+   * @param source The pseudo-terminal whose shell ended.
+   * @param exitCode The shell's exit code.
+   */
+  onExit(source: PseudoTerminal, exitCode: number): void;
+}
+
+/**
+ * Finds the shell a new terminal starts.
+ */
+export interface IShellLocator {
+  /**
+   * Finds the default shell.
+   * @param environment The environment the shell will start with, which is also where it is looked for.
+   * @returns The shell.
+   * @throws ServiceException when no shell can be found.
+   */
+  findDefault(environment: ShellEnvironment): Shell;
+}
+
+/**
+ * An environment variable read from the Windows registry, before any `%NAME%` reference in it is expanded.
+ */
+export declare class RegistryVariable {
+  /**
+   * Where the variable is defined.
+   */
+  public readonly scope: RegistryScope;
+  /**
+   * The variable's name, spelled as in the registry.
+   */
+  public readonly name: string;
+  /**
+   * The variable's value as stored.
+   */
+  public readonly value: string;
+  /**
+   * Whether `%NAME%` references in the value name other variables to expand.
+   */
+  public readonly isExpandable: boolean;
+
+  /**
+   * Initializes the variable.
+   * @param scope Where the variable is defined.
+   * @param name The name; must not be blank.
+   * @param value The value as stored; may be empty.
+   * @param isExpandable Whether the value is stored as an expandable string.
+   * @throws ArgumentException when the name is blank.
+   */
+  public constructor(scope: RegistryScope, name: string, value: string, isExpandable: boolean);
+}
+
+/**
+ * A shell a terminal can start: its display name and how to run it.
+ */
+export declare class Shell {
+  /**
+   * The display name, such as `PowerShell` or `zsh`.
+   */
+  public readonly name: string;
+  /**
+   * The executable's path.
+   */
+  public readonly executable: string;
+  /**
+   * The arguments, copied on construction.
+   */
+  public readonly arguments: readonly string[];
+
+  /**
+   * Initializes the shell.
+   * @param name The display name; must not be blank.
+   * @param executable The executable's path; must not be blank.
+   * @param args The arguments; copied.
+   * @throws ArgumentException when the name or the executable is blank.
+   */
+  public constructor(name: string, executable: string, args: readonly string[]);
+}
+
+/**
+ * The environment variables a shell starts with. On Windows names ignore case, so each name appears once, spelled as
+ * it was last set.
+ */
+export declare class ShellEnvironment {
+  /**
+   * Initializes an empty environment.
+   * @param ignoresCase Whether names ignore case, as on Windows.
+   */
+  public constructor(ignoresCase: boolean);
+
+  /**
+   * Reads a variable.
+   * @param name The name.
+   * @returns The value, or `undefined` when the variable is not set.
+   */
+  public get(name: string): string | undefined;
+
+  /**
+   * Sets a variable, replacing any variable with the same name.
+   * @param name The name.
+   * @param value The value.
+   */
+  public set(name: string, value: string): void;
+
+  /**
+   * Removes a variable when it is set.
+   * @param name The name.
+   */
+  public delete(name: string): void;
+
+  /**
+   * Renders the variables for starting a process.
+   * @returns A new object with one property per variable.
+   */
+  public toRecord(): Record<string, string>;
+}
+
+/**
+ * How terminals behave on the runtime's platform: the Windows build the emulator adapts to, how a shell is ended, and
+ * how much unprocessed output pauses a shell.
+ */
+export declare class TerminalSettings {
+  /**
+   * The Windows build number, or `null` on other platforms.
+   */
+  public readonly windowsBuild: number | null;
+  /**
+   * The signal sent when a shell does not end after being asked; `undefined` on Windows, where ending a
+   * pseudo-terminal already ends its processes.
+   */
+  public readonly forceSignal: string | undefined;
+  /**
+   * How long to wait for a shell to end after each attempt, in milliseconds.
+   */
+  public readonly endMilliseconds: number;
+  /**
+   * The unprocessed output, in characters and bytes waiting to be stored, above which the shell is paused.
+   */
+  public readonly highWatermark: number;
+  /**
+   * The unprocessed output at or below which a paused shell continues.
+   */
+  public readonly lowWatermark: number;
+
+  /**
+   * Initializes the settings.
+   * @param windowsBuild The Windows build number, or `null`.
+   * @param forceSignal The signal that forces a shell to end, or `undefined`.
+   * @param endMilliseconds How long to wait for a shell to end after each attempt; a positive integer.
+   * @param highWatermark The unprocessed output that pauses a shell; a positive integer.
+   * @param lowWatermark The unprocessed output that lets a paused shell continue; a non-negative integer below
+   * `highWatermark`.
+   * @throws ArgumentOutOfRangeException when a number is out of range.
+   */
+  public constructor(windowsBuild: number | null, forceSignal: string | undefined, endMilliseconds: number, highWatermark: number, lowWatermark: number);
+
+  /**
+   * Chooses the settings for a platform.
+   * @param platform The platform, as `process.platform`.
+   * @param release The operating system release, as `os.release()`; on Windows its third part is the build number.
+   * @returns The settings, with two-second end attempts and a 512 KiB to 128 KiB pause range.
+   */
+  public static forPlatform(platform: string, release: string): TerminalSettings;
+}
+
+/**
+ * Finds the default shell: PowerShell 7 on Windows, or Windows PowerShell when it is absent, and elsewhere the
+ * person's login shell, started as a login shell so it reads their profile.
+ */
+export declare class ShellLocator implements IShellLocator {
+  /**
+   * Initializes the locator.
+   * @param platform The platform, as `process.platform`.
+   * @param userShell Reads the person's login shell from the system, or `null` when none is recorded; a failure counts
+   * as none.
+   * @param exists Tells whether a file exists.
+   */
+  public constructor(platform: string, userShell: () => string | null, exists: (path: string) => boolean);
+
+  /**
+   * Creates the locator for a platform, reading the login shell from the system's user record. A file counts as
+   * present when the file system lists it, so a Microsoft Store app execution alias for PowerShell 7 counts although
+   * it cannot be opened as a file; a path that cannot be inspected counts as absent.
+   * @param platform The platform, as `process.platform`.
+   * @returns The locator.
+   */
+  public static fromPlatform(platform: string): ShellLocator;
+
+  /**
+   * Finds the default shell. On Windows it looks for `pwsh.exe` in `Path`, in `%ProgramFiles%\PowerShell\7` and among
+   * the Microsoft Store's aliases in `%LOCALAPPDATA%\Microsoft\WindowsApps`, and otherwise uses Windows PowerShell
+   * under `%SystemRoot%`. Elsewhere it uses the login shell, then `SHELL`, then `/bin/sh`, with the `-l` argument.
+   * @param environment The environment the shell will start with.
+   * @returns The shell.
+   * @throws ServiceException `Unavailable` on Windows when neither PowerShell 7 nor `SystemRoot` is found.
+   */
+  public findDefault(environment: ShellEnvironment): Shell;
+}
+
+/**
+ * Reads the Windows machine, user and sign-in session environment variables from the registry through Windows
+ * PowerShell, without expanding them, so a new shell sees variables set after TeamRun started.
+ */
+export declare class WindowsEnvironmentReader {
+  /**
+   * Initializes the reader.
+   * @param command The command that prints the variables.
+   * @param runner Runs the command.
+   * @param timeoutMilliseconds How long the command may run; a positive integer.
+   */
+  public constructor(command: ProcessCommand, runner: CommandRunner, timeoutMilliseconds: number);
+
+  /**
+   * Creates the reader that runs Windows PowerShell from the Windows folder with a 10-second deadline.
+   * @param systemRoot The Windows folder, from `SystemRoot`.
+   * @param runner Runs the command.
+   * @returns The reader.
+   */
+  public static forSystemRoot(systemRoot: string, runner: CommandRunner): WindowsEnvironmentReader;
+
+  /**
+   * Reads the variables. The command prints one line per string variable, its scope, its kind and its base64-encoded
+   * UTF-8 name and value separated by spaces, and then `End`.
+   * @param environment The environment to run the command with.
+   * @returns The machine, user and session variables, in the order printed.
+   * @throws ServiceException `Unavailable` (as a rejected promise) when the command cannot start, times out, fails or
+   * prints output that cannot be read.
+   */
+  public read(environment: NodeJS.ProcessEnv): Promise<readonly RegistryVariable[]>;
+}
+
+/**
+ * Builds the environment a new or restarted shell starts with. It starts from the runtime's environment without the
+ * variables that TeamRun's own launch added, restores `XDG_CURRENT_DESKTOP` when Electron replaced it, and on Windows
+ * adds the machine, then the user and then the sign-in session variables read from the registry, as Windows does,
+ * expanding `%NAME%` references and joining the machine and user `Path`. It sets `COLORTERM=truecolor`, `TERM=xterm-256color` outside Windows, and on macOS, when no
+ * locale variable is set, `LANG` for the system locale or `LC_CTYPE=UTF-8` when the locale has no region.
+ */
+export declare class TerminalEnvironment {
+  /**
+   * Initializes the builder.
+   * @param platform The platform, as `process.platform`.
+   * @param base The runtime's environment.
+   * @param registry Reads the Windows registry variables, or `null` to add none.
+   * @param locale The system locale as a BCP 47 tag, used on macOS.
+   */
+  public constructor(platform: string, base: NodeJS.ProcessEnv, registry: WindowsEnvironmentReader | null, locale: string);
+
+  /**
+   * Creates the builder for a platform, reading the registry only on Windows.
+   * @param platform The platform, as `process.platform`.
+   * @param base The runtime's environment.
+   * @param locale The system locale as a BCP 47 tag.
+   * @returns The builder.
+   * @throws ServiceException `Unavailable` on Windows when `SystemRoot` is not set.
+   */
+  public static forPlatform(platform: string, base: NodeJS.ProcessEnv, locale: string): TerminalEnvironment;
+
+  /**
+   * Builds a fresh environment.
+   * @returns The environment; each call reads the registry again on Windows.
+   * @throws ServiceException `Unavailable` (as a rejected promise) when the registry cannot be read.
+   */
+  public create(): Promise<ShellEnvironment>;
+}
+
+/**
+ * The pseudo-terminal a shell runs in, behind which `node-pty` stays: it passes input, size and flow control to the
+ * shell, reports output and the shell's end, and ends the shell on request.
+ */
+export declare class PseudoTerminal {
+  /**
+   * Wraps a started pseudo-terminal and listens to it until the shell ends.
+   * @param pty The `node-pty` pseudo-terminal.
+   * @param listener Receives output and the shell's end.
+   * @param forceSignal The signal that forces the shell to end when asking does not, or `undefined` to ask again.
+   * @param graceMilliseconds How long to wait for the shell to end after each attempt.
+   */
+  public constructor(pty: IPty, listener: IPseudoTerminalListener, forceSignal: string | undefined, graceMilliseconds: number);
+
+  /**
+   * Starts a shell in a pseudo-terminal.
+   * @param shell The shell.
+   * @param directory The folder the shell starts in.
+   * @param environment The shell's environment.
+   * @param size The pseudo-terminal's size.
+   * @param listener Receives output and the shell's end.
+   * @param forceSignal The signal that forces the shell to end, or `undefined`.
+   * @param graceMilliseconds How long to wait for the shell to end after each attempt.
+   * @returns The pseudo-terminal.
+   * @throws Error when `node-pty` cannot start the process; on Windows a failed start is reported as an exit.
+   */
+  public static start(
+    shell: Shell,
+    directory: string,
+    environment: ShellEnvironment,
+    size: TerminalSize,
+    listener: IPseudoTerminalListener,
+    forceSignal: string | undefined,
+    graceMilliseconds: number): PseudoTerminal;
+
+  /**
+   * Whether the shell has ended.
+   */
+  public get hasExited(): boolean;
+
+  /**
+   * Sends input to the shell.
+   * @param data The input.
+   */
+  public write(data: string): void;
+
+  /**
+   * Resizes the pseudo-terminal.
+   * @param size The new size.
+   */
+  public resize(size: TerminalSize): void;
+
+  /**
+   * Stops reading output, so a shell that keeps printing waits.
+   */
+  public pause(): void;
+
+  /**
+   * Reads output again after `pause`.
+   */
+  public resume(): void;
+
+  /**
+   * Ends the shell: asks it to end (a hangup outside Windows), waits, then forces it and waits again.
+   * @returns A promise that settles when the shell has ended or the second wait has passed; `hasExited` tells which.
+   */
+  public end(): Promise<void>;
+}
+
+/**
+ * Reads a line of the headless emulator's buffer as a stored `TerminalLine`: its text, whether it continues the line
+ * before, and its styles.
+ */
+export declare class TerminalLineReader {
+  /**
+   * Initializes the reader.
+   * @param cell A cell of the emulator's buffer that the reader reuses for every cell it reads.
+   */
+  public constructor(cell: IBufferCell);
+
+  /**
+   * Reads a line. Trailing blanks without a background color, inverse video or a line are left out, unless the next
+   * line continues this one.
+   * @param line The buffer line.
+   * @param isContinued Whether the next line continues this one.
+   * @returns The stored line.
+   */
+  public read(line: IBufferLine, isContinued: boolean): TerminalLine;
+}
+
+/**
+ * A terminal's stored lines, in a file of the runtime's data directory, written without blocking the runtime. Line
+ * numbers keep counting after the lines are cleared. The file is created with the first line and deleted by `close`.
+ */
+export declare class TerminalHistory {
+  /**
+   * Initializes the history without creating its file.
+   * @param path The file's path.
+   * @param onWritten Called after each write finishes, when `backlog` has shrunk.
+   */
+  public constructor(path: string, onWritten: () => void);
+
+  /**
+   * The lines stored so far.
+   */
+  public get stored(): TerminalLineRange;
+
+  /**
+   * The bytes of stored lines not yet written to the file.
+   */
+  public get backlog(): number;
+
+  /**
+   * Stores a line; nothing is stored after a write has failed.
+   * @param line The line.
+   */
+  public append(line: TerminalLine): void;
+
+  /**
+   * Forgets every stored line, as clearing a terminal does.
+   */
+  public clear(): void;
+
+  /**
+   * Reads a page of stored lines once the lines stored before it are written.
+   * @param start The number of the first line to read; lines already cleared are skipped.
+   * @param limit How many lines at most.
+   * @returns The page.
+   * @throws ServiceException `Unavailable` (as a rejected promise) when a write failed, or `Internal` when the file
+   * is damaged.
+   */
+  public read(start: number, limit: number): Promise<TerminalLinePage>;
+
+  /**
+   * Discards lines not yet written, then closes and deletes the file.
+   * @returns A promise that settles when the file is gone.
+   * @throws Error (as a rejected promise) when the file cannot be closed or deleted.
+   */
+  public close(): Promise<void>;
+}
+
+/**
+ * The runtime's copy of a terminal's screen, drawn by `@xterm/headless`. Lines that leave the screen are stored in
+ * the terminal's history as they leave it; erasing saved lines or a full reset clears the history, and the alternate
+ * screen of full-screen programs is not stored.
+ */
+export declare class TerminalEmulator implements Disposable {
+  /**
+   * Initializes an empty screen.
+   * @param size The screen's size.
+   * @param history Receives the lines that leave the screen.
+   * @param windowsBuild The Windows build the pseudo-terminal runs on, or `null` elsewhere.
+   */
+  public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null);
+
+  /**
+   * The screen's size.
+   */
+  public get size(): TerminalSize;
+
+  /**
+   * The characters written but not yet processed.
+   */
+  public get backlog(): number;
+
+  /**
+   * Processes output after the output written before it.
+   * @param data The output.
+   * @param parsed Called once the output has been processed.
+   */
+  public write(data: string, parsed: () => void): void;
+
+  /**
+   * Runs an action once everything written so far has been processed.
+   * @param action The action.
+   */
+  public afterWrites(action: () => void): void;
+
+  /**
+   * Resizes the screen now. Lines that the new size pushes off the screen are stored, and stored lines never come
+   * back onto it.
+   * @param size The new size.
+   */
+  public resize(size: TerminalSize): void;
+
+  /**
+   * Serializes the screen, the cursor and the modes programs set, including an active alternate screen.
+   * @returns Terminal output that restores the screen in an emulator of the same size.
+   */
+  public screen(): string;
+
+  /**
+   * Stores the screen's lines up to the cursor or the last line with text, whichever is lower, as a restart does
+   * before the new shell starts on an empty screen.
+   */
+  public storeScreen(): void;
+
+  /**
+   * Releases the emulator.
+   */
+  public [Symbol.dispose](): void;
+}
+
+/**
+ * One terminal: the shell in its pseudo-terminal, the runtime's copy of its screen and its stored lines. It sends the
+ * processed output and its changes to its owner as `TerminalOutput` and `TerminalChanged` events, in the order they
+ * happened, and pauses the shell while too much output waits to be processed or stored.
+ */
+export declare class HostedTerminal implements IPseudoTerminalListener {
+  /**
+   * The terminal id.
+   */
+  public readonly id: string;
+  /**
+   * The connection the terminal belongs to.
+   */
+  public readonly owner: ITerminalOwner;
+
+  /**
+   * Starts a shell in a new terminal.
+   * @param id The terminal id.
+   * @param owner The connection the terminal belongs to.
+   * @param project The project whose folder the shell starts in.
+   * @param shell The shell.
+   * @param environment The shell's environment.
+   * @param size The terminal's size.
+   * @param historyPath The file for the stored lines.
+   * @param settings The platform's terminal settings.
+   * @returns The terminal; a shell whose executable cannot run ends at once with an exit code.
+   * @throws Error when `node-pty` cannot start the pseudo-terminal.
+   */
+  public static start(
+    id: string,
+    owner: ITerminalOwner,
+    project: Project,
+    shell: Shell,
+    environment: ShellEnvironment,
+    size: TerminalSize,
+    historyPath: string,
+    settings: TerminalSettings): HostedTerminal;
+
+  /**
+   * The terminal's state as of the last event sent.
+   */
+  public get state(): TerminalState;
+
+  /**
+   * Sends input to the shell.
+   * @param data The input.
+   * @throws ServiceException `Conflict` when the shell is not running.
+   */
+  public input(data: string): void;
+
+  /**
+   * Resizes the pseudo-terminal now and the screen after the output already received, then sends `TerminalChanged`;
+   * the current size does nothing.
+   * @param size The new size.
+   */
+  public resize(size: TerminalSize): void;
+
+  /**
+   * Sends the processed output, then reads the screen.
+   * @returns The state and the screen, which match each other.
+   */
+  public screen(): TerminalScreen;
+
+  /**
+   * Reads a page of stored lines.
+   * @param start The number of the first line.
+   * @param limit How many lines at most.
+   * @returns The page.
+   * @throws ServiceException (as a rejected promise) when the lines cannot be read.
+   */
+  public lines(start: number, limit: number): Promise<TerminalLinePage>;
+
+  /**
+   * Ends the running shell, moves the screen into the stored lines and starts the same shell again, after any earlier
+   * restart or close; the old shell's end is reported first.
+   * @param environment The new shell's environment.
+   * @returns A promise that settles once the new shell runs and `TerminalChanged` was sent.
+   * @throws ServiceException (as a rejected promise) `NotFound` after the terminal closed, or Error when `node-pty`
+   * cannot start the pseudo-terminal.
+   */
+  public restart(environment: ShellEnvironment): Promise<void>;
+
+  /**
+   * Ends the shell, releases the screen and deletes the stored lines, after any earlier restart.
+   * @returns A promise that settles when the terminal is gone.
+   * @throws Error (as a rejected promise) when the stored lines cannot be deleted.
+   */
+  public close(): Promise<void>;
+
+  /**
+   * Processes the running shell's output; output of a shell that was replaced or closed is ignored.
+   * @param source The pseudo-terminal.
+   * @param data The output.
+   */
+  public onData(source: PseudoTerminal, data: string): void;
+
+  /**
+   * Records the running shell's end once its output is processed, and sends `TerminalChanged`.
+   * @param source The pseudo-terminal.
+   * @param exitCode The exit code.
+   */
+  public onExit(source: PseudoTerminal, exitCode: number): void;
+}
+
+/**
+ * The runtime's terminals. A terminal belongs to the connection that opened it: only that connection lists it,
+ * receives its events and can use it, and the terminal ends when the connection closes.
+ */
+export declare class TerminalHost {
+  /**
+   * Initializes the host.
+   * @param projects Finds the project a terminal opens in.
+   * @param directory The folder for the stored lines.
+   * @param shells Finds the shell a new terminal starts.
+   * @param environment Builds each shell's environment.
+   * @param settings The platform's terminal settings.
+   */
+  public constructor(projects: IProjectsService, directory: string, shells: IShellLocator, environment: TerminalEnvironment, settings: TerminalSettings);
+
+  /**
+   * Empties the folder for stored lines, removing what a runtime that did not stop cleanly left behind.
+   * @throws Error when the folder cannot be emptied or created.
+   */
+  public prepare(): void;
+
+  /**
+   * Tells whether a method is a terminal method.
+   * @param method The method.
+   * @returns Whether `dispatch` answers it.
+   */
+  public handles(method: string): boolean;
+
+  /**
+   * Answers a terminal request from a connection; never throws.
+   * @param owner The connection that sent the request.
+   * @param request The request.
+   * @returns The response: `NotFound` for a terminal of another connection, `UnknownMethod` for a method that is not a
+   * terminal method.
+   */
+  public dispatch(owner: ITerminalOwner, request: Request): Promise<Response>;
+
+  /**
+   * Ends every terminal of a connection that closed, without waiting.
+   * @param owner The connection.
+   */
+  public endOwnedBy(owner: ITerminalOwner): void;
+
+  /**
+   * Refuses new terminals, ends every terminal and waits for terminals that are opening or closing.
+   * @returns A promise that settles when every terminal has ended.
+   */
+  public shutdown(): Promise<void>;
 }

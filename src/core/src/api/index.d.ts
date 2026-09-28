@@ -9,6 +9,7 @@
 import { DbContext, type DbContextOptions } from "@noldova/teamrun-foundation-data";
 import type { MigrationBuilder, SqlConnection, SqlMigration } from "@noldova/teamrun-foundation-data-sql";
 import type { JsonValue } from "@noldova/teamrun-foundation-json";
+import type { ServiceResponseInfo } from "@noldova/teamrun-foundation-services";
 import type {
   Approval,
   ApprovalDecideParams,
@@ -2611,6 +2612,15 @@ export declare class RequestDispatcher {
    * @returns The response with the request's id.
    */
   public dispatch(request: Request): Promise<Response>;
+
+  /**
+   * Describes a failure as the response info a failed request carries: a `ServiceException` keeps its own info, a
+   * `JsonException` becomes `InvalidParams` naming the field's path, an `ArgumentException` becomes `InvalidParams`
+   * naming the parameter when it has one, and anything else becomes `Internal` with its message.
+   * @param error The caught failure.
+   * @returns The info for `Response.failure`.
+   */
+  public static describe(error: unknown): ServiceResponseInfo;
 }
 
 /**

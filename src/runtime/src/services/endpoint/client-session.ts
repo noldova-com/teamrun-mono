@@ -12,10 +12,11 @@ import "@noldova/teamrun-foundation-core";
 import type { WireMessage } from "@noldova/teamrun-protocol";
 
 import type { ISessionListener } from "../../interfaces/i-session-listener.js";
+import type { ITerminalOwner } from "../../interfaces/i-terminal-owner.js";
 import { LineBuffer } from "../../models/line-buffer.js";
 import { Resources } from "../../resources.js";
 
-export class ClientSession {
+export class ClientSession implements ITerminalOwner {
   private readonly socket: Socket;
   private readonly listener: ISessionListener;
   private readonly lines: LineBuffer = new LineBuffer();

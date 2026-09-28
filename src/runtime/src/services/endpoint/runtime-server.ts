@@ -21,6 +21,7 @@ import type { ISessionListener } from "../../interfaces/i-session-listener.js";
 import type { IUpdateShutdown } from "../../interfaces/i-update-shutdown.js";
 import { Endpoint } from "../../models/endpoint.js";
 import { Resources } from "../../resources.js";
+import type { TerminalHost } from "../terminals/terminal-host.js";
 import { ClientSession } from "./client-session.js";
 
 export class RuntimeServer implements ISessionListener, IEventListener {
@@ -39,10 +40,12 @@ export class RuntimeServer implements ISessionListener, IEventListener {
   private pauseOwner: ClientSession | null = null;
   private pauseTimer: NodeJS.Timeout | null = null;
   private readonly shutdown: IUpdateShutdown | null;
+  private readonly terminals: TerminalHost | null;
   private committing: boolean = false;
 
   public constructor(endpointKind: EndpointKind, socketPath: string, token: string, dispatcher: IRequestDispatcher, listener: IServerListener,
-    isBusy: () => boolean = () => false, pauseLeaseMilliseconds: number = Resources.runtimePauseLeaseMilliseconds, shutdown: IUpdateShutdown | null = null) {
+    isBusy: () => boolean = () => false, pauseLeaseMilliseconds: number = Resources.runtimePauseLeaseMilliseconds, shutdown: IUpdateShutdown | null = null,
+    terminals: TerminalHost | null = null) {
     ArgumentException.throwIfNullOrWhitespace(socketPath, Resources.pathParameterName);
     ArgumentException.throwIfNullOrWhitespace(token, Resources.tokenParameterName);
 
@@ -54,6 +57,7 @@ export class RuntimeServer implements ISessionListener, IEventListener {
     this.isBusy = isBusy;
     this.pauseLeaseMilliseconds = pauseLeaseMilliseconds;
     this.shutdown = shutdown;
+    this.terminals = terminals;
   }
 
   public get endpoint(): Endpoint | null {
@@ -130,6 +134,7 @@ export class RuntimeServer implements ISessionListener, IEventListener {
     if (this.pauseOwner === session && !this.committing)
       this.resume();
     this.sessions.delete(session);
+    this.terminals?.endOwnedBy(session);
     this.listener.onSessionCountChanged(this.sessions.size);
   }
 
@@ -178,7 +183,9 @@ export class RuntimeServer implements ISessionListener, IEventListener {
     }
     this.activeRequests += 1;
     try {
-      const response = await this.dispatcher.dispatch(request);
+      const response = !Object.isNull(this.terminals) && this.terminals.handles(request.method)
+        ? await this.terminals.dispatch(session, request)
+        : await this.dispatcher.dispatch(request);
       try {
         await session.writeAndFlush(response);
         this.listener.onResponseSent?.(request);

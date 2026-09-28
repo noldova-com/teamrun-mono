@@ -21,11 +21,12 @@ import {
   RequestDispatcher
 } from "@noldova/teamrun-core";
 import {
-  EndpointKind, ProcessInspector, ProcessProbe, ProcessRegistry,
+  EndpointKind, type IShellLocator, ProcessInspector, ProcessProbe, ProcessRegistry,
   RuntimeClient, RuntimeService, RuntimeSettings, RuntimeTimings
 } from "@noldova/teamrun-runtime";
 
 import { FakeProviderAdapter } from "./fake-provider-adapter.fixture.js";
+import { FixtureShell } from "./fixture-shell.fixture.js";
 import { RecordingClientListener } from "./recording-client-listener.fixture.js";
 import { TemporaryDirectory } from "./temporary-directory.fixture.js";
 
@@ -50,9 +51,9 @@ export class RuntimeTestHost implements AsyncDisposable {
     return new RuntimeSettings(dataDirectory, RuntimeTestHost.PRODUCT_VERSION, kind, socketPath, idleGrace);
   }
 
-  public createService(settings: RuntimeSettings = this.createSettings()): RuntimeService {
+  public createService(settings: RuntimeSettings = this.createSettings(), shells: IShellLocator = new FixtureShell()): RuntimeService {
     const processes = new ProcessRegistry(settings.processesPath, process.pid, new ProcessProbe(), ProcessInspector.fromPlatform(process.platform));
-    const service = new RuntimeService(settings, this.registry, processes);
+    const service = new RuntimeService(settings, this.registry, processes, null, shells);
     this.services.push(service);
     return service;
   }
