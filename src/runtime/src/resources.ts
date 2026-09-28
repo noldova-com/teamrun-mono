@@ -207,7 +207,7 @@ export class Resources {
   public static readonly windowsPowerShellName: string = "Windows PowerShell";
   public static readonly windowsPowerShellSegments: readonly string[] = ["System32", "WindowsPowerShell", "v1.0", "powershell.exe"];
   public static readonly windowsEnvironmentArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
-  public static readonly windowsEnvironmentMilliseconds: number = 10_000;
+  public static readonly windowsEnvironmentMilliseconds: number = 20_000;
   public static readonly windowsEnvironmentEnd: string = "End";
   public static readonly windowsEnvironmentFieldSeparator: string = " ";
   public static readonly windowsEnvironmentFieldCount: number = 4;

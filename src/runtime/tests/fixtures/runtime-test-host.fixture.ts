@@ -37,7 +37,7 @@ export class RuntimeTestHost implements AsyncDisposable {
   public readonly adapter: FakeProviderAdapter = new FakeProviderAdapter();
   public readonly registry: ProviderRegistry = new ProviderRegistry();
   public readonly timings: RuntimeTimings = new RuntimeTimings(1000, 5000, 5000, 50);
-  public readonly terminalTimings: RuntimeTimings = new RuntimeTimings(1000, 20_000, 5000, 50);
+  public readonly terminalTimings: RuntimeTimings = new RuntimeTimings(1000, 25_000, 5000, 50);
   public readonly services: RuntimeService[] = [];
   public readonly clients: RuntimeClient[] = [];
   public readonly contexts: DatabaseContext[] = [];

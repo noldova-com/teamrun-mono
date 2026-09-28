@@ -2281,7 +2281,7 @@ export declare class WindowsEnvironmentReader {
   public constructor(command: ProcessCommand, runner: CommandRunner, timeoutMilliseconds: number);
 
   /**
-   * Creates the reader that runs Windows PowerShell from the Windows folder with a 10-second deadline.
+   * Creates the reader that runs Windows PowerShell from the Windows folder with a 20-second deadline.
    * @param systemRoot The Windows folder, from `SystemRoot`.
    * @param runner Runs the command.
    * @returns The reader.
