@@ -163,6 +163,43 @@ test("arranges panels in every region by dragging and from the tab menu, and res
   await expect(page.locator("tr-tab-group:not([data-side])")).toHaveCount(0);
 });
 
+test("opens a terminal in the default shell, runs a command, hides and shows it, finds it again after a reload, and closes it", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator(".xterm")).toBeVisible();
+  await expect(terminal.locator("textarea")).toBeFocused();
+  const panel = (await terminal.locator(".tr-terminal-screen").boundingBox())!;
+  const drawn = (await terminal.locator(".xterm-screen").boundingBox())!;
+  expect(Math.round(drawn.x - panel.x)).toBe(8);
+  expect(Math.round(drawn.y - panel.y)).toBe(6);
+  expect(panel.x + panel.width - (drawn.x + drawn.width)).toBeGreaterThanOrEqual(8);
+  expect(panel.y + panel.height - (drawn.y + drawn.height)).toBeGreaterThanOrEqual(6);
+
+  await page.keyboard.type("echo teamrun-terminal-check");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/);
+  await desktop.capture("terminal-opened");
+
+  await page.keyboard.press("Control+Backquote");
+  await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
+  await page.keyboard.press("Control+Backquote");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/);
+
+  await page.reload();
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/);
+  await terminal.locator(".xterm-screen").click();
+  await page.keyboard.type("echo teamrun-after-reload");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-after-reload[\s\S]*teamrun-after-reload/);
+
+  await page.locator("tr-tab-group[data-side='Bottom'] .tr-tab[data-panel^='Terminal:'] .tr-tab-close").click();
+  await expect(page.locator(".tr-tab[data-panel^='Terminal:']")).toHaveCount(0);
+  await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
+});
+
 test("quits when its window is gone before it could save", async () => {
   expect(await desktop.closeFromPage()).toBe(0);
 });

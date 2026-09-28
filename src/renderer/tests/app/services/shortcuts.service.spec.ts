@@ -10,10 +10,11 @@ import { DOCUMENT } from "@angular/common";
 import { TestBed } from "@angular/core/testing";
 import { MatDialog } from "@angular/material/dialog";
 
-import { Conversation, Event, EventName, MessageStatus, MethodName } from "@noldova/teamrun-protocol";
+import { Conversation, Event, EventName, MessageStatus, MethodName, TerminalScreen } from "@noldova/teamrun-protocol";
 
 import { MemoryStorage } from "../../fixtures/memory-storage";
 import { SampleData } from "../../fixtures/sample-data";
+import { TerminalWindow } from "../../fixtures/terminal-window";
 import { AppView } from "../../../src/app/enums/app-view";
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelKind } from "../../../src/app/enums/panel-kind";
@@ -28,6 +29,7 @@ import { ChatStore } from "../../../src/app/services/chat-store.service";
 import { NavigationService } from "../../../src/app/services/navigation.service";
 import { LayoutService } from "../../../src/app/services/layout.service";
 import { ShortcutsService } from "../../../src/app/services/shortcuts.service";
+import { TerminalsService } from "../../../src/app/services/terminals.service";
 
 describe("ShortcutsService", () => {
   const explorer = new Panel(PanelKind.Explorer);
@@ -65,6 +67,44 @@ describe("ShortcutsService", () => {
     expect(shortcuts.keysOf(ShortcutAction.ToggleSidebar)).toBe("Ctrl + B");
     expect(shortcuts.keysOf(ShortcutAction.Back)).toBe("Alt + ←");
     expect(shortcuts.keysOf(ShortcutAction.Search)).toBe("Ctrl + K");
+    expect(shortcuts.keysOf(ShortcutAction.ToggleTerminal)).toBe("Ctrl + `");
+    expect(shortcuts.keysOf(ShortcutAction.NewTerminal)).toBe("Ctrl + Shift + `");
+  });
+
+  it("opens and shows terminals by the physical backquote key, and leaves a terminal for the message box", async () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const bridge = SampleData.createBridge()
+      .answer(MethodName.TerminalOpen, () => SampleData.terminal("t1").toJson())
+      .answer(MethodName.TerminalScreen, () => new TerminalScreen(SampleData.terminal("t1"), "").toJson());
+    TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    const document = TestBed.inject(DOCUMENT);
+    const store = TestBed.inject(ChatStore);
+    const navigation = TestBed.inject(NavigationService);
+    const terminals = TestBed.inject(TerminalsService);
+    const shortcuts = TestBed.inject(ShortcutsService);
+    started = shortcuts;
+    opened = store;
+    onTestFinished(() => terminals.stop());
+    shortcuts.start();
+
+    expect(press(document, "~", { code: "Backquote", ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
+    await store.initialize();
+    expect(press(document, "~", { code: "Backquote", ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(terminals.sessions().size).toBe(1));
+
+    const host = document.body.appendChild(document.createElement("div"));
+    host.classList.add("tr-terminal");
+    onTestFinished(() => host.remove());
+    terminals.sessions().get("t1")?.show(host, () => true);
+    let focused = 0;
+    shortcuts.attachComposer(() => { focused += 1; });
+    navigation.openSettings();
+    const leave = new KeyboardEvent("keydown", { key: "`", code: "Backquote", ctrlKey: true, bubbles: true, cancelable: true });
+    host.querySelector("textarea")!.dispatchEvent(leave);
+    expect(leave.defaultPrevented).toBe(true);
+    expect(navigation.view()).toBe(AppView.Chat);
+    await vi.waitFor(() => expect(focused).toBe(1));
   });
 
   it("handles the window's shortcuts while started and leaves handled keys alone", async () => {

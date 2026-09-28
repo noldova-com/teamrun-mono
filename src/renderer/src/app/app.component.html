@@ -12,6 +12,12 @@ LICENSE file in the root directory of this source tree.
   </div>
 }
 @if (restart.error(); as error) { <div class="tr-error fixed bottom-4 left-4 z-50 tr-raised px-4 py-2" role="alert">{{ error }}</div> }
+@if (terminals.error(); as error) {
+  <div class="tr-error tr-raised fixed bottom-4 left-4 z-50 flex items-center gap-2 px-4 py-2" role="alert">
+    <span class="flex-1">{{ error }}</span>
+    <button mat-button (click)="terminals.dismissError()">{{ resources.dismissLabel }}</button>
+  </div>
+}
 <div class="tr-window grid h-screen grid-rows-[auto_minmax(0,1fr)]" [inert]="restart.frozen()">
   <div class="tr-window-row tr-drag tr-title-bar-inset flex items-center gap-2 px-2">
     <tr-window-controls />
@@ -27,7 +33,7 @@ LICENSE file in the root directory of this source tree.
         }
       } @else if (navigation.panel(); as panel) {
         <mat-icon class="tr-muted tr-nav-icon">{{ resources.panelIcons[panel.kind] }}</mat-icon>
-        <span class="truncate tr-emphasis">{{ resources.panelLabels[panel.kind] }}</span>
+        <span class="truncate tr-emphasis">{{ labels.of(panel) }}</span>
       } @else {
         @if (store.selectedProject(); as project) {
           <mat-icon class="tr-muted tr-nav-icon">{{ resources.icons["folder"] }}</mat-icon>

@@ -62,7 +62,7 @@ LICENSE file in the root directory of this source tree.
         (auxclick)="onPanelAuxClick($event, panel)" (keydown)="menu.openFromKeyboard($event, tab)">
         <span class="tr-tab-label flex items-center gap-1.5">
           <mat-icon class="tr-tab-icon">{{ resources.panelIcons[panel.kind] }}</mat-icon>
-          <span class="truncate">{{ resources.panelLabels[panel.kind] }}</span>
+          <span class="truncate">{{ labels.of(panel) }}</span>
         </span>
         <span class="tr-tab-actions">
           <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="closePanel($event, panel)"
@@ -96,7 +96,7 @@ LICENSE file in the root directory of this source tree.
   }
   @for (panel of group().panels; track panel.key) {
     <button mat-menu-item class="tr-documents-panel-item" (click)="layout.activatePanel(panel)">
-      <mat-icon>{{ resources.panelIcons[panel.kind] }}</mat-icon>{{ resources.panelLabels[panel.kind] }}
+      <mat-icon>{{ resources.panelIcons[panel.kind] }}</mat-icon>{{ labels.of(panel) }}
     </button>
   }
   <button mat-menu-item (click)="closeAll()">{{ resources.closeAllLabel }}</button>

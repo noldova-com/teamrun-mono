@@ -10,8 +10,11 @@ import { Component, signal } from "@angular/core";
 import { type ComponentFixture, TestBed } from "@angular/core/testing";
 import { MatMenuModule } from "@angular/material/menu";
 
+import { MethodName, TerminalIdParams, TerminalScreen } from "@noldova/teamrun-protocol";
+
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
+import { TerminalWindow } from "../../../fixtures/terminal-window";
 import { DockSide } from "../../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../../src/app/enums/panel-edge";
 import { PanelKind } from "../../../../src/app/enums/panel-kind";
@@ -22,7 +25,9 @@ import { TabDropTarget } from "../../../../src/app/models/tab-drop-target";
 import { TabGroup } from "../../../../src/app/models/tab-group";
 import { Resources } from "../../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
+import { ChatStore } from "../../../../src/app/services/chat-store.service";
 import { LayoutService } from "../../../../src/app/services/layout.service";
+import { TerminalsService } from "../../../../src/app/services/terminals.service";
 import { PanelMenuComponent } from "../../../../src/app/components/panel-menu/panel-menu.component";
 
 @Component({
@@ -109,6 +114,41 @@ describe("PanelMenuComponent", () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(layout.arrangement().groupOf(explorer)?.activePanel).toEqual(explorer);
+  });
+
+  it("restarts a terminal and names groups by their panels' labels", async () => {
+    MemoryStorage.install(window);
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const bridge = SampleData.createBridge()
+      .answer(MethodName.TerminalOpen, () => SampleData.terminal("t1").toJson())
+      .answer(MethodName.TerminalScreen, () => new TerminalScreen(SampleData.terminal("t1"), "").toJson())
+      .answer(MethodName.TerminalRestart, () => SampleData.terminal("t1").toJson());
+    TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    await TestBed.inject(ChatStore).initialize();
+    const terminals = TestBed.inject(TerminalsService);
+    onTestFinished(() => terminals.stop());
+    await terminals.open();
+    const fixture = TestBed.createComponent(PanelMenuHost);
+    fixture.detectChanges();
+
+    await open(fixture);
+    expect(document.querySelector(".tr-terminal-restart")).toBeNull();
+    item(Resources.moveToLabel).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(Array.from(document.querySelectorAll(".tr-panel-destination")).map(t => t.textContent?.trim())).toContain("Activity, PowerShell");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.panel.set(new Panel(PanelKind.Terminal, "t1"));
+    fixture.detectChanges();
+    await open(fixture);
+    item(Resources.restartTerminalLabel).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(bridge.requests.filter(t => t.method === MethodName.TerminalRestart).map(t => t.payload)).toEqual([new TerminalIdParams("t1").toJson()]);
   });
 
   it("opens below its tab with Shift+F10 and leaves other keys alone", async () => {

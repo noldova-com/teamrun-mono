@@ -18,6 +18,7 @@ export class TerminalState {
   public readonly id: string;
   public readonly projectId: string;
   public readonly shell: string;
+  public readonly conptyBuild: number | null;
   public readonly size: TerminalSize;
   public readonly exitCode: number | null;
   public readonly restartCount: number;
@@ -28,6 +29,7 @@ export class TerminalState {
     id: string,
     projectId: string,
     shell: string,
+    conptyBuild: number | null,
     size: TerminalSize,
     exitCode: number | null,
     restartCount: number,
@@ -36,6 +38,8 @@ export class TerminalState {
     ArgumentException.throwIfNullOrWhitespace(id, Resources.idField);
     ArgumentException.throwIfNullOrWhitespace(projectId, Resources.projectIdField);
     ArgumentException.throwIfNullOrWhitespace(shell, Resources.shellField);
+    if (!Object.isNull(conptyBuild) && (!Number.isInteger(conptyBuild) || conptyBuild < 1))
+      throw new ArgumentOutOfRangeException(Resources.conptyBuildField, conptyBuild);
     if (!Object.isNull(exitCode) && !Number.isInteger(exitCode))
       throw new ArgumentOutOfRangeException(Resources.exitCodeField, exitCode);
     if (!Number.isInteger(restartCount) || restartCount < 0)
@@ -46,6 +50,7 @@ export class TerminalState {
     this.id = id;
     this.projectId = projectId;
     this.shell = shell;
+    this.conptyBuild = conptyBuild;
     this.size = size;
     this.exitCode = exitCode;
     this.restartCount = restartCount;
@@ -61,6 +66,7 @@ export class TerminalState {
       reader.readNonBlankString(Resources.idField),
       reader.readNonBlankString(Resources.projectIdField),
       reader.readNonBlankString(Resources.shellField),
+      reader.readNullableInteger(Resources.conptyBuildField),
       TerminalSize.fromJson(size.toJson(), size.path),
       reader.readNullableInteger(Resources.exitCodeField),
       reader.readInteger(Resources.restartCountField),
@@ -73,6 +79,7 @@ export class TerminalState {
       [Resources.idField]: this.id,
       [Resources.projectIdField]: this.projectId,
       [Resources.shellField]: this.shell,
+      [Resources.conptyBuildField]: this.conptyBuild,
       [Resources.sizeField]: this.size.toJson(),
       [Resources.exitCodeField]: this.exitCode,
       [Resources.restartCountField]: this.restartCount,

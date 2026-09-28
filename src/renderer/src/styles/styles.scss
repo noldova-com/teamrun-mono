@@ -9,6 +9,7 @@
 @use "@angular/material" as mat;
 @use "tailwindcss";
 @use "material-symbols/rounded.css";
+@use "@xterm/xterm/css/xterm.css";
 @use "./noldova-fonts.css";
 
 $tr-sans: "var(--tr-font-sans)";
@@ -721,6 +722,18 @@ mat-icon.mat-icon {
   border: 1px solid var(--tr-card-border);
   border-radius: var(--tr-radius-large);
   overflow: hidden;
+}
+
+.tr-terminal .xterm {
+  padding: 6px 8px;
+}
+
+.tr-terminal .xterm .xterm-viewport {
+  background-color: transparent;
+}
+
+.tr-terminal-exit {
+  border-top: 1px solid var(--tr-border);
 }
 
 .tr-raised {

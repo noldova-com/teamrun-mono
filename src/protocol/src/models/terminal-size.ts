@@ -25,6 +25,12 @@ export class TerminalSize {
     this.rows = rows;
   }
 
+  public static fitting(columns: number, rows: number): TerminalSize {
+    return new TerminalSize(
+      Math.min(Resources.maximumTerminalColumns, Math.max(Resources.minimumTerminalColumns, Math.floor(columns))),
+      Math.min(Resources.maximumTerminalRows, Math.max(1, Math.floor(rows))));
+  }
+
   public static fromJson(value: unknown, path?: string): TerminalSize {
     const reader = JsonReader.fromValue(value, path);
     return new TerminalSize(reader.readInteger(Resources.columnsField), reader.readInteger(Resources.rowsField));

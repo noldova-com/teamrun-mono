@@ -17,6 +17,7 @@ import {
   Project,
   Request,
   type Response,
+  TerminalAcknowledgeParams,
   TerminalIdParams,
   TerminalInputParams,
   TerminalLinePage,
@@ -51,6 +52,8 @@ export class TerminalHostTests {
       await TerminalHostTests.succeed(host, owner, MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
       await Wait.until(() => owner.output.includes("line 20"));
       await TerminalHostTests.succeed(host, owner, MethodName.TerminalResize, new TerminalResizeParams(opened.id, new TerminalSize(100, 6)).toJson());
+      const acknowledged = await TerminalHostTests.succeed(host, owner, MethodName.TerminalAcknowledge,
+        new TerminalAcknowledgeParams(opened.id, owner.output.length).toJson());
       const listed = await TerminalHostTests.succeed(host, owner, MethodName.TerminalList, null);
       const screen = TerminalScreen.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalScreen, id));
       const page = TerminalLinePage.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalLines,
@@ -62,6 +65,7 @@ export class TerminalHostTests {
       Assert.areEqual("Fixture", opened.shell);
       Assert.areEqual("project-1", opened.projectId);
       Assert.areEqual(JSON.stringify([opened.id]), JSON.stringify(TerminalHostTests.ids(listed)));
+      Assert.isNull(acknowledged);
       Assert.areEqual(opened.id, screen.state.id);
       Assert.isTrue(page.lines.some(t => t.text === "line 1"));
       Assert.areEqual(1, restarted.restartCount);
@@ -114,6 +118,7 @@ export class TerminalHostTests {
     Assert.areEqual(ErrorCode.UnknownMethod, method.info?.name);
     Assert.areEqual(ErrorCode.NotFound, absent.info?.name);
     Assert.isTrue(host.handles(MethodName.TerminalLines));
+    Assert.isTrue(host.handles(MethodName.TerminalAcknowledge));
     Assert.isFalse(host.handles(MethodName.ProjectList));
   }
 

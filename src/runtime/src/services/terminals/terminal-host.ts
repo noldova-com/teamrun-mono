@@ -19,6 +19,7 @@ import {
   type Project,
   type Request,
   Response,
+  TerminalAcknowledgeParams,
   TerminalIdParams,
   TerminalInputParams,
   TerminalLinesParams,
@@ -37,7 +38,7 @@ import type { TerminalEnvironment } from "./terminal-environment.js";
 export class TerminalHost {
   private static readonly methods: ReadonlySet<string> = new Set([
     MethodName.TerminalList, MethodName.TerminalOpen, MethodName.TerminalInput, MethodName.TerminalResize, MethodName.TerminalRestart,
-    MethodName.TerminalClose, MethodName.TerminalScreen, MethodName.TerminalLines
+    MethodName.TerminalClose, MethodName.TerminalScreen, MethodName.TerminalLines, MethodName.TerminalAcknowledge
   ]);
   private readonly terminals: Map<string, HostedTerminal> = new Map();
   private readonly work: Set<Promise<void>> = new Set();
@@ -117,6 +118,11 @@ export class TerminalHost {
       case MethodName.TerminalLines: {
         const params = TerminalLinesParams.fromJson(payload);
         return (await this.find(owner, params.terminalId).lines(params.start, params.limit)).toJson();
+      }
+      case MethodName.TerminalAcknowledge: {
+        const params = TerminalAcknowledgeParams.fromJson(payload);
+        this.find(owner, params.terminalId).acknowledge(params.characters);
+        return null;
       }
       default:
         throw new ServiceException(ErrorCode.UnknownMethod, Resources.formatUnknownTerminalMethod(method), [method]);

@@ -20,8 +20,11 @@ describe("PlatformService", () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const document = TestBed.inject(DOCUMENT);
 
-    await TestBed.inject(PlatformService).ready;
+    const platform = TestBed.inject(PlatformService);
+    expect(platform.isMac()).toBe(false);
+    await platform.ready;
     expect(document.documentElement.classList.contains("tr-mac")).toBe(true);
+    expect(platform.isMac()).toBe(true);
     document.documentElement.classList.remove("tr-mac");
 
     TestBed.resetTestingModule();
@@ -29,5 +32,6 @@ describe("PlatformService", () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: windows }] });
     await TestBed.inject(PlatformService).ready;
     expect(document.documentElement.classList.contains("tr-mac")).toBe(false);
+    expect(TestBed.inject(PlatformService).isMac()).toBe(false);
   });
 });

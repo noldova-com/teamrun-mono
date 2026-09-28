@@ -183,6 +183,7 @@ export class Resources {
   public static readonly columnsField: string = "columns";
   public static readonly rowsField: string = "rows";
   public static readonly shellField: string = "shell";
+  public static readonly conptyBuildField: string = "conptyBuild";
   public static readonly exitCodeField: string = "exitCode";
   public static readonly restartCountField: string = "restartCount";
   public static readonly storedField: string = "stored";
@@ -192,6 +193,7 @@ export class Resources {
   public static readonly wrappedField: string = "wrapped";
   public static readonly runsField: string = "runs";
   public static readonly lengthField: string = "length";
+  public static readonly charactersField: string = "characters";
   public static readonly foregroundField: string = "foreground";
   public static readonly backgroundField: string = "background";
   public static readonly styleField: string = "style";

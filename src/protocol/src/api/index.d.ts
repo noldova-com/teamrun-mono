@@ -736,7 +736,15 @@ export declare enum MethodName {
   /**
    * Reads a page of a terminal's stored lines. Parameters: `TerminalLinesParams`. Result: `TerminalLinePage`.
    */
-  TerminalLines = "TerminalLines"
+  TerminalLines = "TerminalLines",
+  /**
+   * Reports how much of a terminal's output the caller has processed, counted as the length of the `data` strings of
+   * its `TerminalOutput` events. The runtime pauses a shell while about a million characters of the output it sent are
+   * not acknowledged, and resumes it as acknowledgements arrive. `TerminalScreen` counts all output before the screen it
+   * returns as acknowledged, and an acknowledgement never counts more than the output still waiting. Parameters:
+   * `TerminalAcknowledgeParams`. Result: `null`.
+   */
+  TerminalAcknowledge = "TerminalAcknowledge"
 }
 
 /**
@@ -4729,6 +4737,19 @@ export declare class TerminalSize {
   public constructor(columns: number, rows: number);
 
   /**
+   * Makes the nearest size a terminal can have, for a space measured in character cells.
+   * @param columns The width in columns; a fraction is dropped and the result kept within 2 through 1000.
+   * @param rows The height in rows; a fraction is dropped and the result kept within 1 through 1000.
+   * @returns The size.
+   * @throws ArgumentOutOfRangeException when a dimension is not a finite number.
+   * @example
+   * ```ts
+   * TerminalSize.fitting(120.6, 0); // 120 columns and 1 row
+   * ```
+   */
+  public static fitting(columns: number, rows: number): TerminalSize;
+
+  /**
    * Reads the size from untrusted JSON.
    * @param value The untrusted value, expected to carry `columns` and `rows`.
    * @param path Path to report for the value; the root path `$` by default.
@@ -4818,6 +4839,12 @@ export declare class TerminalState {
    */
   public readonly shell: string;
   /**
+   * The build of the Windows pseudo-console (ConPTY) that runs the shell, or `null` outside Windows. A client that
+   * draws the terminal gives it to its emulator, because ConPTY redraws the screen after a resize and builds before
+   * 21376 do so differently, so the client's screen wraps lines as the runtime's does.
+   */
+  public readonly conptyBuild: number | null;
+  /**
    * The terminal's size.
    */
   public readonly size: TerminalSize;
@@ -4844,18 +4871,21 @@ export declare class TerminalState {
    * @param id The terminal id; must not be blank.
    * @param projectId The id of the `Project` whose folder the shell started in; must not be blank.
    * @param shell The shell's display name; must not be blank.
+   * @param conptyBuild The Windows build that runs the shell, a positive integer, or `null` outside Windows.
    * @param size The terminal's size.
    * @param exitCode The shell's exit code, an integer, or `null` while it runs.
    * @param restartCount How many times the shell was started again; a non-negative integer.
    * @param sequence The sequence of the last event this state includes; a non-negative integer.
    * @param stored The lines stored so far.
    * @throws ArgumentException when `id`, `projectId` or `shell` is blank.
-   * @throws ArgumentOutOfRangeException when `exitCode` is not an integer or a count is negative or not an integer.
+   * @throws ArgumentOutOfRangeException when `conptyBuild` is not a positive integer, `exitCode` is not an integer or a
+   * count is negative or not an integer.
    */
   public constructor(
     id: string,
     projectId: string,
     shell: string,
+    conptyBuild: number | null,
     size: TerminalSize,
     exitCode: number | null,
     restartCount: number,
@@ -4864,8 +4894,8 @@ export declare class TerminalState {
 
   /**
    * Reads the state from untrusted JSON.
-   * @param value The untrusted value, expected to carry `id`, `projectId`, `shell`, `size`, the nullable `exitCode`,
-   * `restartCount`, `sequence` and `stored`.
+   * @param value The untrusted value, expected to carry `id`, `projectId`, `shell`, the nullable `conptyBuild`, `size`,
+   * the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The state.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
@@ -4875,7 +4905,8 @@ export declare class TerminalState {
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `id`, `projectId`, `shell`, `size`, `exitCode`, `restartCount`, `sequence` and `stored`.
+   * @returns The object with `id`, `projectId`, `shell`, `conptyBuild`, `size`, `exitCode`, `restartCount`, `sequence`
+   * and `stored`.
    */
   public toJson(): JsonObject;
 }
@@ -5016,6 +5047,49 @@ export declare class TerminalOpenParams {
   /**
    * Renders the JSON object `fromJson` accepts.
    * @returns The object with `projectId` and `size`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
+ * Parameters of `TerminalAcknowledge`.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalAcknowledgeParams {
+  /**
+   * The terminal id.
+   */
+  public readonly terminalId: string;
+  /**
+   * How many characters of output the caller processed since its last acknowledgement; a positive integer.
+   */
+  public readonly characters: number;
+
+  /**
+   * Initializes the parameters.
+   * @param terminalId The terminal id; must not be blank.
+   * @param characters How many characters of output the caller processed since its last acknowledgement, counted
+   * as the length of the events' `data` strings; a positive integer.
+   * @throws ArgumentException when `terminalId` is blank.
+   * @throws ArgumentOutOfRangeException when `characters` is not a positive integer.
+   */
+  public constructor(terminalId: string, characters: number);
+
+  /**
+   * Reads the parameters from untrusted JSON.
+   * @param value The untrusted value, expected to carry `terminalId` and `characters`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The parameters.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   * @throws ArgumentOutOfRangeException when `characters` is not a positive integer.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalAcknowledgeParams;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `terminalId` and `characters`.
    */
   public toJson(): JsonObject;
 }

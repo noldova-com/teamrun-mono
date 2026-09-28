@@ -25,6 +25,7 @@ import { DocumentsService } from "../../services/documents.service";
 import { LayoutService } from "../../services/layout.service";
 import { NavigationService } from "../../services/navigation.service";
 import { PanelDragService } from "../../services/panel-drag.service";
+import { PanelLabels } from "../../services/panel-labels.service";
 import { ViewportService } from "../../services/viewport.service";
 import { PanelMenuComponent } from "../panel-menu/panel-menu.component";
 
@@ -42,6 +43,7 @@ export class DocumentTabsComponent {
   protected readonly documents: DocumentsService = inject(DocumentsService);
   protected readonly navigation: NavigationService = inject(NavigationService);
   protected readonly drag: PanelDragService = inject(PanelDragService);
+  protected readonly labels: PanelLabels = inject(PanelLabels);
   protected readonly settingsView: AppView = AppView.Settings;
   protected readonly group: Signal<TabGroup> = computed(() => this.layout.arrangement().documents);
   protected readonly isEmpty: Signal<boolean> = computed(() => this.layout.documents().length === 0 && !this.navigation.settingsOpen() &&

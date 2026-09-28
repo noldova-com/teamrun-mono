@@ -332,4 +332,18 @@ describe("AppComponent", () => {
     expect(element.querySelector("[role=alert]")).toBeNull();
     fixture.destroy();
   });
+
+  it("shows a terminal failure with a dismiss action", async () => {
+    const bridge = SampleData.createBridge().fail(MethodName.TerminalList, ErrorCode.Unavailable, "terminals down");
+    const fixture = await start(bridge, () => bridge.methods.includes(MethodName.TerminalList));
+    const element = fixture.nativeElement as HTMLElement;
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element.querySelector("[role=alert]")?.textContent).toContain("terminals down");
+    element.querySelector<HTMLButtonElement>("[role=alert] button")?.click();
+    fixture.detectChanges();
+    expect(element.querySelector("[role=alert]")).toBeNull();
+    fixture.destroy();
+  });
 });

@@ -32,6 +32,7 @@ export class PreferencesService {
   public readonly panelTextSize: Signal<number> = computed(() => this.current().panelTextSize);
   public readonly messageTextSize: Signal<number> = computed(() => this.current().messageTextSize);
   public readonly codeTextSize: Signal<number> = computed(() => this.current().codeTextSize);
+  public readonly codeFontStack: Signal<string> = computed(() => PreferencesService.monoStack(this.current().codeFont));
   public readonly defaultComposer: Signal<ComposerSettings | null> = computed(() => this.current().defaultComposer);
   public readonly accessMode: Signal<AccessMode> = computed(() => this.current().accessMode);
   public readonly timeFormat: Signal<string> = computed(() => this.current().timeFormat);
@@ -128,12 +129,16 @@ export class PreferencesService {
   private apply(preferences: Preferences): void {
     const root = this.document.documentElement;
     const sans = preferences.interfaceFont === FontChoice.Noldova ? Resources.noldovaSansStack : Resources.systemSansStack;
-    const mono = preferences.codeFont === FontChoice.Noldova ? Resources.noldovaMonoStack : Resources.systemMonoStack;
+    const mono = PreferencesService.monoStack(preferences.codeFont);
     root.style.setProperty(Resources.sansFontVariable, sans);
     root.style.setProperty(Resources.monoFontVariable, mono);
     root.style.setProperty(Resources.panelTextSizeVariable, Resources.formatPixels(preferences.panelTextSize));
     root.style.setProperty(Resources.messageTextSizeVariable, Resources.formatPixels(preferences.messageTextSize));
     root.style.setProperty(Resources.codeTextSizeVariable, Resources.formatPixels(preferences.codeTextSize));
+  }
+
+  private static monoStack(choice: FontChoice): string {
+    return choice === FontChoice.Noldova ? Resources.noldovaMonoStack : Resources.systemMonoStack;
   }
 
   private static clampSize(size: number): number {

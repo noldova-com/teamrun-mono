@@ -17,6 +17,7 @@ export class TerminalStateTests {
     id: "terminal-1",
     projectId: "project-1",
     shell: "PowerShell",
+    conptyBuild: 26200,
     size: { columns: 100, rows: 30 },
     exitCode: null,
     restartCount: 2,
@@ -32,6 +33,7 @@ export class TerminalStateTests {
     Assert.areEqual("terminal-1", value.id);
     Assert.areEqual("project-1", value.projectId);
     Assert.areEqual("PowerShell", value.shell);
+    Assert.areEqual(26200, value.conptyBuild);
     Assert.areEqual(100, value.size.columns);
     Assert.isNull(value.exitCode);
     Assert.areEqual(2, value.restartCount);
@@ -47,18 +49,28 @@ export class TerminalStateTests {
   }
 
   @TestMethod
+  public hasNoWindowsBuildOutsideWindows(): void {
+    const value = TerminalState.fromJson({ ...TerminalStateTests.json, conptyBuild: null });
+
+    Assert.isNull(value.conptyBuild);
+    Assert.isNull(value.toJson()["conptyBuild"]);
+  }
+
+  @TestMethod
   public rejectsInvalidArguments(): void {
     const size = new TerminalSize(80, 24);
     const stored = new TerminalLineRange(0, 0);
 
-    Assert.areEqual("id", Assert.throws(() => new TerminalState(" ", "p", "bash", size, null, 0, 0, stored), ArgumentException).parameterName);
-    Assert.areEqual("projectId", Assert.throws(() => new TerminalState("t", "", "bash", size, null, 0, 0, stored), ArgumentException).parameterName);
-    Assert.areEqual("shell", Assert.throws(() => new TerminalState("t", "p", " ", size, null, 0, 0, stored), ArgumentException).parameterName);
-    Assert.areEqual("exitCode", Assert.throws(() => new TerminalState("t", "p", "bash", size, 1.5, 0, 0, stored), ArgumentOutOfRangeException).parameterName);
-    Assert.areEqual("restartCount", Assert.throws(() => new TerminalState("t", "p", "bash", size, null, -1, 0, stored), ArgumentOutOfRangeException).parameterName);
-    Assert.areEqual("restartCount", Assert.throws(() => new TerminalState("t", "p", "bash", size, null, 0.5, 0, stored), ArgumentOutOfRangeException).parameterName);
-    Assert.areEqual("sequence", Assert.throws(() => new TerminalState("t", "p", "bash", size, null, 0, -1, stored), ArgumentOutOfRangeException).parameterName);
-    Assert.areEqual("sequence", Assert.throws(() => new TerminalState("t", "p", "bash", size, null, 0, 2.5, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("id", Assert.throws(() => new TerminalState(" ", "p", "bash", null, size, null, 0, 0, stored), ArgumentException).parameterName);
+    Assert.areEqual("projectId", Assert.throws(() => new TerminalState("t", "", "bash", null, size, null, 0, 0, stored), ArgumentException).parameterName);
+    Assert.areEqual("shell", Assert.throws(() => new TerminalState("t", "p", " ", null, size, null, 0, 0, stored), ArgumentException).parameterName);
+    Assert.areEqual("conptyBuild", Assert.throws(() => new TerminalState("t", "p", "bash", 0, size, null, 0, 0, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("conptyBuild", Assert.throws(() => new TerminalState("t", "p", "bash", 1.5, size, null, 0, 0, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("exitCode", Assert.throws(() => new TerminalState("t", "p", "bash", null, size, 1.5, 0, 0, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("restartCount", Assert.throws(() => new TerminalState("t", "p", "bash", null, size, null, -1, 0, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("restartCount", Assert.throws(() => new TerminalState("t", "p", "bash", null, size, null, 0.5, 0, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("sequence", Assert.throws(() => new TerminalState("t", "p", "bash", null, size, null, 0, -1, stored), ArgumentOutOfRangeException).parameterName);
+    Assert.areEqual("sequence", Assert.throws(() => new TerminalState("t", "p", "bash", null, size, null, 0, 2.5, stored), ArgumentOutOfRangeException).parameterName);
   }
 
   @TestMethod

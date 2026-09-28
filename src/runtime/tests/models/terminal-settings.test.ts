@@ -19,8 +19,8 @@ export class TerminalSettingsTests {
     Assert.areEqual(26200, settings.windowsBuild);
     Assert.isUndefined(settings.forceSignal);
     Assert.areEqual(2000, settings.endMilliseconds);
-    Assert.areEqual(512 * 1024, settings.highWatermark);
-    Assert.areEqual(128 * 1024, settings.lowWatermark);
+    Assert.areEqual(1024 * 1024, settings.highWatermark);
+    Assert.areEqual(256 * 1024, settings.lowWatermark);
   }
 
   @TestMethod

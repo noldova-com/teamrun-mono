@@ -57,6 +57,7 @@ describe("PreferencesService", () => {
     TestBed.tick();
 
     expect(document.documentElement.style.getPropertyValue(Resources.monoFontVariable)).toBe(Resources.systemMonoStack);
+    expect(service.codeFontStack()).toBe(Resources.systemMonoStack);
     expect(document.documentElement.style.getPropertyValue(Resources.panelTextSizeVariable)).toBe("16px");
     expect(document.documentElement.style.getPropertyValue(Resources.messageTextSizeVariable)).toBe(Resources.formatPixels(Resources.maximumTextSize));
     expect(document.documentElement.style.getPropertyValue(Resources.codeTextSizeVariable)).toBe(Resources.formatPixels(Resources.minimumTextSize));

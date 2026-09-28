@@ -24,7 +24,9 @@ import { DocumentsService } from "./documents.service";
 import { HistoryService } from "./history.service";
 import { NavigationService } from "./navigation.service";
 import { LayoutService } from "./layout.service";
+import { PlatformService } from "./platform.service";
 import { SearchLauncher } from "./search-launcher.service";
+import { TerminalsService } from "./terminals.service";
 
 @Injectable({ providedIn: "root" })
 export class ShortcutsService {
@@ -35,6 +37,8 @@ export class ShortcutsService {
   private readonly history: HistoryService = inject(HistoryService);
   private readonly documents: DocumentsService = inject(DocumentsService);
   private readonly search: SearchLauncher = inject(SearchLauncher);
+  private readonly terminals: TerminalsService = inject(TerminalsService);
+  private readonly platform: PlatformService = inject(PlatformService);
   private readonly listener: (event: KeyboardEvent) => void = event => this.handle(event);
   private focusComposer: (() => void) | null = null;
   private focusPending: boolean = false;
@@ -61,6 +65,10 @@ export class ShortcutsService {
     return Object.isUndefined(shortcut) ? String.empty : this.describe(shortcut);
   }
 
+  public isShortcut(event: KeyboardEvent): boolean {
+    return !Object.isUndefined(this.find(event));
+  }
+
   public describe(shortcut: Shortcut): string {
     const parts: string[] = [];
     if (shortcut.control)
@@ -77,11 +85,26 @@ export class ShortcutsService {
   private handle(event: KeyboardEvent): void {
     if (event.defaultPrevented)
       return;
-    const shortcut = Resources.shortcuts.find(t => t.global && t.matches(event));
+    const shortcut = this.find(event);
     if (Object.isUndefined(shortcut))
       return;
     if (this.perform(shortcut.action))
       event.preventDefault();
+  }
+
+  private find(event: KeyboardEvent): Shortcut | undefined {
+    const inTerminal = event.target instanceof Element && !Object.isNull(event.target.closest(Resources.terminalSelector));
+    return Resources.shortcuts.find(t => t.global && (inTerminal ? this.actsInTerminal(t, event) : t.matches(event)));
+  }
+
+  private actsInTerminal(shortcut: Shortcut, event: KeyboardEvent): boolean {
+    if (Resources.terminalShortcutActions.includes(shortcut.action))
+      return shortcut.matches(event);
+    if (!shortcut.control)
+      return false;
+    return this.platform.isMac()
+      ? event.metaKey && !event.ctrlKey && shortcut.matches(event)
+      : event.ctrlKey && event.shiftKey && !event.metaKey && shortcut.shifted().matches(event);
   }
 
   private perform(action: ShortcutAction): boolean {
@@ -122,6 +145,13 @@ export class ShortcutsService {
         return true;
       case ShortcutAction.ToggleBottomDock:
         this.layout.toggleDock(DockSide.Bottom);
+        return true;
+      case ShortcutAction.ToggleTerminal:
+        return this.terminals.toggle() || this.perform(ShortcutAction.FocusComposer);
+      case ShortcutAction.NewTerminal:
+        if (!this.terminals.canOpen())
+          return false;
+        void this.terminals.open();
         return true;
       case ShortcutAction.CloseDocument:
         return this.closeDocument();

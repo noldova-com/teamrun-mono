@@ -20,6 +20,7 @@ import { SplitDropTarget } from "../../models/split-drop-target";
 import { TabDropTarget } from "../../models/tab-drop-target";
 import { Resources } from "../../resources";
 import { PanelDragService } from "../../services/panel-drag.service";
+import { PanelLabels } from "../../services/panel-labels.service";
 import { ShellService } from "../../services/shell.service";
 
 @Component({
@@ -34,6 +35,7 @@ export class DockGuidesComponent {
 
   protected readonly resources: typeof Resources = Resources;
   protected readonly drag: PanelDragService = inject(PanelDragService);
+  protected readonly labels: PanelLabels = inject(PanelLabels);
   protected readonly sides: readonly DockSide[] = Object.values(DockSide);
   protected readonly edges: readonly PanelEdge[] = Object.values(PanelEdge);
   protected readonly ghostOffset: number = Resources.ghostOffset;

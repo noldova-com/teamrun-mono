@@ -48,6 +48,15 @@ export class TerminalSizeTests {
   }
 
   @TestMethod
+  public fitsASpaceToTheNearestAllowedSize(): void {
+    Assert.isTrue(TerminalSize.fitting(120.6, 30.2).equals(new TerminalSize(120, 30)));
+    Assert.isTrue(TerminalSize.fitting(0, 0).equals(new TerminalSize(2, 1)));
+    Assert.isTrue(TerminalSize.fitting(5000, 2000).equals(new TerminalSize(1000, 1000)));
+    Assert.throws(() => TerminalSize.fitting(Number.NaN, 24), ArgumentOutOfRangeException);
+    Assert.throws(() => TerminalSize.fitting(80, Number.NaN), ArgumentOutOfRangeException);
+  }
+
+  @TestMethod
   public rejectsInvalidValuesWithTheirPath(): void {
     const exception = Assert.throws(() => TerminalSize.fromJson({ columns: 80, rows: "24" }), JsonException);
 

@@ -41,6 +41,7 @@ export class MethodNameTests {
     Assert.areEqual("TerminalClose", MethodName.TerminalClose);
     Assert.areEqual("TerminalScreen", MethodName.TerminalScreen);
     Assert.areEqual("TerminalLines", MethodName.TerminalLines);
+    Assert.areEqual("TerminalAcknowledge", MethodName.TerminalAcknowledge);
   }
 
   @TestMethod
