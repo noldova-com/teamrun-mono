@@ -1181,7 +1181,8 @@ export declare class Resources {
   public static readonly nullSeparator: string;
   public static readonly completedStatus: string;
   /**
-   * The `source` of a file-change detail read from the working tree rather than reported by the provider.
+   * The `source` of the details read from the working tree rather than reported by the provider: the file-change report
+   * and the note that its evidence is incomplete.
    */
   public static readonly workingTreeSource: string;
   public static readonly addKind: string;

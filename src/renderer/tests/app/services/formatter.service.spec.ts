@@ -83,7 +83,8 @@ describe("Formatter", () => {
       detail(7, DetailKind.Reasoning, "hmm"),
       detail(8, DetailKind.Note, "Glob: *.ts", { tool: "Glob", toolUseId: "t4" }),
       detail(9, DetailKind.Text, "Done."),
-      detail(10, DetailKind.FileChange, "Files changed in the working tree: a.ts", { files: ["/repo/a.ts"], source: "workingTree", changes: [] })
+      detail(10, DetailKind.FileChange, "Files changed in the working tree: a.ts", { files: ["/repo/a.ts"], source: "workingTree", changes: [] }),
+      detail(11, DetailKind.Note, "Git evidence may omit changes.", { source: "workingTree" })
     ]);
 
     const segments = formatter().segments(message);
@@ -91,6 +92,7 @@ describe("Formatter", () => {
     expect(segments.map(t => `${t.kind}:${t.key}:${t.entries.length}`))
       .toEqual(["Activity:0:2", "Text:3:0", "Activity:4:2", "Image:6:0", "Activity:7:2", "Text:9:0"]);
     expect(formatter().activity(message).map(t => t.detail.sequence)).toEqual([0, 1, 4, 5, 7, 8]);
+    expect(formatter().evidenceNotes(message).map(t => t.sequence)).toEqual([11]);
     expect(formatter().activitySummary(segments[0]!.entries)).toBe("Read 1 file, 1 more step");
     expect(formatter().activitySummary(segments[2]!.entries)).toBe("Ran 1 command, edited 1 file");
     expect(formatter().activitySummary(segments[4]!.entries)).toBe("Searched once, thought once");
@@ -100,8 +102,9 @@ describe("Formatter", () => {
     expect(formatter().activitySummary(formatter().activity(commands))).toBe("Ran 2 commands");
     expect(formatter().isGeneratedImage(message.details[6]!)).toBe(true);
     expect(formatter().isGeneratedImage(message.details[0]!)).toBe(false);
-    expect(formatter().isWorkingTreeReport(message.details[10]!)).toBe(true);
-    expect(formatter().isWorkingTreeReport(message.details[5]!)).toBe(false);
+    expect(formatter().isWorkingTreeEvidence(message.details[10]!)).toBe(true);
+    expect(formatter().isWorkingTreeEvidence(message.details[11]!)).toBe(true);
+    expect(formatter().isWorkingTreeEvidence(message.details[5]!)).toBe(false);
   });
 
   it("labels activity with the duration and the step count", () => {

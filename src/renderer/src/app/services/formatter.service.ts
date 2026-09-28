@@ -117,9 +117,13 @@ export class Formatter {
     return !Object.isNull(payload) && payload[Resources.itemTypeField] === Resources.imageGenerationItemType;
   }
 
-  public isWorkingTreeReport(detail: MessageDetail): boolean {
+  public isWorkingTreeEvidence(detail: MessageDetail): boolean {
     const payload = Formatter.payloadOf(detail);
-    return detail.kind === DetailKind.FileChange && !Object.isNull(payload) && payload[Resources.sourceField] === Resources.workingTreeSource;
+    return !Object.isNull(payload) && payload[Resources.sourceField] === Resources.workingTreeSource;
+  }
+
+  public evidenceNotes(message: Message): readonly MessageDetail[] {
+    return message.details.filter(t => t.kind === DetailKind.Note && this.isWorkingTreeEvidence(t));
   }
 
   public segments(message: Message): readonly ReplySegment[] {
@@ -131,7 +135,7 @@ export class Formatter {
       steps = [];
     };
     for (const detail of message.details) {
-      if (this.isWorkingTreeReport(detail))
+      if (this.isWorkingTreeEvidence(detail))
         continue;
       if (this.isAnswer(detail) || this.isGeneratedImage(detail)) {
         closeActivity();

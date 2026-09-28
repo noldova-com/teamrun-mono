@@ -71,6 +71,7 @@ export class ReplyRunTests {
     await host.engine.send(new MessageSendParams(conversation.id, "hello", new RequestedSettings("fake", null, null), null));
     await host.engine.waitForIdle();
     const reply = host.messages.list(new MessageListParams(conversation.id, null)).at(-1);
-    Assert.isTrue(reply?.details.some(t => t.text === Resources.incompleteWorkingTreeEvidence) ?? false);
+    const note = reply?.details.find(t => t.text === Resources.incompleteWorkingTreeEvidence);
+    Assert.areEqual(JSON.stringify({ source: Resources.workingTreeSource }), JSON.stringify(note?.payload));
   }
 }

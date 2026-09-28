@@ -33,8 +33,7 @@ export class ReplySummary {
     return panel === ReplyPanel.Changes ? this.files.length > 0 : this.preview.details.some(t => {
       const payload = t.payload;
       return t.kind !== DetailKind.Text && t.kind !== DetailKind.Error && !(ReplySummary.isPayload(payload)
-        && (payload[Resources.itemTypeField] === Resources.imageGenerationItemType
-          || (t.kind === DetailKind.FileChange && payload[Resources.sourceField] === Resources.workingTreeSource)));
+        && (payload[Resources.itemTypeField] === Resources.imageGenerationItemType || payload[Resources.sourceField] === Resources.workingTreeSource));
     });
   }
 
