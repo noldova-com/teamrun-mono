@@ -18,6 +18,38 @@ import { SdkMessages } from "../../fixtures/sdk-messages.fixture.js";
 @TestClass
 export class ClaudeTurnTests {
   @TestMethod
+  public async replacesEachStreamedBlockWhenTheBlocksArriveOneMessageAtATime(): Promise<void> {
+    const listener = new RecordingTurnListener();
+    const turn = new ClaudeTurn(listener, null, new DeltaStream(listener, 1));
+    const first = "33333333-3333-3333-3333-333333333333";
+    const second = "44444444-4444-4444-4444-444444444444";
+    const query = new FakeClaudeQuery([
+      SdkMessages.init("s-3", "none", null, []),
+      SdkMessages.messageStart("s-3", first),
+      SdkMessages.thinkingDelta("s-3", first, 0, "Pond"),
+      SdkMessages.blockStop("s-3", first, 0),
+      SdkMessages.assistant("55555555-5555-5555-5555-555555555555", [SdkMessages.thinking("Pondering")], "claude-opus-5"),
+      SdkMessages.textDelta("s-3", first, 1, "Hel"),
+      SdkMessages.textDelta("s-3", first, 1, "lo"),
+      SdkMessages.blockStop("s-3", first, 1),
+      SdkMessages.assistant("66666666-6666-6666-6666-666666666666", [SdkMessages.text("Hello!")], "claude-opus-5"),
+      SdkMessages.assistant("77777777-7777-7777-7777-777777777777", [SdkMessages.toolUse("tool-1", "Bash", { command: "ls" })], "claude-opus-5"),
+      SdkMessages.messageStart("s-3", second),
+      SdkMessages.textDelta("s-3", second, 0, "Do"),
+      SdkMessages.assistant("88888888-8888-8888-8888-888888888888", [SdkMessages.text("Done.")], "claude-opus-5"),
+      SdkMessages.success("s-3", "Done.")
+    ]);
+
+    await turn.consume(query);
+
+    const texts = listener.details.filter(t => t.kind === DetailKind.Text);
+    Assert.areEqual(JSON.stringify(["s-3:stream1:1", "s-3:stream2:0"]), JSON.stringify([...new Set(texts.map(t => t.providerItemId))]));
+    Assert.areEqual("Hello!", texts.filter(t => t.providerItemId === "s-3:stream1:1").at(-1)?.text);
+    Assert.areEqual("Done.", texts.at(-1)?.text);
+    Assert.areEqual("Pondering", listener.details.filter(t => t.providerItemId === "s-3:stream1:0").at(-1)?.text);
+  }
+
+  @TestMethod
   public async growsStreamedBlocksThenReusesTheirIdsForTheCompleteMessage(): Promise<void> {
     const listener = new RecordingTurnListener();
     const turn = new ClaudeTurn(listener, null, new DeltaStream(listener, 1));

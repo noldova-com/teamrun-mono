@@ -42,6 +42,7 @@ export class ClaudeTurn {
   private readonly stream: DeltaStream;
   private readonly streamBlockIds: Map<number, string> = new Map();
   private streamOrdinal: number = 0;
+  private deliveredBlocks: number = 0;
   private readonly roleApplied: RoleApplication | null;
 
   public constructor(listener: ITurnListener, resumeNativeSessionId: string | null, stream: DeltaStream, roleApplied: RoleApplication | null = null) {
@@ -129,6 +130,7 @@ export class ClaudeTurn {
     if (event.type === Resources.messageStartEventType) {
       this.streamOrdinal += 1;
       this.streamBlockIds.clear();
+      this.deliveredBlocks = 0;
       return;
     }
     if (event.type !== Resources.contentBlockDeltaEventType)
@@ -180,11 +182,16 @@ export class ClaudeTurn {
     if (!Object.isNull(message.parent_tool_use_id))
       return;
 
-    message.message.content.forEach((block, index) =>
-      this.handleBlock(block, this.streamBlockIds.get(index) ?? `${message.uuid}${Resources.requestIdSeparator}${index}`));
-    for (const id of this.streamBlockIds.values())
-      this.stream.forget(id);
-    this.streamBlockIds.clear();
+    message.message.content.forEach((block, index) => {
+      const position = this.deliveredBlocks + index;
+      const streamed = this.streamBlockIds.get(position);
+      this.handleBlock(block, streamed ?? `${message.uuid}${Resources.requestIdSeparator}${index}`);
+      if (!Object.isUndefined(streamed)) {
+        this.stream.forget(streamed);
+        this.streamBlockIds.delete(position);
+      }
+    });
+    this.deliveredBlocks += message.message.content.length;
     if (message.message.model !== this.currentObserved.model) {
       const observed = this.currentObserved;
       this.currentObserved = new ObservedSettings(observed.provider, message.message.model, observed.effort, observed.harnessVersion, observed.identity);
