@@ -45,10 +45,23 @@ export class ResourcesTests {
     const messages = [
       Resources.versionTextInvalid, Resources.resumedWithoutSession, Resources.approvalDecisionMismatch,
       Resources.approvalWithoutOptions, Resources.decisionStatusMismatch, Resources.unknownDecision, Resources.decisionOutcomeMismatch,
-      Resources.provenanceMismatch, Resources.messageEndMismatch
+      Resources.provenanceMismatch, Resources.messageEndMismatch, Resources.terminalLineRangeReversed, Resources.terminalRunsMismatch,
+      Resources.terminalPageOutsideStored
     ];
 
     for (const message of messages)
       Assert.isTrue(message.endsWith("."));
+  }
+
+  @TestMethod
+  public boundsTerminalsAndEncodesTheirColors(): void {
+    Assert.areEqual(2, Resources.minimumTerminalColumns);
+    Assert.areEqual(1000, Resources.maximumTerminalColumns);
+    Assert.areEqual(1000, Resources.maximumTerminalRows);
+    Assert.areEqual(-1, Resources.defaultTerminalColor);
+    Assert.areEqual(256, Resources.terminalPaletteSize);
+    Assert.areEqual(0x1000000, Resources.terminalRgbColor);
+    Assert.areEqual(0x1ffffff, Resources.maximumTerminalColor);
+    Assert.areEqual(0x1ff, Resources.terminalTextStyles);
   }
 }

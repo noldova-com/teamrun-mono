@@ -7,6 +7,7 @@
  */
 
 import { existsSync, rmSync } from "node:fs";
+import { release } from "node:os";
 
 import { Guid } from "@noldova/teamrun-foundation-core";
 import {
@@ -32,8 +33,10 @@ import { InvalidOperationException } from "../exceptions/invalid-operation.excep
 import { EndpointKind } from "../enums/endpoint-kind.js";
 import type { IIdleParticipant } from "../interfaces/i-idle-participant.js";
 import type { IServerListener } from "../interfaces/i-server-listener.js";
+import type { IShellLocator } from "../interfaces/i-shell-locator.js";
 import { RuntimeLock } from "../models/runtime-lock.js";
 import { RuntimeSettings } from "../models/runtime-settings.js";
+import { TerminalSettings } from "../models/terminal-settings.js";
 import { Resources } from "../resources.js";
 import { RuntimeServer } from "./endpoint/runtime-server.js";
 import { IdleMonitor } from "./idle-monitor.js";
@@ -44,6 +47,9 @@ import type { IUpdateShutdown } from "../interfaces/i-update-shutdown.js";
 import { InstallationRole } from "../enums/installation-role.js";
 import { InstallationMember } from "../models/installation-member.js";
 import type { InstallationRegistry } from "./installation-registry.js";
+import { ShellLocator } from "./terminals/shell-locator.js";
+import { TerminalEnvironment } from "./terminals/terminal-environment.js";
+import { TerminalHost } from "./terminals/terminal-host.js";
 import { TokenGenerator } from "./tokens/token-generator.js";
 
 export class RuntimeService implements IServerListener, IIdleParticipant, IEventListener, IUpdateShutdown {
@@ -65,15 +71,19 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
   private sessionCount: number = 0;
   private updateDataClosed: boolean = false;
   private readonly installation: InstallationRegistry | null;
+  private readonly shells: IShellLocator;
   private member: InstallationMember | null = null;
+  private terminals: TerminalHost | null = null;
 
-  public constructor(settings: RuntimeSettings, registry: ProviderRegistry, processes: ProcessRegistry, installation: InstallationRegistry | null = null) {
+  public constructor(settings: RuntimeSettings, registry: ProviderRegistry, processes: ProcessRegistry, installation: InstallationRegistry | null = null,
+    shells: IShellLocator = ShellLocator.fromPlatform(process.platform)) {
     this.settings = settings;
     this.registry = registry;
     this.processes = processes;
     this.lockFile = new LockFile(settings.lockPath, new ProcessProbe());
     this.idle = new IdleMonitor(settings.idleGraceMilliseconds, this);
     this.installation = installation;
+    this.shells = shells;
   }
 
   public get lock(): RuntimeLock | null {
@@ -145,9 +155,14 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
     this.engine = engine;
     engine.reconcile();
     const dispatcher = new RequestDispatcher(providers, accounts, projects, conversations, messages, approvals, engine, teammates, events);
+    const terminals = new TerminalHost(projects, this.settings.terminalsPath, this.shells,
+      TerminalEnvironment.forPlatform(process.platform, process.env, Intl.DateTimeFormat().resolvedOptions().locale),
+      TerminalSettings.forPlatform(process.platform, release()));
+    terminals.prepare();
+    this.terminals = terminals;
     const token = new TokenGenerator().generate();
     const server = new RuntimeServer(this.settings.endpointKind, this.settings.socketPath, token, dispatcher, this,
-      () => engine.activeRunCount > 0, Resources.runtimePauseLeaseMilliseconds, this);
+      () => engine.activeRunCount > 0, Resources.runtimePauseLeaseMilliseconds, this, terminals);
     this.server = server;
     this.subscriptions = [events.subscribe(server), events.subscribe(this)];
 
@@ -200,7 +215,7 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
     let timer: NodeJS.Timeout | null = null;
     try {
       await Promise.race([
-        this.shutdownProviders(),
+        this.endWork(),
         new Promise<never>((_resolve, reject) => {
           timer = setTimeout(() => reject(new Error(Resources.runtimeShutdownFailed)), Resources.updateShutdownMilliseconds);
         })
@@ -242,12 +257,18 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
       this.server = null;
       return;
     }
-    await this.shutdownProviders();
+    await this.endWork();
     if (!Object.isNull(this.context))
       this.context[Symbol.dispose]();
     this.server = null;
     this.engine = null;
     this.context = null;
+  }
+
+  private async endWork(): Promise<void> {
+    if (!Object.isNull(this.terminals))
+      await this.terminals.shutdown();
+    await this.shutdownProviders();
   }
 
   private async shutdownProviders(): Promise<void> {

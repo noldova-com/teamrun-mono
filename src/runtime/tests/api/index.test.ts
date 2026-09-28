@@ -21,6 +21,8 @@ export class RuntimeApiTests {
     ];
 
     expected.push("InstallationRole", "InstallationUpdatePhase", "InstallationMember", "InstallationUpdate", "InstallationRegistry");
+    expected.push("RegistryScope", "RegistryVariable", "Shell", "ShellEnvironment", "TerminalSettings", "HostedTerminal", "PseudoTerminal", "ShellLocator",
+      "TerminalEmulator", "TerminalEnvironment", "TerminalHistory", "TerminalHost", "TerminalLineReader", "WindowsEnvironmentReader");
     Assert.areEqual([...expected].sort().join(","), Object.keys(api).sort().join(","));
   }
 }

@@ -50,5 +50,13 @@ export enum MethodName {
   MessageCancel = "MessageCancel",
   ApprovalList = "ApprovalList",
   ApprovalListPending = "ApprovalListPending",
-  ApprovalDecide = "ApprovalDecide"
+  ApprovalDecide = "ApprovalDecide",
+  TerminalList = "TerminalList",
+  TerminalOpen = "TerminalOpen",
+  TerminalInput = "TerminalInput",
+  TerminalResize = "TerminalResize",
+  TerminalRestart = "TerminalRestart",
+  TerminalClose = "TerminalClose",
+  TerminalScreen = "TerminalScreen",
+  TerminalLines = "TerminalLines"
 }

@@ -105,6 +105,17 @@ export class RequestDispatcher {
     }
   }
 
+  public static describe(error: unknown): ServiceResponseInfo {
+    if (error instanceof ServiceException)
+      return error.info;
+    if (error instanceof JsonException)
+      return new ServiceResponseInfo(ErrorCode.InvalidParams, error.message, [error.path]);
+    if (error instanceof ArgumentException)
+      return new ServiceResponseInfo(ErrorCode.InvalidParams, error.message, [error.parameterName].filter((t): t is string => !Object.isUndefined(t)));
+
+    return new ServiceResponseInfo(ErrorCode.Internal, error instanceof Error ? error.message : String(error));
+  }
+
   private async invoke(method: string, payload: JsonValue): Promise<JsonValue> {
     switch (method) {
       case MethodName.TeammateList:
@@ -196,16 +207,5 @@ export class RequestDispatcher {
       default:
         throw new ServiceException(ErrorCode.UnknownMethod, Resources.formatUnknownMethod(method), [method]);
     }
-  }
-
-  private static describe(error: unknown): ServiceResponseInfo {
-    if (error instanceof ServiceException)
-      return error.info;
-    if (error instanceof JsonException)
-      return new ServiceResponseInfo(ErrorCode.InvalidParams, error.message, [error.path]);
-    if (error instanceof ArgumentException)
-      return new ServiceResponseInfo(ErrorCode.InvalidParams, error.message, [error.parameterName].filter((t): t is string => !Object.isUndefined(t)));
-
-    return new ServiceResponseInfo(ErrorCode.Internal, error instanceof Error ? error.message : String(error));
   }
 }
