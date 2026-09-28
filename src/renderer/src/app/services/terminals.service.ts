@@ -193,8 +193,6 @@ export class TerminalsService {
     const fontSize = this.preferences.codeTextSize();
     await this.document.fonts.load(Resources.formatFontLoad(fontSize, fontFamily));
     const options: ITerminalOptions = { allowTransparency: true, fontFamily, fontSize, scrollback: Resources.terminalScrollback, theme: this.palette() };
-    if (!Object.isNull(state.conptyBuild))
-      options.windowsPty = { backend: Resources.conptyBackend, buildNumber: state.conptyBuild };
     return new TerminalSession(state, new xterm.Terminal(options), new fit.FitAddon(), this.bridge);
   }
 

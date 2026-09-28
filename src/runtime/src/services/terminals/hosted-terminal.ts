@@ -58,7 +58,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
     this.shell = shell;
     this.settings = settings;
     this.history = new TerminalHistory(historyPath, () => this.updateFlow());
-    this.emulator = new TerminalEmulator(size, this.history, settings.windowsBuild);
+    this.emulator = new TerminalEmulator(size, this.history, settings.windowsBuild, t => this.answer(t));
     this.size = size;
   }
 
@@ -150,6 +150,11 @@ export class HostedTerminal implements IPseudoTerminalListener {
     });
   }
 
+  private answer(data: string): void {
+    if (!Object.isNull(this.pty))
+      this.pty.write(data);
+  }
+
   private launch(environment: ShellEnvironment): PseudoTerminal {
     return PseudoTerminal.start(this.shell, this.project.rootPath, environment, this.size, this, this.settings.forceSignal, this.settings.endMilliseconds);
   }
@@ -162,7 +167,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
     await this.parsed();
 
     const pty = this.launch(environment);
-    const emulator = new TerminalEmulator(this.size, this.history, this.settings.windowsBuild);
+    const emulator = new TerminalEmulator(this.size, this.history, this.settings.windowsBuild, t => this.answer(t));
     this.emulator.storeScreen();
     this.emulator[Symbol.dispose]();
     this.emulator = emulator;

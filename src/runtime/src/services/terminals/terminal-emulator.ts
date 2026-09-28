@@ -20,24 +20,27 @@ export class TerminalEmulator implements Disposable {
   private readonly serializer: SerializeAddon = new serialize.SerializeAddon();
   private readonly history: TerminalHistory;
   private readonly reader: TerminalLineReader;
+  private readonly answer: (data: string) => void;
   private captured: number = 0;
   private pending: number = 0;
 
-  public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null) {
+  public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null, answer: (data: string) => void) {
     this.terminal = new headless.Terminal({
       cols: size.columns,
       rows: size.rows,
       scrollback: Resources.terminalCaptureScrollback,
       allowProposedApi: true,
-      ...(Object.isNull(windowsBuild) ? {} : { windowsPty: { backend: Resources.conptyBackend, buildNumber: windowsBuild } })
+      ...(Object.isNull(windowsBuild) ? {} : { windowsPty: { backend: Resources.conptyBackend, buildNumber: windowsBuild }, reflowCursorLine: true })
     });
     this.history = history;
+    this.answer = answer;
     this.terminal.loadAddon(this.serializer);
     this.reader = new TerminalLineReader(this.terminal.buffer.normal.getNullCell());
     this.terminal.onScroll(() => this.capture());
     this.terminal.parser.registerCsiHandler({ final: Resources.eraseInDisplayFinal }, t => this.eraseSaved(t));
     this.terminal.parser.registerCsiHandler({ prefix: Resources.privatePrefix, final: Resources.eraseInDisplayFinal }, t => this.eraseSaved(t));
     this.terminal.parser.registerEscHandler({ final: Resources.fullResetFinal }, () => this.forgetStored());
+    this.terminal.parser.registerCsiHandler({ final: Resources.deviceAttributesFinal }, t => this.answerAttributes(t));
   }
 
   public get size(): TerminalSize {
@@ -119,5 +122,13 @@ export class TerminalEmulator implements Disposable {
     this.history.clear();
     this.captured = 0;
     return false;
+  }
+
+  private answerAttributes(params: readonly (number | number[])[]): boolean {
+    if (params.length > 1 || (params.length === 1 && params[0] !== 0))
+      return false;
+
+    this.answer(Resources.deviceAttributesAnswer);
+    return true;
   }
 }

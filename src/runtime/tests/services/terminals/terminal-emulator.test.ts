@@ -18,7 +18,7 @@ export class TerminalEmulatorTests {
   public async storesEveryLineThatLeavesTheScreenInOrder(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     let text = "";
     for (let index = 1; index <= 600; index++)
       text += `line ${index}\r\n`;
@@ -40,7 +40,7 @@ export class TerminalEmulatorTests {
   public async clearsTheStoredLinesWhenTheSavedLinesAreErasedOrTheTerminalResets(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
 
     for (const [clearing, expected] of [["\u001b[3J", "c,d,e,f"], ["\u001b[?3J", "c,d,e,f"], ["\u001bc", "e,f"]]) {
       await TerminalEmulatorTests.write(emulator, "a\r\nb\r\nc\r\nd\r\n");
@@ -58,7 +58,7 @@ export class TerminalEmulatorTests {
   public async keepsNothingOfTheAlternateScreen(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
     await TerminalEmulatorTests.write(emulator, "a\r\nb\r\nc\r\nd\r\n");
     const stored = history.stored.end;
 
@@ -76,7 +76,7 @@ export class TerminalEmulatorTests {
   public async storesTheLinesAResizePushesOffAndNeverBringsThemBack(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     await TerminalEmulatorTests.write(emulator, "a1\r\na2\r\na3\r\na4\r\na5");
 
     emulator.resize(new TerminalSize(20, 3));
@@ -97,7 +97,7 @@ export class TerminalEmulatorTests {
   public async storesTheScreenUpToTheCursorOrItsLastText(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 6), history, 26200);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 6), history, 26200, () => undefined);
     await TerminalEmulatorTests.write(emulator, "x\r\ny\r\nz\u001b[2A");
 
     emulator.storeScreen();
@@ -111,7 +111,7 @@ export class TerminalEmulatorTests {
   public async runsActionsAfterTheOutputWrittenBeforeThem(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 19045);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 19045, () => undefined);
     const order: string[] = [];
 
     emulator.write("x".repeat(10_000), () => order.push("written"));
@@ -124,6 +124,33 @@ export class TerminalEmulatorTests {
     Assert.areEqual(10_000, backlog);
     Assert.areEqual(0, emulator.backlog);
     Assert.areEqual("written,after", order.join(","));
+    await history.close();
+  }
+
+  @TestMethod
+  public async answersThePrimaryDeviceAttributesQueryOnly(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const answers: string[] = [];
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, t => answers.push(t));
+
+    await TerminalEmulatorTests.write(emulator, "\u001b[c\u001b[0c\u001b[1c\u001b[0;1c\u001b[>c");
+
+    Assert.areEqual(JSON.stringify(["\u001b[?1;2c", "\u001b[?1;2c"]), JSON.stringify(answers));
+    await history.close();
+  }
+
+  @TestMethod
+  public async keepsTheLineHoldingTheCursorWhenTheWidthChangesOnWindows(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 26200, () => undefined);
+    await TerminalEmulatorTests.write(emulator, "PS C:\\project> ");
+
+    emulator.resize(new TerminalSize(8, 5));
+    emulator.resize(new TerminalSize(20, 5));
+
+    Assert.isTrue(emulator.screen().includes("PS C:\\project>"));
     await history.close();
   }
 

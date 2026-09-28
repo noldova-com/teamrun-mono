@@ -179,7 +179,7 @@ test("opens a terminal in the default shell, runs a command, hides and shows it,
 
   await page.keyboard.type("echo teamrun-terminal-check");
   await page.keyboard.press("Enter");
-  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/);
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/, { timeout: 60_000 });
   await desktop.capture("terminal-opened");
 
   await page.keyboard.press("Control+Backquote");

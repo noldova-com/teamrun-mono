@@ -13,6 +13,7 @@ import { type IDisposable, type IPty, spawn } from "node-pty";
 import type { IPseudoTerminalListener } from "../../interfaces/i-pseudo-terminal-listener.js";
 import type { Shell } from "../../models/shell.js";
 import type { ShellEnvironment } from "../../models/shell-environment.js";
+import { Resources } from "../../resources.js";
 
 export class PseudoTerminal {
   private readonly pty: IPty;
@@ -39,7 +40,8 @@ export class PseudoTerminal {
     listener: IPseudoTerminalListener,
     forceSignal: string | undefined,
     graceMilliseconds: number): PseudoTerminal {
-    const pty = spawn(shell.executable, [...shell.arguments], { cwd: directory, env: environment.toRecord(), cols: size.columns, rows: size.rows });
+    const pty = spawn(shell.executable, [...shell.arguments],
+      { cwd: directory, env: environment.toRecord(), cols: size.columns, rows: size.rows, useConptyDll: true });
     return new PseudoTerminal(pty, listener, forceSignal, graceMilliseconds);
   }
 
@@ -67,6 +69,7 @@ export class PseudoTerminal {
     if (this.hasExited)
       return;
 
+    this.pty.resume();
     this.pty.kill();
     if (await this.exitsWithin(this.graceMilliseconds))
       return;
@@ -93,9 +96,18 @@ export class PseudoTerminal {
     this.exitCode = exitCode;
     for (const subscription of this.subscriptions)
       subscription.dispose();
-    // node-pty releases a finished Windows pseudoconsole only through kill(); elsewhere the process is already gone.
     this.pty.kill();
+    this.releaseOutputReader();
     this.exited.resolve();
     this.listener.onExit(this, exitCode);
+  }
+
+  private releaseOutputReader(): void {
+    const pty: object = this.pty;
+    const agent: unknown = Resources.ptyAgentField in pty ? pty[Resources.ptyAgentField] : undefined;
+    const reader: unknown = Object.isObject(agent) && Resources.ptyOutputReaderField in agent ? agent[Resources.ptyOutputReaderField] : undefined;
+    const dispose: unknown = Object.isObject(reader) && Resources.disposeMethod in reader ? reader[Resources.disposeMethod] : undefined;
+    if (Object.isFunction(dispose))
+      dispose.call(reader);
   }
 }

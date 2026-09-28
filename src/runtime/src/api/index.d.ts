@@ -1217,6 +1217,18 @@ export declare class Resources {
    */
   public static readonly conptyBackend: "conpty";
   /**
+   * The field of `node-pty`'s Windows terminal that holds its pseudo-console agent: `_agent`.
+   */
+  public static readonly ptyAgentField: "_agent";
+  /**
+   * The field of that agent that holds the thread reading the pseudo-console's output: `_conoutSocketWorker`.
+   */
+  public static readonly ptyOutputReaderField: "_conoutSocketWorker";
+  /**
+   * The method that releases that thread: `dispose`.
+   */
+  public static readonly disposeMethod: "dispose";
+  /**
    * The emulator's name for the normal screen: `normal`.
    */
   public static readonly normalBufferType: "normal";
@@ -1232,6 +1244,14 @@ export declare class Resources {
    * The final character of a full reset: `c`.
    */
   public static readonly fullResetFinal: string;
+  /**
+   * The final character of the primary device attributes query: `c`.
+   */
+  public static readonly deviceAttributesFinal: string;
+  /**
+   * The answer to the primary device attributes query, the one `@xterm/xterm` gives: a VT100 with advanced video.
+   */
+  public static readonly deviceAttributesAnswer: string;
   /**
    * The Erase in Display parameter that erases the saved lines: 3.
    */
@@ -2336,7 +2356,11 @@ export declare class TerminalEnvironment {
 
 /**
  * The pseudo-terminal a shell runs in, behind which `node-pty` stays: it passes input, size and flow control to the
- * shell, reports output and the shell's end, and ends the shell on request.
+ * shell, reports output and the shell's end, and ends the shell on request. When a shell ends by itself, it still asks
+ * `node-pty` to end it, which closes the shell's input, and on Windows it releases the thread `node-pty` keeps reading
+ * the pseudo-console's output. `node-pty` offers no public way to release that thread and otherwise keeps it until more
+ * output arrives, which never happens after an exit (microsoft/node-pty#887); reaching it is the exception the coding
+ * standards record.
  */
 export declare class PseudoTerminal {
   /**
@@ -2349,7 +2373,8 @@ export declare class PseudoTerminal {
   public constructor(pty: IPty, listener: IPseudoTerminalListener, forceSignal: string | undefined, graceMilliseconds: number);
 
   /**
-   * Starts a shell in a pseudo-terminal.
+   * Starts a shell in a pseudo-terminal. On Windows the shell runs in the pseudo-console that `node-pty` ships,
+   * Microsoft's `conpty.dll` with `OpenConsole.exe`, rather than the one built into Windows.
    * @param shell The shell.
    * @param directory The folder the shell starts in.
    * @param environment The shell's environment.
@@ -2397,7 +2422,8 @@ export declare class PseudoTerminal {
   public resume(): void;
 
   /**
-   * Ends the shell: asks it to end (a hangup outside Windows), waits, then forces it and waits again.
+   * Ends the shell: asks it to end (a hangup outside Windows), waits, then forces it and waits again. It reads the
+   * output again first, because the Windows pseudo-console cannot end a shell while its output waits to be read.
    * @returns A promise that settles when the shell has ended or the second wait has passed; `hasExited` tells which.
    */
   public end(): Promise<void>;
@@ -2478,7 +2504,9 @@ export declare class TerminalHistory {
 /**
  * The runtime's copy of a terminal's screen, drawn by `@xterm/headless`. Lines that leave the screen are stored in
  * the terminal's history as they leave it; erasing saved lines or a full reset clears the history, and the alternate
- * screen of full-screen programs is not stored.
+ * screen of full-screen programs is not stored. It answers the primary device attributes query, which the Windows
+ * pseudo-console asks when it starts and waits for, so the answer never depends on a window being attached; on
+ * Windows it also rewraps the line holding the cursor when the width changes, so a resize keeps the prompt.
  */
 export declare class TerminalEmulator implements Disposable {
   /**
@@ -2486,8 +2514,9 @@ export declare class TerminalEmulator implements Disposable {
    * @param size The screen's size.
    * @param history Receives the lines that leave the screen.
    * @param windowsBuild The Windows build the pseudo-terminal runs on, or `null` elsewhere.
+   * @param answer Sends the emulator's answers to the shell.
    */
-  public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null);
+  public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null, answer: (data: string) => void);
 
   /**
    * The screen's size.

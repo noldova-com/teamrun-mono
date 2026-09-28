@@ -16,7 +16,9 @@ import {
   TerminalLineRange,
   TerminalOutputPayload,
   TerminalResizeParams,
-  TerminalScreen
+  TerminalScreen,
+  TerminalSize,
+  TerminalState
 } from "@noldova/teamrun-protocol";
 
 import { FakeFitAddon } from "../../fixtures/fake-fit-addon";
@@ -62,6 +64,27 @@ describe("TerminalSession", () => {
     expect(lines()).toEqual(["screen", "early", "late"]);
     expect(session.id).toBe("t1");
     expect(session.state().sequence).toBe(4);
+  });
+
+  it("leaves the device attributes question to the runtime, which answers it", async () => {
+    session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
+
+    session.receiveOutput(output(1, "\u001b[c\u001b[0c\u001b[6n"));
+    await parsed();
+
+    expect(requests(MethodName.TerminalInput)).toEqual([new TerminalInputParams("t1", "\u001b[1;1R").toJson()]);
+  });
+
+  it("follows the Windows pseudo-console only for a terminal that runs in one", () => {
+    const windows = new TerminalState("t2", SampleData.project.id, "PowerShell", 26200, new TerminalSize(80, 24), null, 0, 0, stored);
+    const other = new Terminal();
+    const onWindows = new TerminalSession(windows, other, new FakeFitAddon(), TestBed.inject(BridgeService));
+
+    expect(other.options.windowsPty).toEqual({ backend: "conpty", buildNumber: 26200 });
+    expect(other.options.reflowCursorLine).toBe(true);
+    expect(terminal.options.windowsPty).toEqual({});
+    expect(terminal.options.reflowCursorLine).toBe(false);
+    onWindows.dispose();
   });
 
   it("acknowledges drawn output in batches", async () => {

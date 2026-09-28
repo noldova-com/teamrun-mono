@@ -89,6 +89,34 @@ export class PseudoTerminalTests {
   }
 
   @TestMethod
+  public async readsThePausedOutputAgainBeforeEndingTheShell(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const fake = new FakePty(1);
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+    pty.pause();
+
+    await pty.end();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.areEqual(1, fake.resumes);
+  }
+
+  @TestMethod
+  public async releasesTheWindowsOutputReaderOfAShellThatEnded(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const reader = { released: 0, dispose(): void { this.released += 1; } };
+    const fake = Object.assign(new FakePty(1), { _agent: { _conoutSocketWorker: reader } });
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+
+    fake.emitExit(0);
+    await pty.end();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.areEqual(1, reader.released);
+    Assert.areEqual(1, fake.kills.length);
+  }
+
+  @TestMethod
   public passesInputSizeAndFlowControlToThePseudoTerminal(): void {
     const listener = new RecordingPseudoTerminalListener();
     const fake = new FakePty(1);
