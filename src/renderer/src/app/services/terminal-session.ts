@@ -96,10 +96,12 @@ export class TerminalSession {
 
   public show(host: HTMLElement, keys: (event: KeyboardEvent) => boolean): void {
     const element = this.terminal.element;
-    if (Object.isUndefined(element))
+    if (Object.isUndefined(element)) {
+      host.replaceChildren();
       this.terminal.open(host);
+    }
     else if (element.parentElement !== host)
-      host.append(element);
+      host.replaceChildren(element);
     this.terminal.attachCustomKeyEventHandler(keys);
     this.fitToHost();
     if (this.focusPending) {
