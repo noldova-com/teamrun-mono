@@ -92,6 +92,7 @@ export class MessageCardComponent {
   protected readonly approvals: Signal<readonly Approval[]> = computed(() => this.store.pendingApprovals().filter(t => t.messageId === this.message().id));
   protected readonly rootPath: Signal<string | null> = computed(() => this.store.selectedProject()?.rootPath ?? null);
   protected readonly edits: Signal<readonly FileEdit[]> = computed(() => this.changes.editsOf(this.message()));
+  protected readonly evidenceNotes = computed(() => this.formatter.evidenceNotes(this.message()));
   protected readonly imageFiles: Signal<readonly ImageSource[]> = computed(() => this.changes.imageFilesOf(this.message(), this.rootPath()));
   protected readonly attachedImages: Signal<readonly ImageSource[]> = computed(() => this.message().attachments.filter(t => t.isImage)
     .map(t => new ImageSource(t.path, t.name, t.path, null)));

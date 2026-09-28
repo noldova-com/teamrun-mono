@@ -166,7 +166,7 @@ export class ReplyRun implements ITurnListener {
     const reported = new Set(this.reportedFiles().map(t => ReplyRun.pathKey(t)));
     const changes = (await tree.changesSince()).filter(t => !reported.has(ReplyRun.pathKey(t.path)));
     if (!tree.hasCompleteEvidence)
-      this.appendDetail(DetailKind.Note, Resources.incompleteWorkingTreeEvidence, null);
+      this.appendDetail(DetailKind.Note, Resources.incompleteWorkingTreeEvidence, { source: Resources.workingTreeSource });
     if (changes.length === 0)
       return;
     const names = changes.map(t => relative(tree.root, t.path)).join(Resources.listSeparator);

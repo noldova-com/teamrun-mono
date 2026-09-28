@@ -102,6 +102,12 @@ LICENSE file in the root directory of this source tree.
     @if (edits().length> 0) {
       <tr-edited-files-card [edits]="edits()" [rootPath]="rootPath()" [expansion]="state().expansion" />
     }
+    @for (note of evidenceNotes(); track note.sequence) {
+      <p class="tr-evidence-note my-2 flex items-start gap-2 tr-muted">
+        <mat-icon class="mt-0.5 shrink-0">{{ resources.icons["note"] }}</mat-icon>
+        <span class="whitespace-pre-wrap break-words">{{ note.text }}</span>
+      </p>
+    }
     @for (approval of approvals(); track approval.id) {
       <tr-approval-card [approval]="approval" />
     }

@@ -48,10 +48,11 @@ export class ReplySummaryTests {
   }
 
   @TestMethod
-  public distinguishesActivityFromAnswersImagesAndWorkingTreeReports(): void {
+  public distinguishesActivityFromAnswersImagesAndWorkingTreeEvidence(): void {
     const details = [new MessageDetail(0, DetailKind.Text, "answer", null, "t"), new MessageDetail(1, DetailKind.Error, "error", null, "t"),
       new MessageDetail(2, DetailKind.Note, "image", { itemType: "imageGeneration" }, "t"),
-      new MessageDetail(3, DetailKind.FileChange, "report", { source: "workingTree", changes: [{ path: "x", diff: "+a" }] }, "t")];
+      new MessageDetail(3, DetailKind.FileChange, "report", { source: "workingTree", changes: [{ path: "x", diff: "+a" }] }, "t"),
+      new MessageDetail(4, DetailKind.Note, "incomplete", { source: "workingTree" }, "t")];
     const summary = ReplySummary.fromMessage(ReplySummaryTests.message(details));
     Assert.isFalse(summary.matches(ReplyPanel.Activity));
     Assert.isTrue(summary.matches(ReplyPanel.Changes));

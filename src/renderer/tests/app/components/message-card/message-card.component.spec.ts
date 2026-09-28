@@ -104,6 +104,21 @@ describe("MessageCardComponent", () => {
     expect(element.querySelector(".tr-reply-summary")).toBeNull();
   });
 
+  it("keeps an answer followed by the working tree's note as the answer and shows the note under the reply", () => {
+    TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const fixture = TestBed.createComponent(MessageCardComponent);
+    fixture.componentRef.setInput("message", SampleData.withStatus(SampleData.reply, MessageStatus.Completed, [
+      SampleData.detail(0, DetailKind.Text, "Done."),
+      new MessageDetail(1, DetailKind.Note, "Git evidence may omit changes.", { source: "workingTree" }, SampleData.timestamp)
+    ]));
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector("tr-markdown")?.parentElement?.classList.contains("tr-interim")).toBe(false);
+    expect(element.querySelector(".tr-activity-toggle")).toBeNull();
+    expect(element.querySelector(".tr-evidence-note")?.textContent).toContain("Git evidence may omit changes.");
+  });
+
   it("copies what the user wrote and what the reply answered", async () => {
     const written: string[] = [];
     const clipboard = { writeText: (text: string): Promise<void> => { written.push(text); return Promise.resolve(); } };
