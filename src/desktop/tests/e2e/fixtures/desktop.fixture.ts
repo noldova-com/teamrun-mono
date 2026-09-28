@@ -25,6 +25,7 @@ export class DesktopFixture {
   private static readonly VIEWPORT_WIDTH: number = 1920;
   private static readonly VIEWPORT_HEIGHT: number = 1080;
   private static readonly DEVICE_SCALE_FACTOR: number = 1;
+  private static readonly NO_GPU_SWITCHES: readonly string[] = ["--disable-gpu", "--disable-software-rasterizer"];
   private static readonly EXIT_MILLISECONDS: number = 10_000;
   private static readonly PNG_WIDTH_OFFSET: number = 16;
   private static readonly PNG_HEIGHT_OFFSET: number = 20;
@@ -180,7 +181,7 @@ export class DesktopFixture {
     delete environment["TEAMRUN_SCREENSHOT"];
     this.application = await _electron.launch({
       executablePath: await new DevelopmentBinary().prepare(),
-      args: [`--force-device-scale-factor=${DesktopFixture.DEVICE_SCALE_FACTOR}`, fileURLToPath(new URL("./desktop-entry.fixture.ts", import.meta.url))],
+      args: [`--force-device-scale-factor=${DesktopFixture.DEVICE_SCALE_FACTOR}`, ...DesktopFixture.NO_GPU_SWITCHES, fileURLToPath(new URL("./desktop-entry.fixture.ts", import.meta.url))],
       env: environment, chromiumSandbox: true, timeout: 60_000
     });
     expect(this.application.process().spawnargs).not.toContain("--no-sandbox");
@@ -218,11 +219,12 @@ export class DesktopFixture {
     expect(host.defaultApp).toBe(true);
     expect(path.basename(host.executable)).toBe(process.platform === "win32" ? "TeamRun.exe" : process.platform === "darwin" ? "TeamRun" : "teamrun");
     const renderer = await this.window.evaluate(() => ({
-      nodeGlobal: "process" in globalThis, requireGlobal: "require" in globalThis, bridge: "teamrun" in globalThis
+      nodeGlobal: "process" in globalThis, requireGlobal: "require" in globalThis, bridge: "teamrun" in globalThis,
+      webgl2: document.createElement("canvas").getContext("webgl2") !== null
     }));
-    expect(renderer).toEqual({ nodeGlobal: false, requireGlobal: false, bridge: true });
+    expect(renderer).toEqual({ nodeGlobal: false, requireGlobal: false, bridge: true, webgl2: false });
     await this.info.attach(`host-${this.launches}`, {
-      body: JSON.stringify({ ...host, renderer, chromiumSandboxRequested: true,
+      body: JSON.stringify({ ...host, renderer, chromiumSandboxRequested: true, gpuRequested: false,
         colorScheme: "dark", reducedMotion: "reduce", screenshotAnimations: "reduced-motion preference" }, null, 2),
       contentType: "application/json"
     });
