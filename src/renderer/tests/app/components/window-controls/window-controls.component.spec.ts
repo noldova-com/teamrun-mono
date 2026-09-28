@@ -83,7 +83,7 @@ describe("WindowControlsComponent", () => {
     expect(label()).toBe("Update 0.0.5 ready to install");
   });
 
-  it("lists each panel that opens once in the Panels menu with its shortcut and no panel that opens more than once", async () => {
+  it("lists each panel that opens once with its shortcut, then New terminal, which needs a selected project", async () => {
     MemoryStorage.install(window);
     TestBed.configureTestingModule({ imports: [WindowControlsComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
     TestBed.inject(LayoutService).openPanel(new Panel(PanelKind.Terminal, "terminal-1"));
@@ -99,7 +99,9 @@ describe("WindowControlsComponent", () => {
     expect(items.map(t => Array.from(t.querySelectorAll(".mat-mdc-menu-item-text > span")).map(k => k.textContent?.trim()))).toEqual([
       ["Explorer", shortcuts.keysOf(ShortcutAction.ToggleExplorer)],
       ["Changes", shortcuts.keysOf(ShortcutAction.ToggleChanges)],
-      ["Activity", shortcuts.keysOf(ShortcutAction.ToggleActivity)]
+      ["Activity", shortcuts.keysOf(ShortcutAction.ToggleActivity)],
+      ["New terminal", shortcuts.keysOf(ShortcutAction.NewTerminal)]
     ]);
+    expect(items[3]?.disabled).toBe(true);
   });
 });

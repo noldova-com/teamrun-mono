@@ -7,7 +7,7 @@
  */
 
 import { DOCUMENT } from "@angular/common";
-import { Injectable, inject } from "@angular/core";
+import { Injectable, type Signal, type WritableSignal, inject, signal } from "@angular/core";
 
 import "@noldova/teamrun-foundation-core";
 
@@ -18,9 +18,13 @@ import { BridgeService } from "./bridge.service";
 export class PlatformService {
   private readonly document: Document = inject(DOCUMENT);
   private readonly bridge: BridgeService = inject(BridgeService);
+  private readonly macSignal: WritableSignal<boolean> = signal(false);
 
+  public readonly isMac: Signal<boolean> = this.macSignal.asReadonly();
   public readonly ready: Promise<void> = this.bridge.describe().then(info => {
-    if (!Object.isNull(info) && info.platform === Resources.macPlatform)
-      this.document.documentElement.classList.add(Resources.macClass);
+    if (Object.isNull(info) || info.platform !== Resources.macPlatform)
+      return;
+    this.macSignal.set(true);
+    this.document.documentElement.classList.add(Resources.macClass);
   });
 }

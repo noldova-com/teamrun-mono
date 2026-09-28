@@ -78,7 +78,8 @@ export class Layout {
   }
 
   public resetArrangement(): Layout {
-    return this.withArrangement(PanelArrangement.createDefault());
+    const instances = this.arrangement.groups.flatMap(t => t.panels).filter(t => !Object.isNull(t.instance));
+    return this.withArrangement(instances.reduce((arrangement, t) => arrangement.openPanel(t), PanelArrangement.createDefault()));
   }
 
   public showDocument(conversationId: string, preview: boolean = false): Layout {

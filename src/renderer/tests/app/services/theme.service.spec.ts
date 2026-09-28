@@ -32,6 +32,11 @@ describe("ThemeService", () => {
     expect(root.style.getPropertyValue("--tr-panel")).toBe("#1F1F1F");
     expect(root.style.getPropertyValue("--tr-accent")).toBe("#0078D4");
     expect(root.style.getPropertyValue("--mat-sys-primary")).toBe("#0078D4");
+    expect(root.style.getPropertyValue("--tr-terminal-foreground")).toBe("#CCCCCC");
+    expect(root.style.getPropertyValue("--tr-terminal-cursor")).toBe("#CCCCCC");
+    expect(root.style.getPropertyValue("--tr-terminal-selection")).toBe("#264F78");
+    expect(root.style.getPropertyValue("--tr-terminal-green")).toBe("#0DBC79");
+    expect(root.style.getPropertyValue("--tr-terminal-bright-white")).toBe("#E5E5E5");
 
     preferences.setTheme(Resources.lightModernThemeId);
     TestBed.tick();
@@ -40,6 +45,11 @@ describe("ThemeService", () => {
     expect(root.style.colorScheme).toBe(Resources.lightScheme);
     expect(root.style.getPropertyValue("--tr-window")).toBe("#F8F8F8");
     expect(root.style.getPropertyValue("--tr-text-muted")).toBe("#616161");
+    expect(root.style.getPropertyValue("--tr-terminal-foreground")).toBe("#3B3B3B");
+    expect(root.style.getPropertyValue("--tr-terminal-cursor")).toBe("#005FB8");
+    expect(root.style.getPropertyValue("--tr-terminal-selection")).toBe("#ADD6FF");
+    expect(root.style.getPropertyValue("--tr-terminal-green")).toBe("#107C10");
+    expect(root.style.getPropertyValue("--tr-terminal-bright-white")).toBe("#A5A5A5");
 
     preferences.setTheme("purple");
     TestBed.tick();

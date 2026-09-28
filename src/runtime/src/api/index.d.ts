@@ -1201,11 +1201,11 @@ export declare class Resources {
    */
   public static readonly terminalEndMilliseconds: number;
   /**
-   * The unprocessed output that pauses a shell: 512 KiB.
+   * The waiting output that pauses a shell: 1 MiB.
    */
   public static readonly terminalHighWatermark: number;
   /**
-   * The unprocessed output that lets a paused shell continue: 128 KiB.
+   * The waiting output that lets a paused shell continue: 256 KiB.
    */
   public static readonly terminalLowWatermark: number;
   /**
@@ -2203,11 +2203,12 @@ export declare class TerminalSettings {
    */
   public readonly endMilliseconds: number;
   /**
-   * The unprocessed output, in characters and bytes waiting to be stored, above which the shell is paused.
+   * The waiting output above which the shell is paused: characters the emulator has not processed, bytes waiting to
+   * be stored and characters sent to the owner that it has not acknowledged.
    */
   public readonly highWatermark: number;
   /**
-   * The unprocessed output at or below which a paused shell continues.
+   * The waiting output at or below which a paused shell continues.
    */
   public readonly lowWatermark: number;
 
@@ -2216,8 +2217,8 @@ export declare class TerminalSettings {
    * @param windowsBuild The Windows build number, or `null`.
    * @param forceSignal The signal that forces a shell to end, or `undefined`.
    * @param endMilliseconds How long to wait for a shell to end after each attempt; a positive integer.
-   * @param highWatermark The unprocessed output that pauses a shell; a positive integer.
-   * @param lowWatermark The unprocessed output that lets a paused shell continue; a non-negative integer below
+   * @param highWatermark The waiting output that pauses a shell; a positive integer.
+   * @param lowWatermark The waiting output that lets a paused shell continue; a non-negative integer below
    * `highWatermark`.
    * @throws ArgumentOutOfRangeException when a number is out of range.
    */
@@ -2227,7 +2228,7 @@ export declare class TerminalSettings {
    * Chooses the settings for a platform.
    * @param platform The platform, as `process.platform`.
    * @param release The operating system release, as `os.release()`; on Windows its third part is the build number.
-   * @returns The settings, with two-second end attempts and a 512 KiB to 128 KiB pause range.
+   * @returns The settings, with two-second end attempts and a 1 MiB to 256 KiB pause range.
    */
   public static forPlatform(platform: string, release: string): TerminalSettings;
 }
@@ -2280,7 +2281,7 @@ export declare class WindowsEnvironmentReader {
   public constructor(command: ProcessCommand, runner: CommandRunner, timeoutMilliseconds: number);
 
   /**
-   * Creates the reader that runs Windows PowerShell from the Windows folder with a 10-second deadline.
+   * Creates the reader that runs Windows PowerShell from the Windows folder with a 20-second deadline.
    * @param systemRoot The Windows folder, from `SystemRoot`.
    * @param runner Runs the command.
    * @returns The reader.
@@ -2594,10 +2595,18 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
   public resize(size: TerminalSize): void;
 
   /**
-   * Sends the processed output, then reads the screen.
+   * Sends the processed output, then reads the screen. The owner starts again from this screen, so all output sent
+   * before it counts as acknowledged.
    * @returns The state and the screen, which match each other.
    */
   public screen(): TerminalScreen;
+
+  /**
+   * Records that the owner processed output it was sent, which lets a shell paused for unacknowledged output continue.
+   * @param characters How many characters of output the owner processed; an acknowledgement never counts more than
+   * the output still unacknowledged.
+   */
+  public acknowledge(characters: number): void;
 
   /**
    * Reads a page of stored lines.

@@ -26,6 +26,9 @@ import { TabDropTarget } from "../../models/tab-drop-target";
 import type { TabGroup } from "../../models/tab-group";
 import { Resources } from "../../resources";
 import { LayoutService } from "../../services/layout.service";
+import { PanelLabels } from "../../services/panel-labels.service";
+import type { TerminalSession } from "../../services/terminal-session";
+import { TerminalsService } from "../../services/terminals.service";
 
 @Component({
   selector: "tr-panel-menu",
@@ -36,6 +39,8 @@ import { LayoutService } from "../../services/layout.service";
 })
 export class PanelMenuComponent {
   private readonly layout: LayoutService = inject(LayoutService);
+  private readonly labels: PanelLabels = inject(PanelLabels);
+  private readonly terminals: TerminalsService = inject(TerminalsService);
   private readonly document: Document = inject(DOCUMENT);
   private readonly environment: EnvironmentInjector = inject(EnvironmentInjector);
 
@@ -48,6 +53,7 @@ export class PanelMenuComponent {
     const group = this.group();
     return !Object.isNull(group) && (group.isDocuments || group.panels.length > 1);
   });
+  protected readonly terminal: Signal<TerminalSession | null> = computed(() => this.terminals.sessionOf(this.panel()));
 
   public readonly panel: InputSignal<Panel> = input.required<Panel>();
   public readonly menu: Signal<MatMenu | undefined> = viewChild<MatMenu>("panelMenu");
@@ -61,7 +67,7 @@ export class PanelMenuComponent {
   }
 
   protected labelOf(group: TabGroup): string {
-    return group.isDocuments ? Resources.documentsGroupLabel : group.panels.map(t => Resources.panelLabels[t.kind]).join(Resources.groupLabelJoiner);
+    return group.isDocuments ? Resources.documentsGroupLabel : group.panels.map(t => this.labels.of(t)).join(Resources.groupLabelJoiner);
   }
 
   protected moveTo(group: TabGroup): void {
@@ -76,6 +82,10 @@ export class PanelMenuComponent {
 
   protected dock(side: DockSide): void {
     this.move(new SideDropTarget(side));
+  }
+
+  protected restart(session: TerminalSession): void {
+    void this.terminals.restart(session);
   }
 
   protected close(): void {

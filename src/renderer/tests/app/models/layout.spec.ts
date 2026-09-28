@@ -32,6 +32,10 @@ describe("Layout", () => {
     expect(reset.arrangement.isOpen(changes)).toBe(true);
     expect(reset.documents.open).toEqual(["c1"]);
     expect(reset.pinnedConversations).toEqual(["c1"]);
+
+    const terminal = new Panel(PanelKind.Terminal, "terminal-1");
+    const withTerminal = layout.withArrangement(layout.arrangement.openPanel(terminal).dockOnSide(terminal, DockSide.Left));
+    expect(withTerminal.resetArrangement().arrangement.dock(DockSide.Bottom).panels).toEqual([activity, terminal]);
   });
 
   it("keeps the open conversations as tabs", () => {

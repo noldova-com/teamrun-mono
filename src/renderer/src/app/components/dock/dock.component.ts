@@ -18,10 +18,10 @@ import type { PanelEdge } from "../../enums/panel-edge";
 import type { Dock } from "../../models/dock";
 import { Resources } from "../../resources";
 import { LayoutService } from "../../services/layout.service";
+import { PanelLabels } from "../../services/panel-labels.service";
 import { ShellService } from "../../services/shell.service";
 import { ResizeHandleComponent } from "../resize-handle/resize-handle.component";
 
-/** A dock's area: its strip of panel buttons while collapsed, or the handle that resizes it while open. Its tab groups are drawn by the shell. */
 @Component({
   selector: "tr-dock",
   imports: [MatButtonModule, MatIconModule, MatTooltipModule, ResizeHandleComponent],
@@ -42,6 +42,7 @@ export class DockComponent {
 
   protected readonly resources: typeof Resources = Resources;
   protected readonly layout: LayoutService = inject(LayoutService);
+  protected readonly labels: PanelLabels = inject(PanelLabels);
   protected readonly dock: Signal<Dock> = computed(() => this.layout.dock(this.side()));
   protected readonly bounds: Signal<DOMRectReadOnly> = computed(() => this.shell.geometry().dock(this.side()));
   protected readonly cornerId: Signal<number | null> = computed(() => this.dock().root?.cornerGroup.id ?? null);

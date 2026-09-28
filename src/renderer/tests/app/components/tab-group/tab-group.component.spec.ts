@@ -8,8 +8,11 @@
 
 import { TestBed } from "@angular/core/testing";
 
+import { MethodName, TerminalScreen } from "@noldova/teamrun-protocol";
+
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
+import { TerminalWindow } from "../../../fixtures/terminal-window";
 import { DockSide } from "../../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../../src/app/enums/panel-edge";
 import { PanelKind } from "../../../../src/app/enums/panel-kind";
@@ -23,6 +26,7 @@ import { ChatStore } from "../../../../src/app/services/chat-store.service";
 import { LayoutService } from "../../../../src/app/services/layout.service";
 import { PanelDragService } from "../../../../src/app/services/panel-drag.service";
 import { ShellService } from "../../../../src/app/services/shell.service";
+import { TerminalsService } from "../../../../src/app/services/terminals.service";
 import { TabGroupComponent } from "../../../../src/app/components/tab-group/tab-group.component";
 
 describe("TabGroupComponent", () => {
@@ -117,6 +121,8 @@ describe("TabGroupComponent", () => {
 
   it("shows each panel of one kind as its own tab and acts on that one alone", () => {
     MemoryStorage.install(window);
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
     TestBed.configureTestingModule({ imports: [TabGroupComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
     const layout = TestBed.inject(LayoutService);
     const shell = TestBed.inject(ShellService);
@@ -146,5 +152,36 @@ describe("TabGroupComponent", () => {
     render();
     expect(layout.isOpen(second)).toBe(false);
     expect(tabs().map(t => t.dataset["panel"])).toEqual(["Activity", "Terminal:terminal-1"]);
+  });
+
+  it("offers a new terminal in a group that holds terminals once a project is selected", async () => {
+    MemoryStorage.install(window);
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const bridge = SampleData.createBridge()
+      .answer(MethodName.TerminalOpen, () => SampleData.terminal("t9").toJson())
+      .answer(MethodName.TerminalScreen, () => new TerminalScreen(SampleData.terminal("t9"), "").toJson());
+    TestBed.configureTestingModule({ imports: [TabGroupComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    const layout = TestBed.inject(LayoutService);
+    const shell = TestBed.inject(ShellService);
+    const terminals = TestBed.inject(TerminalsService);
+    onTestFinished(() => terminals.stop());
+    const fixture = TestBed.createComponent(TabGroupComponent);
+    const render = (panel: Panel): void => {
+      fixture.componentRef.setInput("frame", shell.geometry().frameOf(layout.arrangement().groupOf(panel)?.id ?? -1));
+      fixture.detectChanges();
+    };
+    const element = fixture.nativeElement as HTMLElement;
+    const button = (): HTMLButtonElement | null => element.querySelector<HTMLButtonElement>(".tr-terminal-new");
+
+    render(explorer);
+    expect(button()).toBeNull();
+    layout.openPanel(new Panel(PanelKind.Terminal, "t1"));
+    render(new Panel(PanelKind.Terminal, "t1"));
+    expect(button()?.disabled).toBe(true);
+    await TestBed.inject(ChatStore).initialize();
+    fixture.detectChanges();
+    button()!.click();
+    await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9"]));
   });
 });

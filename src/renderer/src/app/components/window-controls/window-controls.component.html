@@ -48,6 +48,11 @@ LICENSE file in the root directory of this source tree.
         }
       </button>
     }
+    <button mat-menu-item class="tr-terminal-new" [disabled]="!terminals.canOpen()" (click)="terminals.open()">
+      <mat-icon>{{ terminalIcon }}</mat-icon>
+      <span>{{ resources.newTerminalLabel }}</span>
+      <span class="tr-muted ml-4">{{ shortcuts.keysOf(newTerminalAction) }}</span>
+    </button>
     <mat-divider />
     <button mat-menu-item class="tr-reset-layout" (click)="layout.reset()">
       <mat-icon>{{ resources.icons["resetLayout"] }}</mat-icon>

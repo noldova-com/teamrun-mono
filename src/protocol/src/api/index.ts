@@ -100,6 +100,7 @@ export { TerminalLineRange } from "../models/terminal-line-range.js";
 export { TerminalSize } from "../models/terminal-size.js";
 export { TerminalState } from "../models/terminal-state.js";
 export { TerminalTextRun } from "../models/terminal-text-run.js";
+export { TerminalAcknowledgeParams } from "../models/methods/terminal-acknowledge-params.js";
 export { TerminalIdParams } from "../models/methods/terminal-id-params.js";
 export { TerminalInputParams } from "../models/methods/terminal-input-params.js";
 export { TerminalLinePage } from "../models/methods/terminal-line-page.js";

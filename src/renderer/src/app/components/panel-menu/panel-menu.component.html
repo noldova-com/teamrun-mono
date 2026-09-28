@@ -16,6 +16,11 @@ LICENSE file in the root directory of this source tree.
   <button mat-menu-item class="tr-panel-dock" [matMenuTriggerFor]="dockMenu">
     <mat-icon>{{ resources.icons["dock"] }}</mat-icon><span>{{ resources.dockLabel }}</span>
   </button>
+  @if (terminal(); as session) {
+    <button mat-menu-item class="tr-terminal-restart" (click)="restart(session)">
+      <mat-icon>{{ resources.icons["restartTerminal"] }}</mat-icon><span>{{ resources.restartTerminalLabel }}</span>
+    </button>
+  }
   <mat-divider />
   <button mat-menu-item class="tr-panel-close" (click)="close()">
     <mat-icon>{{ resources.icons["close"] }}</mat-icon><span>{{ resources.closePanelLabel }}</span>

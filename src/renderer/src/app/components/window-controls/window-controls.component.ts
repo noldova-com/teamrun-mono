@@ -15,6 +15,7 @@ import { MatMenuModule } from "@angular/material/menu";
 import { MatTooltipModule } from "@angular/material/tooltip";
 
 import { DockSide } from "../../enums/dock-side";
+import { PanelKind } from "../../enums/panel-kind";
 import { SettingsSection } from "../../enums/settings-section";
 import { ShortcutAction } from "../../enums/shortcut-action";
 import { Panel } from "../../models/panel";
@@ -25,6 +26,7 @@ import { LayoutService } from "../../services/layout.service";
 import { NavigationService } from "../../services/navigation.service";
 import { SearchLauncher } from "../../services/search-launcher.service";
 import { ShortcutsService } from "../../services/shortcuts.service";
+import { TerminalsService } from "../../services/terminals.service";
 import { UpdateRestartService } from "../../services/update-restart.service";
 
 @Component({
@@ -42,6 +44,9 @@ export class WindowControlsComponent {
   protected readonly search: SearchLauncher = inject(SearchLauncher);
   protected readonly navigation: NavigationService = inject(NavigationService);
   protected readonly shortcuts: ShortcutsService = inject(ShortcutsService);
+  protected readonly terminals: TerminalsService = inject(TerminalsService);
+  protected readonly newTerminalAction: ShortcutAction = ShortcutAction.NewTerminal;
+  protected readonly terminalIcon: string = Resources.panelIcons[PanelKind.Terminal];
   private readonly updates: AppUpdatesService = inject(AppUpdatesService);
   private readonly restart: UpdateRestartService = inject(UpdateRestartService);
   protected readonly panels: readonly Panel[] = Resources.singlePanelKinds.map(t => new Panel(t));

@@ -169,8 +169,8 @@ export class Resources {
   public static readonly terminalCaptureScrollback: number = 512;
   public static readonly terminalCompactionLines: number = 256;
   public static readonly terminalEndMilliseconds: number = 2_000;
-  public static readonly terminalHighWatermark: number = 512 * 1024;
-  public static readonly terminalLowWatermark: number = 128 * 1024;
+  public static readonly terminalHighWatermark: number = 1024 * 1024;
+  public static readonly terminalLowWatermark: number = 256 * 1024;
   public static readonly forceKillSignal: string = "SIGKILL";
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly normalBufferType: "normal" = "normal";
@@ -207,7 +207,7 @@ export class Resources {
   public static readonly windowsPowerShellName: string = "Windows PowerShell";
   public static readonly windowsPowerShellSegments: readonly string[] = ["System32", "WindowsPowerShell", "v1.0", "powershell.exe"];
   public static readonly windowsEnvironmentArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
-  public static readonly windowsEnvironmentMilliseconds: number = 10_000;
+  public static readonly windowsEnvironmentMilliseconds: number = 20_000;
   public static readonly windowsEnvironmentEnd: string = "End";
   public static readonly windowsEnvironmentFieldSeparator: string = " ";
   public static readonly windowsEnvironmentFieldCount: number = 4;

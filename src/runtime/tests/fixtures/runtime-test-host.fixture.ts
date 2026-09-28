@@ -37,6 +37,7 @@ export class RuntimeTestHost implements AsyncDisposable {
   public readonly adapter: FakeProviderAdapter = new FakeProviderAdapter();
   public readonly registry: ProviderRegistry = new ProviderRegistry();
   public readonly timings: RuntimeTimings = new RuntimeTimings(1000, 5000, 5000, 50);
+  public readonly terminalTimings: RuntimeTimings = new RuntimeTimings(1000, 25_000, 5000, 50);
   public readonly services: RuntimeService[] = [];
   public readonly clients: RuntimeClient[] = [];
   public readonly contexts: DatabaseContext[] = [];
@@ -74,12 +75,16 @@ export class RuntimeTestHost implements AsyncDisposable {
     return new RequestDispatcher(providers, accounts, projects, conversations, messages, approvals, engine, teammates);
   }
 
-  public async connect(service: RuntimeService, clientName: string = "test", listener: RecordingClientListener = new RecordingClientListener()): Promise<RuntimeClient> {
+  public async connect(
+    service: RuntimeService,
+    clientName: string = "test",
+    listener: RecordingClientListener = new RecordingClientListener(),
+    timings: RuntimeTimings = this.timings): Promise<RuntimeClient> {
     const lock = service.lock;
     if (lock === null)
       throw new Error("The service is not running.");
 
-    const client = await RuntimeClient.connect(lock.endpoint, lock.token, clientName, listener, this.timings);
+    const client = await RuntimeClient.connect(lock.endpoint, lock.token, clientName, listener, timings);
     this.clients.push(client);
     return client;
   }

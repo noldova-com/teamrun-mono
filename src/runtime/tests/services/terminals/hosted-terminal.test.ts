@@ -45,6 +45,7 @@ export class HostedTerminalTests {
       Assert.isTrue(texts.indexOf("line 1") < texts.indexOf("line 25"));
       Assert.areEqual(owner.sequences.map((_t, index) => index + 1).join(","), owner.sequences.join(","));
       Assert.areEqual(terminal.state.stored.end, owner.outputs.at(-1)?.stored.end);
+      Assert.areEqual(HostedTerminalTests.settings().windowsBuild, terminal.state.conptyBuild);
     }
     finally {
       await terminal.close();
@@ -175,15 +176,42 @@ export class HostedTerminalTests {
     const owner = new RecordingTerminalOwner();
     const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), new TerminalSettings(null, "SIGKILL", 2000, 1, 0));
     try {
-      await Wait.until(() => owner.output.includes("ready"));
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "ready");
 
       terminal.input("flood 400\r");
-      await Wait.until(() => owner.output.includes("flooded"));
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "flooded");
       terminal.input("lines 10\r");
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "line 10");
       await HostedTerminalTests.waitForStored(terminal, "line 4");
       const texts = (await terminal.lines(0, 500)).lines.map(t => t.text);
 
       Assert.areEqual(400, texts.filter(t => t === HostedTerminalTests.FLOOD_LINE).length);
+    }
+    finally {
+      await terminal.close();
+    }
+  }
+
+  @TestMethod
+  public async pausesTheShellWhileTheOutputItSentIsNotAcknowledged(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const owner = new RecordingTerminalOwner();
+    const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), new TerminalSettings(null, "SIGKILL", 2000, 20_000, 1_000));
+    try {
+      await Wait.until(() => owner.output.includes("ready"));
+
+      terminal.input("flood 2000\r");
+      await Wait.until(() => owner.output.includes(HostedTerminalTests.FLOOD_LINE));
+      const paused = await HostedTerminalTests.settledOutput(owner);
+      terminal.acknowledge(100);
+      const stillPaused = await HostedTerminalTests.settledOutput(owner);
+      terminal.screen();
+      await Wait.until(() => owner.output.length > stillPaused.length);
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "flooded");
+
+      Assert.isFalse(paused.includes("flooded"));
+      Assert.areEqual(paused.length, stillPaused.length);
+      Assert.areEqual(2000, owner.output.split(HostedTerminalTests.FLOOD_LINE).length - 1);
     }
     finally {
       await terminal.close();
@@ -219,6 +247,22 @@ export class HostedTerminalTests {
 
   private static settings(): TerminalSettings {
     return TerminalSettings.forPlatform(process.platform, release());
+  }
+
+  private static acknowledgeUntil(terminal: HostedTerminal, owner: RecordingTerminalOwner, text: string): Promise<void> {
+    return Wait.until(() => {
+      terminal.acknowledge(owner.output.length);
+      return owner.output.includes(text);
+    });
+  }
+
+  private static async settledOutput(owner: RecordingTerminalOwner): Promise<string> {
+    let output: string | null = null;
+    while (output !== owner.output) {
+      output = owner.output;
+      await Wait.delay(250);
+    }
+    return output;
   }
 
   private static async waitForStored(terminal: HostedTerminal, text: string): Promise<void> {

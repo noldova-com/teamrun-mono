@@ -58,5 +58,6 @@ export enum MethodName {
   TerminalRestart = "TerminalRestart",
   TerminalClose = "TerminalClose",
   TerminalScreen = "TerminalScreen",
-  TerminalLines = "TerminalLines"
+  TerminalLines = "TerminalLines",
+  TerminalAcknowledge = "TerminalAcknowledge"
 }

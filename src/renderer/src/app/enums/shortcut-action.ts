@@ -19,6 +19,8 @@ export enum ShortcutAction {
   ToggleChanges = "ToggleChanges",
   ToggleActivity = "ToggleActivity",
   ToggleBottomDock = "ToggleBottomDock",
+  ToggleTerminal = "ToggleTerminal",
+  NewTerminal = "NewTerminal",
   CloseDocument = "CloseDocument",
   FocusComposer = "FocusComposer",
   StopOrBack = "StopOrBack",

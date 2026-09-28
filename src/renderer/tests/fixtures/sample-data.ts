@@ -29,7 +29,10 @@ import {
   ProviderDescriptor,
   ProviderModel,
   ProjectIdParams,
-  RequestedSettings
+  RequestedSettings,
+  TerminalLineRange,
+  TerminalSize,
+  TerminalState
 } from "@noldova/teamrun-protocol";
 
 import { FakeTeamRunBridge } from "./fake-teamrun-bridge";
@@ -79,6 +82,7 @@ export class SampleData {
       .answer(MethodName.TeammateList, () => [])
       .answer(MethodName.ConversationListMembers, () => [])
       .answer(MethodName.ProjectList, () => [SampleData.project.toJson()])
+      .answer(MethodName.TerminalList, () => [])
       .answer(MethodName.ConversationList, payload => ProjectIdParams.fromJson(payload).projectId === SampleData.project.id ? [SampleData.conversation.toJson()] : [])
       .answer(MethodName.MessageList, () => [SampleData.userMessage.toJson(), SampleData.reply.toJson()])
       .answer(MethodName.MessageListOpen, () => [])
@@ -86,6 +90,11 @@ export class SampleData {
       .answer(MethodName.ApprovalList, () => [SampleData.approval.toJson()])
       .answer(MethodName.ProviderListModels, () => ["gpt-5", "gpt-5-mini"])
       .answer(MethodName.ProviderModelCatalog, () => ["gpt-5", "gpt-5-mini"].map((id, index) => new ProviderModel(id, id, "Fixture", ["medium", "high"], index === 0, null, true).toJson()));
+  }
+
+  public static terminal(id: string, sequence: number = 0, exitCode: number | null = null, restartCount: number = 0): TerminalState {
+    return new TerminalState(id, SampleData.project.id, "PowerShell", null, new TerminalSize(80, 24), exitCode, restartCount, sequence,
+      new TerminalLineRange(0, 0));
   }
 
   public static withStatus(message: Message, status: MessageStatus, details: readonly MessageDetail[] = message.details): Message {

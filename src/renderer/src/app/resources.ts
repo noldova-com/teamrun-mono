@@ -20,6 +20,7 @@ import { PanelEdge } from "./enums/panel-edge";
 import { PanelKind } from "./enums/panel-kind";
 import { ShortcutAction } from "./enums/shortcut-action";
 import { SplitAxis } from "./enums/split-axis";
+import { TerminalColor } from "./enums/terminal-color";
 import { FontChoice } from "./enums/font-choice";
 import { ThemeToken } from "./models/theme-token";
 import { AvatarColor } from "./enums/avatar-color";
@@ -438,6 +439,18 @@ export class Resources {
   public static readonly tabIndexSelector: string = "[data-tab-index]";
   public static readonly panelData: string = "panel";
   public static readonly panelTabSelector: string = ".tr-tab[data-panel]";
+  public static readonly terminalSelector: string = ".tr-terminal";
+  public static readonly newTerminalLabel: string = "New terminal";
+  public static readonly restartTerminalLabel: string = "Restart";
+  public static readonly defaultTerminalColumns: number = 80;
+  public static readonly defaultTerminalRows: number = 24;
+  public static readonly terminalScrollback: number = 1000;
+  public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
+  public static readonly conptyBackend: "conpty" = "conpty";
+  public static readonly transparentColor: string = "#00000000";
+  public static readonly terminalRestartReset: string = "\u001b[?1047l\u001b[!p\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?2004l\r";
+  public static readonly terminalLineFeed: string = "\n";
+  public static readonly terminalHome: string = "\u001b[H";
   public static readonly dropGroupData: string = "dropGroup";
   public static readonly dropEdgeData: string = "dropEdge";
   public static readonly dropGroupSelector: string = "[data-drop-group]";
@@ -498,6 +511,12 @@ export class Resources {
   public static readonly formatTokensHint: string =
     "Tokens: yyyy yy MMMM MMM MM M dd d EEEE EEE HH H hh h mm ss a. Punctuation and spaces stay; put other text in single quotes, as in 'at' HH:mm.";
   public static readonly enterKey: string = "Enter";
+  public static readonly backquoteKey: string = "`";
+  public static readonly backquoteCode: string = "Backquote";
+  public static readonly copyKey: string = "c";
+  public static readonly pasteKey: string = "v";
+  public static readonly commaCode: string = "Comma";
+  public static readonly slashCode: string = "Slash";
   public static readonly lineSeparator: string = "\n";
   public static readonly titleSeparator: string = " · ";
   public static readonly ellipsis: string = "…";
@@ -831,6 +850,8 @@ export class Resources {
     [ShortcutAction.ToggleChanges]: "Show or hide the Changes",
     [ShortcutAction.ToggleActivity]: "Show or hide the Activity",
     [ShortcutAction.ToggleBottomDock]: "Hide or show the bottom dock",
+    [ShortcutAction.ToggleTerminal]: "Show the terminal, or leave it and hide its dock",
+    [ShortcutAction.NewTerminal]: "Open a new terminal",
     [ShortcutAction.CloseDocument]: "Close the conversation's tab",
     [ShortcutAction.FocusComposer]: "Go to the message box",
     [ShortcutAction.StopOrBack]: "Stop the running reply, or back to the chat from settings",
@@ -843,8 +864,8 @@ export class Resources {
   public static readonly shortcuts: readonly Shortcut[] = [
     new Shortcut(ShortcutAction.NewConversation, "n", true, false, false, true),
     new Shortcut(ShortcutAction.OpenFolder, "o", true, false, false, true),
-    new Shortcut(ShortcutAction.OpenSettings, ",", true, false, false, true),
-    new Shortcut(ShortcutAction.ShowShortcuts, "/", true, false, false, true),
+    new Shortcut(ShortcutAction.OpenSettings, ",", true, false, false, true, Resources.commaCode),
+    new Shortcut(ShortcutAction.ShowShortcuts, "/", true, false, false, true, Resources.slashCode),
     new Shortcut(ShortcutAction.ToggleSidebar, "b", true, false, false, true),
     new Shortcut(ShortcutAction.Back, Resources.arrowLeftKey, false, false, true, true),
     new Shortcut(ShortcutAction.Forward, Resources.arrowRightKey, false, false, true, true),
@@ -853,6 +874,8 @@ export class Resources {
     new Shortcut(ShortcutAction.ToggleChanges, "d", true, true, false, true),
     new Shortcut(ShortcutAction.ToggleActivity, "a", true, true, false, true),
     new Shortcut(ShortcutAction.ToggleBottomDock, "j", true, false, false, true),
+    new Shortcut(ShortcutAction.ToggleTerminal, Resources.backquoteKey, true, false, false, true, Resources.backquoteCode),
+    new Shortcut(ShortcutAction.NewTerminal, Resources.backquoteKey, true, true, false, true, Resources.backquoteCode),
     new Shortcut(ShortcutAction.CloseDocument, "w", true, false, false, true),
     new Shortcut(ShortcutAction.FocusComposer, "l", true, false, false, true),
     new Shortcut(ShortcutAction.StopOrBack, Resources.escapeKey, false, false, false, true),
@@ -925,7 +948,32 @@ export class Resources {
   public static readonly themeColorPattern: RegExp = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
   public static readonly titleBarBackground: ThemeToken = new ThemeToken("--tr-title-bar", "titleBar.activeBackground", "sideBar.background");
   public static readonly titleBarForeground: ThemeToken = new ThemeToken("--tr-title-bar-text", "titleBar.activeForeground", "foreground");
+  public static readonly terminalShortcutActions: readonly ShortcutAction[] = [ShortcutAction.ToggleTerminal, ShortcutAction.NewTerminal];
+
+  public static readonly terminalColorTokens: Readonly<Record<TerminalColor, ThemeToken>> = {
+    [TerminalColor.Foreground]: new ThemeToken("--tr-terminal-foreground", "terminal.foreground", "foreground"),
+    [TerminalColor.Cursor]: new ThemeToken("--tr-terminal-cursor", "terminalCursor.foreground", "terminal.foreground"),
+    [TerminalColor.SelectionBackground]: new ThemeToken("--tr-terminal-selection", "terminal.selectionBackground", "editor.selectionBackground"),
+    [TerminalColor.Black]: new ThemeToken("--tr-terminal-black", "terminal.ansiBlack"),
+    [TerminalColor.Red]: new ThemeToken("--tr-terminal-red", "terminal.ansiRed"),
+    [TerminalColor.Green]: new ThemeToken("--tr-terminal-green", "terminal.ansiGreen"),
+    [TerminalColor.Yellow]: new ThemeToken("--tr-terminal-yellow", "terminal.ansiYellow"),
+    [TerminalColor.Blue]: new ThemeToken("--tr-terminal-blue", "terminal.ansiBlue"),
+    [TerminalColor.Magenta]: new ThemeToken("--tr-terminal-magenta", "terminal.ansiMagenta"),
+    [TerminalColor.Cyan]: new ThemeToken("--tr-terminal-cyan", "terminal.ansiCyan"),
+    [TerminalColor.White]: new ThemeToken("--tr-terminal-white", "terminal.ansiWhite"),
+    [TerminalColor.BrightBlack]: new ThemeToken("--tr-terminal-bright-black", "terminal.ansiBrightBlack"),
+    [TerminalColor.BrightRed]: new ThemeToken("--tr-terminal-bright-red", "terminal.ansiBrightRed"),
+    [TerminalColor.BrightGreen]: new ThemeToken("--tr-terminal-bright-green", "terminal.ansiBrightGreen"),
+    [TerminalColor.BrightYellow]: new ThemeToken("--tr-terminal-bright-yellow", "terminal.ansiBrightYellow"),
+    [TerminalColor.BrightBlue]: new ThemeToken("--tr-terminal-bright-blue", "terminal.ansiBrightBlue"),
+    [TerminalColor.BrightMagenta]: new ThemeToken("--tr-terminal-bright-magenta", "terminal.ansiBrightMagenta"),
+    [TerminalColor.BrightCyan]: new ThemeToken("--tr-terminal-bright-cyan", "terminal.ansiBrightCyan"),
+    [TerminalColor.BrightWhite]: new ThemeToken("--tr-terminal-bright-white", "terminal.ansiBrightWhite")
+  };
+
   public static readonly themeTokens: readonly ThemeToken[] = [
+    ...Object.values(Resources.terminalColorTokens),
     new ThemeToken("--tr-avatar-default-background", "teamrun.avatar.default.background"),
     new ThemeToken("--tr-avatar-default-foreground", "teamrun.avatar.default.foreground"),
     new ThemeToken("--tr-avatar-teal-background", "teamrun.avatar.teal.background"),
@@ -1043,6 +1091,7 @@ export class Resources {
     forward: "arrow_forward",
     panels: "dashboard",
     resetLayout: "restart_alt",
+    restartTerminal: "refresh",
     more: "more_vert",
     search: "search",
     folderOpen: "folder_open",
@@ -1132,6 +1181,14 @@ export class Resources {
 
   public static formatThemeUnreadable(id: string): string {
     return `The built-in theme "${id}" could not be read.`;
+  }
+
+  public static formatTerminalExit(exitCode: number): string {
+    return `The shell exited with code ${exitCode}.`;
+  }
+
+  public static formatFontLoad(size: number, family: string): string {
+    return `${size}px ${family}`;
   }
 
   public static formatPixelSize(value: number): string {

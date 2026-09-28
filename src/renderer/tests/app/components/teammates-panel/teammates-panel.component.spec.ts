@@ -8,6 +8,7 @@
 
 import { TestBed } from "@angular/core/testing";
 import { Conversation, ConversationIdParams, ConversationMember, MethodName } from "@noldova/teamrun-protocol";
+import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { TeammateFixture } from "../../../fixtures/teammate-fixture";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../../src/app/services/chat-store.service";
@@ -16,6 +17,7 @@ import { TeammatesPanelComponent } from "../../../../src/app/components/teammate
 
 describe("TeammatesPanelComponent", () => {
   it("shows only the active chat's members and clears when Settings or no chat is active", async () => {
+    MemoryStorage.install(window);
     const data = new TeammateFixture();
     data.bridge.answer(MethodName.ConversationList, () => ["c1", "c2"].map(id => new Conversation(id, "p1", id, "t", "t").toJson()))
       .answer(MethodName.ConversationListMembers, payload => {

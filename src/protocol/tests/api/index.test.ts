@@ -101,6 +101,7 @@ export class ProtocolApiTests {
     Assert.isDefined(api.TerminalSize);
     Assert.isDefined(api.TerminalState);
     Assert.isDefined(api.TerminalTextRun);
+    Assert.isDefined(api.TerminalAcknowledgeParams);
     Assert.isDefined(api.TerminalIdParams);
     Assert.isDefined(api.TerminalInputParams);
     Assert.isDefined(api.TerminalLinePage);

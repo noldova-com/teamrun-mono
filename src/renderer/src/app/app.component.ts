@@ -37,9 +37,11 @@ import { DocumentsService } from "./services/documents.service";
 import { RestartPreparationService } from "./services/restart-preparation.service";
 import { LayoutService } from "./services/layout.service";
 import { NavigationService } from "./services/navigation.service";
+import { PanelLabels } from "./services/panel-labels.service";
 import { PlatformService } from "./services/platform.service";
 import { ShellService } from "./services/shell.service";
 import { ShortcutsService } from "./services/shortcuts.service";
+import { TerminalsService } from "./services/terminals.service";
 import { TitleBarService } from "./services/title-bar.service";
 
 @Component({
@@ -63,6 +65,8 @@ export class AppComponent implements OnInit, OnDestroy {
   protected readonly chatView: AppView = AppView.Chat;
   protected readonly titleBar: TitleBarService = inject(TitleBarService);
   protected readonly platform: PlatformService = inject(PlatformService);
+  protected readonly labels: PanelLabels = inject(PanelLabels);
+  protected readonly terminals: TerminalsService = inject(TerminalsService);
   protected readonly leftSide: DockSide = DockSide.Left;
   protected readonly rightSide: DockSide = DockSide.Right;
   protected readonly bottomSide: DockSide = DockSide.Bottom;
@@ -84,10 +88,12 @@ export class AppComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.shortcuts.start();
     void this.store.initialize().then(() => this.documents.restore());
+    void this.terminals.start();
   }
 
   public ngOnDestroy(): void {
     this.shortcuts.stop();
+    this.terminals.stop();
     this.store.dispose();
     this.onBusy(false);
   }

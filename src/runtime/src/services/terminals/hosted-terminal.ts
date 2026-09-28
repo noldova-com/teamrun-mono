@@ -42,6 +42,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
   private restartCount: number = 0;
   private sequence: number = 0;
   private output: string = String.empty;
+  private unacknowledged: number = 0;
   private flush: NodeJS.Immediate | null = null;
   private paused: boolean = false;
   private closed: boolean = false;
@@ -76,8 +77,8 @@ export class HostedTerminal implements IPseudoTerminalListener {
   }
 
   public get state(): TerminalState {
-    return new TerminalState(this.id, this.project.id, this.shell.name, this.emulator.size, this.exitCode, this.restartCount, this.sequence,
-      this.history.stored);
+    return new TerminalState(this.id, this.project.id, this.shell.name, this.settings.windowsBuild, this.emulator.size, this.exitCode, this.restartCount,
+      this.sequence, this.history.stored);
   }
 
   public input(data: string): void {
@@ -103,7 +104,14 @@ export class HostedTerminal implements IPseudoTerminalListener {
 
   public screen(): TerminalScreen {
     this.flushOutput();
+    this.unacknowledged = 0;
+    this.updateFlow();
     return new TerminalScreen(this.state, this.emulator.screen());
+  }
+
+  public acknowledge(characters: number): void {
+    this.unacknowledged = Math.max(0, this.unacknowledged - characters);
+    this.updateFlow();
   }
 
   public lines(start: number, limit: number): Promise<TerminalLinePage> {
@@ -206,8 +214,10 @@ export class HostedTerminal implements IPseudoTerminalListener {
 
     this.sequence += 1;
     const payload = new TerminalOutputPayload(this.id, this.sequence, this.output, this.history.stored);
+    this.unacknowledged += this.output.length;
     this.output = String.empty;
     this.owner.write(new Event(EventName.TerminalOutput, payload.toJson()));
+    this.updateFlow();
   }
 
   private emitChanged(): void {
@@ -219,7 +229,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
     if (Object.isNull(this.pty))
       return;
 
-    const backlog = this.emulator.backlog + this.history.backlog;
+    const backlog = this.emulator.backlog + this.history.backlog + this.unacknowledged;
     if (!this.paused && backlog > this.settings.highWatermark) {
       this.paused = true;
       this.pty.pause();

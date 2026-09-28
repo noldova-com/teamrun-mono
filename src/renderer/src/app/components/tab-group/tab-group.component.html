@@ -18,7 +18,7 @@ LICENSE file in the root directory of this source tree.
           [matContextMenuTriggerFor]="menu.menu() ?? null"
           (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)"
           (keydown)="menu.openFromKeyboard($event, tab)">
-          <span class="tr-tab-label">{{ resources.panelLabels[panel.kind] }}</span>
+          <span class="tr-tab-label">{{ labels.of(panel) }}</span>
           <span class="tr-tab-actions">
             <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="close($event, panel)"
               (pointerdown)="$event.stopPropagation()">
@@ -30,6 +30,12 @@ LICENSE file in the root directory of this source tree.
       <span class="flex-1" [class.tr-drop-before]="drag.isDropBefore(group().id, group().panels.length)"></span>
     </div>
     <div class="tr-tabs-actions">
+      @if (holdsTerminals()) {
+        <button mat-icon-button class="tr-small-icon-button tr-terminal-new" [matTooltip]="resources.newTerminalLabel"
+          [attr.aria-label]="resources.newTerminalLabel" [disabled]="!terminals.canOpen()" (click)="terminals.open(group().id)">
+          <mat-icon>{{ resources.icons["add"] }}</mat-icon>
+        </button>
+      }
       @if (group().activePanel; as active) {
         <tr-panel-menu #actions [panel]="active" />
         <button mat-icon-button class="tr-small-icon-button tr-panel-actions" [matTooltip]="resources.panelActionsLabel"
