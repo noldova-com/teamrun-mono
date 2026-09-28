@@ -8,23 +8,28 @@
 
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { DocumentTabs } from "../../../src/app/models/document-tabs";
 import { Layout } from "../../../src/app/models/layout";
+import { Panel } from "../../../src/app/models/panel";
 import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
 import { TabGroup } from "../../../src/app/models/tab-group";
 
 describe("Layout", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
+
   it("starts with the default panel arrangement and no open conversations, and resets only the arrangement", () => {
     const layout = Layout.createDefault();
     expect(layout.arrangement.toJson()).toEqual(PanelArrangement.createDefault().toJson());
     expect(layout.documents.open).toEqual([]);
 
-    const arranged = layout.withArrangement(layout.arrangement.closePanel(PanelId.Changes)).showDocument("c1").togglePin("c1");
-    expect(arranged.arrangement.isOpen(PanelId.Changes)).toBe(false);
+    const arranged = layout.withArrangement(layout.arrangement.closePanel(changes)).showDocument("c1").togglePin("c1");
+    expect(arranged.arrangement.isOpen(changes)).toBe(false);
     expect(arranged.withArrangement(arranged.arrangement)).toBe(arranged);
     const reset = arranged.resetArrangement();
-    expect(reset.arrangement.isOpen(PanelId.Changes)).toBe(true);
+    expect(reset.arrangement.isOpen(changes)).toBe(true);
     expect(reset.documents.open).toEqual(["c1"]);
     expect(reset.pinnedConversations).toEqual(["c1"]);
   });
@@ -70,20 +75,20 @@ describe("Layout", () => {
   });
 
   it("round-trips through JSON and reads leniently", () => {
-    const arrangement = PanelArrangement.createDefault().splitGroup(PanelId.Activity, TabGroup.documentsId, PanelEdge.Bottom).resizeDock(DockSide.Right, 300);
+    const arrangement = PanelArrangement.createDefault().splitGroup(activity, TabGroup.documentsId, PanelEdge.Bottom).resizeDock(DockSide.Right, 300);
     const layout = Layout.createDefault().withArrangement(arrangement).showDocument("c1");
 
     const read = Layout.fromJson(JSON.parse(JSON.stringify(layout.toJson())));
     expect(read.toJson()).toEqual(layout.toJson());
-    expect(read.arrangement.middle.groups.map(t => t.panels)).toEqual([[], [PanelId.Activity]]);
+    expect(read.arrangement.middle.groups.map(t => t.panels)).toEqual([[], [activity]]);
     expect(read.arrangement.dock(DockSide.Right).size).toBe(300);
     expect(read.documents.active).toBe("c1");
 
     expect(Layout.fromJson("x").toJson()).toEqual(Layout.createDefault().toJson());
     expect(Layout.fromJson([]).toJson()).toEqual(Layout.createDefault().toJson());
     const saved = Layout.fromJson({ docks: { Left: { panels: ["Changes", "Explorer"], activePanel: "Explorer", size: 300 }, Right: { panels: ["Changes"] } }, documents: 5 });
-    expect(saved.arrangement.dock(DockSide.Left).panels).toEqual([PanelId.Changes, PanelId.Explorer]);
-    expect(saved.arrangement.groupOf(PanelId.Explorer)?.activePanel).toBe(PanelId.Explorer);
+    expect(saved.arrangement.dock(DockSide.Left).panels).toEqual([changes, explorer]);
+    expect(saved.arrangement.groupOf(explorer)?.activePanel).toEqual(explorer);
     expect(saved.arrangement.dock(DockSide.Right).isEmpty).toBe(true);
     expect(saved.documents.open).toEqual([]);
     const tabs = Layout.fromJson({ documents: { open: ["c1", 2, " "], active: "zz" } });

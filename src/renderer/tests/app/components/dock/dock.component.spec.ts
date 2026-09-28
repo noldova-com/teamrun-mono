@@ -11,7 +11,8 @@ import { TestBed } from "@angular/core/testing";
 import { SampleData } from "../../../fixtures/sample-data";
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { DockSide } from "../../../../src/app/enums/dock-side";
-import { PanelId } from "../../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../../src/app/enums/panel-kind";
+import { Panel } from "../../../../src/app/models/panel";
 import { TabDropTarget } from "../../../../src/app/models/tab-drop-target";
 import { Resources } from "../../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
@@ -20,12 +21,15 @@ import { ShellService } from "../../../../src/app/services/shell.service";
 import { DockComponent } from "../../../../src/app/components/dock/dock.component";
 
 describe("DockComponent", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+
   it("covers its dock's area with a panel strip while collapsed and a resize handle while open, and hides when empty", () => {
     MemoryStorage.install(window);
     TestBed.configureTestingModule({ imports: [DockComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
     const layout = TestBed.inject(LayoutService);
     const shell = TestBed.inject(ShellService);
-    layout.movePanel(PanelId.Changes, new TabDropTarget(layout.arrangement().groupOf(PanelId.Explorer)?.id ?? -1, 1));
+    layout.movePanel(changes, new TabDropTarget(layout.arrangement().groupOf(explorer)?.id ?? -1, 1));
     const fixture = TestBed.createComponent(DockComponent);
     fixture.componentRef.setInput("side", DockSide.Left);
     fixture.detectChanges();
@@ -55,15 +59,35 @@ describe("DockComponent", () => {
     expect(strip.hasAttribute("data-drop-tabs")).toBe(true);
     expect(element.querySelector("tr-resize-handle")).toBeNull();
     const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>(".tr-dock-strip-button"));
-    expect(buttons.map(t => t.getAttribute("aria-label"))).toEqual([Resources.panelLabels[PanelId.Explorer], Resources.panelLabels[PanelId.Changes]]);
+    expect(buttons.map(t => t.getAttribute("aria-label"))).toEqual([Resources.panelLabels[PanelKind.Explorer], Resources.panelLabels[PanelKind.Changes]]);
     buttons[1]!.click();
     fixture.detectChanges();
     expect(layout.dock(DockSide.Left).collapsed).toBe(false);
-    expect(layout.arrangement().groupOf(PanelId.Changes)?.activePanel).toBe(PanelId.Changes);
+    expect(layout.arrangement().groupOf(changes)?.activePanel).toEqual(changes);
 
-    layout.closePanel(PanelId.Explorer);
-    layout.closePanel(PanelId.Changes);
+    layout.closePanel(explorer);
+    layout.closePanel(changes);
     fixture.detectChanges();
     expect(element.classList.contains("hidden")).toBe(true);
+  });
+
+  it("gives each panel of one kind its own strip button that opens that one", () => {
+    MemoryStorage.install(window);
+    TestBed.configureTestingModule({ imports: [DockComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const layout = TestBed.inject(LayoutService);
+    const first = new Panel(PanelKind.Terminal, "terminal-1");
+    const second = new Panel(PanelKind.Terminal, "terminal-2");
+    layout.openPanel(first);
+    layout.openPanel(second);
+    layout.toggleDock(DockSide.Bottom);
+    const fixture = TestBed.createComponent(DockComponent);
+    fixture.componentRef.setInput("side", DockSide.Bottom);
+    fixture.detectChanges();
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(".tr-dock-strip-button"));
+
+    expect(buttons.map(t => [t.getAttribute("aria-label"), t.textContent?.trim()])).toEqual([["Activity", "list_alt"], ["Terminal", "terminal"], ["Terminal", "terminal"]]);
+    buttons[1]!.click();
+    expect(layout.dock(DockSide.Bottom).collapsed).toBe(false);
+    expect(layout.arrangement().groupOf(first)?.activePanel).toEqual(first);
   });
 });

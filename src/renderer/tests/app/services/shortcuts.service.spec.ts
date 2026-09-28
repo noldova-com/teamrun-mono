@@ -16,9 +16,10 @@ import { MemoryStorage } from "../../fixtures/memory-storage";
 import { SampleData } from "../../fixtures/sample-data";
 import { AppView } from "../../../src/app/enums/app-view";
 import { DockSide } from "../../../src/app/enums/dock-side";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { SettingsSection } from "../../../src/app/enums/settings-section";
 import { ShortcutAction } from "../../../src/app/enums/shortcut-action";
+import { Panel } from "../../../src/app/models/panel";
 import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
 import { TabGroup } from "../../../src/app/models/tab-group";
 import { Resources } from "../../../src/app/resources";
@@ -29,6 +30,9 @@ import { LayoutService } from "../../../src/app/services/layout.service";
 import { ShortcutsService } from "../../../src/app/services/shortcuts.service";
 
 describe("ShortcutsService", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
   let started: ShortcutsService | null = null;
   let opened: ChatStore | null = null;
 
@@ -103,18 +107,18 @@ describe("ShortcutsService", () => {
     press(document, "j", { ctrlKey: true });
     expect(TestBed.inject(LayoutService).dock(DockSide.Bottom).collapsed).toBe(false);
     press(document, "E", { ctrlKey: true, shiftKey: true });
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Explorer)).toBe(false);
+    expect(TestBed.inject(LayoutService).isOpen(explorer)).toBe(false);
     press(document, "D", { ctrlKey: true, shiftKey: true });
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Changes)).toBe(false);
+    expect(TestBed.inject(LayoutService).isOpen(changes)).toBe(false);
     press(document, "A", { ctrlKey: true, shiftKey: true });
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Activity)).toBe(false);
+    expect(TestBed.inject(LayoutService).isOpen(activity)).toBe(false);
     press(document, "e", { ctrlKey: true, shiftKey: true });
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Explorer)).toBe(true);
+    expect(TestBed.inject(LayoutService).isOpen(explorer)).toBe(true);
     TestBed.tick();
-    TestBed.inject(LayoutService).movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    TestBed.inject(LayoutService).movePanel(changes, new TabDropTarget(TabGroup.documentsId, 0));
     expect(navigation.view()).toBe(AppView.Panel);
     expect(press(document, "w", { ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Changes)).toBe(false);
+    expect(TestBed.inject(LayoutService).isOpen(changes)).toBe(false);
     expect(TestBed.inject(LayoutService).documents()).toEqual(["c1"]);
     expect(navigation.view()).toBe(AppView.Chat);
     expect(press(document, "w", { ctrlKey: true }).defaultPrevented).toBe(true);

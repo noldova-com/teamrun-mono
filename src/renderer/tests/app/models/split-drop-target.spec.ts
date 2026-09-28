@@ -8,18 +8,22 @@
 
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
+import { Panel } from "../../../src/app/models/panel";
 import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
 import { ShellGeometry } from "../../../src/app/models/shell-geometry";
 import { SideDropTarget } from "../../../src/app/models/side-drop-target";
 import { SplitDropTarget } from "../../../src/app/models/split-drop-target";
 
 describe("SplitDropTarget", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+
   it("splits the group, previews the half it gives the panel and compares by group and edge", () => {
     const arrangement = PanelArrangement.createDefault();
     const target = new SplitDropTarget(1, PanelEdge.Top);
 
-    expect(target.place(arrangement, PanelId.Changes).dock(DockSide.Left).root?.groups.map(t => t.panels)).toEqual([[PanelId.Changes], [PanelId.Explorer]]);
+    expect(target.place(arrangement, changes).dock(DockSide.Left).root?.groups.map(t => t.panels)).toEqual([[changes], [explorer]]);
     const geometry = new ShellGeometry(1920, 1045, arrangement);
     const bounds = geometry.frameOf(1)?.bounds ?? new DOMRectReadOnly();
     const half = target.preview(geometry);

@@ -9,8 +9,8 @@
 import "@noldova/teamrun-foundation-core";
 
 import type { PanelEdge } from "../enums/panel-edge";
-import type { PanelId } from "../enums/panel-id";
 import { DropTarget } from "./drop-target";
+import type { Panel } from "./panel";
 import type { PanelArrangement } from "./panel-arrangement";
 import type { ShellGeometry } from "./shell-geometry";
 
@@ -25,7 +25,7 @@ export class SplitDropTarget extends DropTarget {
     this.edge = edge;
   }
 
-  public override place(arrangement: PanelArrangement, panel: PanelId): PanelArrangement {
+  public override place(arrangement: PanelArrangement, panel: Panel): PanelArrangement {
     return arrangement.splitGroup(panel, this.groupId, this.edge);
   }
 

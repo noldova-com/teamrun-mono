@@ -7,8 +7,8 @@
  */
 
 import type { DockSide } from "../enums/dock-side";
-import type { PanelId } from "../enums/panel-id";
 import { DropTarget } from "./drop-target";
+import type { Panel } from "./panel";
 import type { PanelArrangement } from "./panel-arrangement";
 import type { ShellGeometry } from "./shell-geometry";
 
@@ -21,7 +21,7 @@ export class SideDropTarget extends DropTarget {
     this.side = side;
   }
 
-  public override place(arrangement: PanelArrangement, panel: PanelId): PanelArrangement {
+  public override place(arrangement: PanelArrangement, panel: Panel): PanelArrangement {
     return arrangement.dockOnSide(panel, this.side);
   }
 

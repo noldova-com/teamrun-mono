@@ -10,17 +10,17 @@ import "@noldova/teamrun-foundation-core";
 
 import { DockSide } from "../enums/dock-side";
 import { PanelEdge } from "../enums/panel-edge";
-import { PanelId } from "../enums/panel-id";
 import { SplitAxis } from "../enums/split-axis";
 import { Resources } from "../resources";
 import { Dock } from "./dock";
 import type { LayoutNode } from "./layout.node";
+import { Panel } from "./panel";
 import { PanelArrangement } from "./panel-arrangement";
 import { SplitNode } from "./split.node";
 import { TabGroup } from "./tab-group";
 
 export class ArrangementReader {
-  private readonly seen: Set<PanelId> = new Set();
+  private readonly seen: Set<string> = new Set();
   private documents: TabGroup | null = null;
   private nextId: number = TabGroup.documentsId + 1;
 
@@ -69,11 +69,10 @@ export class ArrangementReader {
 
   private readGroup(record: Record<string, unknown>, inMiddle: boolean): TabGroup | null {
     const listed = record[Resources.panelsField];
-    const known = Object.values(PanelId);
-    const panels = (Array.isArray(listed) ? listed : []).filter((t): t is PanelId => known.some(k => k === t) && !this.seen.has(t));
-    const active = known.find(t => t === record[Resources.activePanelField]) ?? null;
+    const panels = (Array.isArray(listed) ? listed : []).map(t => Panel.fromKey(t)).filter((t): t is Panel => !Object.isNull(t) && !this.seen.has(t.key));
+    const active = Panel.fromKey(record[Resources.activePanelField]);
     for (const panel of panels)
-      this.seen.add(panel);
+      this.seen.add(panel.key);
     if (inMiddle && Object.isNull(this.documents) && record[Resources.documentsGroupField] === true) {
       this.documents = new TabGroup(TabGroup.documentsId, panels, active);
       return this.documents;

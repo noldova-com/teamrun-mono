@@ -14,8 +14,9 @@ import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { DockSide } from "../../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../../src/app/enums/panel-kind";
 import { SplitAxis } from "../../../../src/app/enums/split-axis";
+import { Panel } from "../../../../src/app/models/panel";
 import type { SplitNode } from "../../../../src/app/models/split.node";
 import { TabDropTarget } from "../../../../src/app/models/tab-drop-target";
 import { TabGroup } from "../../../../src/app/models/tab-group";
@@ -27,16 +28,19 @@ import { PanelMenuComponent } from "../../../../src/app/components/panel-menu/pa
 @Component({
   imports: [MatMenuModule, PanelMenuComponent],
   template: `<tr-panel-menu #menu [panel]="panel()" />
-    <button type="button" class="tr-tab" [attr.data-panel]="panel()" [matMenuTriggerFor]="menu.menu() ?? null">{{ panel() }}</button>
+    <button type="button" class="tr-tab" [attr.data-panel]="panel().key" [matMenuTriggerFor]="menu.menu() ?? null">{{ panel().key }}</button>
     <button #tab type="button" class="tr-context" [matContextMenuTriggerFor]="menu.menu() ?? null" (keydown)="menu.openFromKeyboard($event, tab)">
-      {{ panel() }}
+      {{ panel().key }}
     </button>`
 })
 class PanelMenuHost {
-  public readonly panel = signal(PanelId.Changes);
+  public readonly panel = signal(new Panel(PanelKind.Changes));
 }
 
 describe("PanelMenuComponent", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+
   const open = async (fixture: ComponentFixture<PanelMenuHost>): Promise<void> => {
     (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>("button")!.click();
     fixture.detectChanges();
@@ -73,38 +77,38 @@ describe("PanelMenuComponent", () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(Array.from(document.querySelectorAll(".tr-panel-destination")).map(t => t.textContent?.trim()))
-      .toEqual([Resources.panelLabels[PanelId.Explorer], Resources.panelLabels[PanelId.Activity], Resources.documentsGroupLabel]);
-    item(Resources.panelLabels[PanelId.Explorer]).click();
+      .toEqual([Resources.panelLabels[PanelKind.Explorer], Resources.panelLabels[PanelKind.Activity], Resources.documentsGroupLabel]);
+    item(Resources.panelLabels[PanelKind.Explorer]).click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(layout.dock(DockSide.Left).panels).toEqual([PanelId.Explorer, PanelId.Changes]);
+    expect(layout.dock(DockSide.Left).panels).toEqual([explorer, changes]);
     expect(document.activeElement).toBe((fixture.nativeElement as HTMLElement).querySelector(".tr-tab"));
 
     await choose(fixture, Resources.splitLabel, Resources.splitGuideLabels[PanelEdge.Bottom]);
     const split = layout.dock(DockSide.Left).root as SplitNode;
-    expect([split.axis, split.groups.map(t => t.panels)]).toEqual([SplitAxis.Vertical, [[PanelId.Explorer], [PanelId.Changes]]]);
+    expect([split.axis, split.groups.map(t => t.panels)]).toEqual([SplitAxis.Vertical, [[explorer], [changes]]]);
 
     await choose(fixture, Resources.dockLabel, Resources.dockGuideLabels[DockSide.Right]);
-    expect(layout.dock(DockSide.Right).panels).toEqual([PanelId.Changes]);
+    expect(layout.dock(DockSide.Right).panels).toEqual([changes]);
     expect(layout.dock(DockSide.Left).root).toBeInstanceOf(TabGroup);
 
-    layout.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    layout.movePanel(changes, new TabDropTarget(TabGroup.documentsId, 0));
     fixture.detectChanges();
     await open(fixture);
     expect(item(Resources.splitLabel).disabled).toBe(false);
     item(Resources.closePanelLabel).click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(layout.isOpen(PanelId.Changes)).toBe(false);
+    expect(layout.isOpen(changes)).toBe(false);
 
-    layout.movePanel(PanelId.Changes, new TabDropTarget(layout.arrangement().groupOf(PanelId.Explorer)?.id ?? -1, 1));
-    layout.activatePanel(PanelId.Changes);
+    layout.movePanel(changes, new TabDropTarget(layout.arrangement().groupOf(explorer)?.id ?? -1, 1));
+    layout.activatePanel(changes);
     fixture.detectChanges();
     await open(fixture);
     item(Resources.closePanelLabel).click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(layout.arrangement().groupOf(PanelId.Explorer)?.activePanel).toBe(PanelId.Explorer);
+    expect(layout.arrangement().groupOf(explorer)?.activePanel).toEqual(explorer);
   });
 
   it("opens below its tab with Shift+F10 and leaves other keys alone", async () => {
@@ -126,5 +130,30 @@ describe("PanelMenuComponent", () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(item(Resources.moveToLabel)).not.toBeNull();
+  });
+
+  it("moves and closes only its own panel of a kind and focuses that panel's tab", async () => {
+    MemoryStorage.install(window);
+    TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const layout = TestBed.inject(LayoutService);
+    const first = new Panel(PanelKind.Terminal, "terminal-1");
+    const second = new Panel(PanelKind.Terminal, "terminal-2");
+    layout.openPanel(first);
+    layout.openPanel(second);
+    const fixture = TestBed.createComponent(PanelMenuHost);
+    fixture.componentInstance.panel.set(first);
+    fixture.detectChanges();
+
+    await choose(fixture, Resources.dockLabel, Resources.dockGuideLabels[DockSide.Right]);
+    expect(layout.dock(DockSide.Right).panels).toEqual([changes, first]);
+    expect(layout.dock(DockSide.Bottom).panels).toEqual([new Panel(PanelKind.Activity), second]);
+    expect(document.activeElement).toBe((fixture.nativeElement as HTMLElement).querySelector(".tr-tab"));
+
+    await open(fixture);
+    item(Resources.closePanelLabel).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(layout.isOpen(first)).toBe(false);
+    expect(layout.isOpen(second)).toBe(true);
   });
 });

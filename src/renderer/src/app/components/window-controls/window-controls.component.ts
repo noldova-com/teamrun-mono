@@ -15,9 +15,9 @@ import { MatMenuModule } from "@angular/material/menu";
 import { MatTooltipModule } from "@angular/material/tooltip";
 
 import { DockSide } from "../../enums/dock-side";
-import { PanelId } from "../../enums/panel-id";
 import { SettingsSection } from "../../enums/settings-section";
 import { ShortcutAction } from "../../enums/shortcut-action";
+import { Panel } from "../../models/panel";
 import { Resources } from "../../resources";
 import { AppUpdatesService } from "../../services/app-updates.service";
 import { HistoryService } from "../../services/history.service";
@@ -44,7 +44,7 @@ export class WindowControlsComponent {
   protected readonly shortcuts: ShortcutsService = inject(ShortcutsService);
   private readonly updates: AppUpdatesService = inject(AppUpdatesService);
   private readonly restart: UpdateRestartService = inject(UpdateRestartService);
-  protected readonly panels: readonly PanelId[] = Object.values(PanelId);
+  protected readonly panels: readonly Panel[] = Resources.singlePanelKinds.map(t => new Panel(t));
   protected readonly hideSidebarTooltip: string = Resources.formatWithKeys(Resources.hideSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
   protected readonly showSidebarTooltip: string = Resources.formatWithKeys(Resources.showSidebarLabel, this.shortcuts.keysOf(ShortcutAction.ToggleSidebar));
   protected readonly backTooltip: string = Resources.formatWithKeys(Resources.historyBackLabel, this.shortcuts.keysOf(ShortcutAction.Back));

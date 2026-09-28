@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { PanelId } from "../enums/panel-id";
 import { DropTarget } from "./drop-target";
+import type { Panel } from "./panel";
 import type { PanelArrangement } from "./panel-arrangement";
 import type { ShellGeometry } from "./shell-geometry";
 
@@ -22,7 +22,7 @@ export class TabDropTarget extends DropTarget {
     this.index = Math.max(0, Math.round(index));
   }
 
-  public override place(arrangement: PanelArrangement, panel: PanelId): PanelArrangement {
+  public override place(arrangement: PanelArrangement, panel: Panel): PanelArrangement {
     return arrangement.insertTab(panel, this.groupId, this.index);
   }
 

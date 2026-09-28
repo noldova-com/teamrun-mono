@@ -12,10 +12,11 @@ import { Injectable, type Signal, type WritableSignal, computed, inject, signal 
 import "@noldova/teamrun-foundation-core";
 
 import type { DockSide } from "../enums/dock-side";
-import type { PanelId } from "../enums/panel-id";
+import type { PanelKind } from "../enums/panel-kind";
 import type { Dock } from "../models/dock";
 import type { DropTarget } from "../models/drop-target";
 import { Layout } from "../models/layout";
+import type { Panel } from "../models/panel";
 import type { PanelArrangement } from "../models/panel-arrangement";
 import { Resources } from "../resources";
 
@@ -37,28 +38,32 @@ export class LayoutService {
     return this.arrangement().dock(side);
   }
 
-  public isOpen(panel: PanelId): boolean {
+  public isOpen(panel: Panel): boolean {
     return this.arrangement().isOpen(panel);
   }
 
-  public openPanel(panel: PanelId): void {
+  public openPanel(panel: Panel): void {
     this.arrange(t => t.openPanel(panel));
   }
 
-  public closePanel(panel: PanelId): void {
+  public closePanel(panel: Panel): void {
     this.arrange(t => t.closePanel(panel));
   }
 
-  public movePanel(panel: PanelId, target: DropTarget): void {
+  public movePanel(panel: Panel, target: DropTarget): void {
     this.arrange(t => target.place(t, panel));
   }
 
-  public togglePanel(panel: PanelId): void {
+  public togglePanel(panel: Panel): void {
     this.arrange(t => t.togglePanel(panel));
   }
 
-  public activatePanel(panel: PanelId): void {
+  public activatePanel(panel: Panel): void {
     this.arrange(t => t.activatePanel(panel));
+  }
+
+  public keepInstances(kind: PanelKind, existing: readonly string[]): void {
+    this.arrange(t => t.keepInstances(kind, existing));
   }
 
   public showDocuments(): void {

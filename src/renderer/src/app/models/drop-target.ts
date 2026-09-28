@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { PanelId } from "../enums/panel-id";
+import type { Panel } from "./panel";
 import type { PanelArrangement } from "./panel-arrangement";
 import type { ShellGeometry } from "./shell-geometry";
 
 export abstract class DropTarget {
-  public abstract place(arrangement: PanelArrangement, panel: PanelId): PanelArrangement;
+  public abstract place(arrangement: PanelArrangement, panel: Panel): PanelArrangement;
 
   public abstract preview(geometry: ShellGeometry): DOMRectReadOnly | null;
 

@@ -37,7 +37,7 @@ LICENSE file in the root directory of this source tree.
   }
   <div class="tr-drag-ghost pointer-events-none flex items-center gap-1 px-2 py-1" [style.left.px]="drag.point()[0] + ghostOffset"
     [style.top.px]="drag.point()[1] + ghostOffset">
-    <mat-icon class="tr-nav-icon">{{ resources.panelIcons[panel] }}</mat-icon>
-    <span>{{ resources.panelLabels[panel] }}</span>
+    <mat-icon class="tr-nav-icon">{{ resources.panelIcons[panel.kind] }}</mat-icon>
+    <span>{{ resources.panelLabels[panel.kind] }}</span>
   </div>
 }

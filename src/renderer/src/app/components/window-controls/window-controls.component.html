@@ -39,11 +39,13 @@ LICENSE file in the root directory of this source tree.
     <mat-icon>{{ resources.icons["settings"] }}</mat-icon>
   </button>
   <mat-menu #panelsMenu="matMenu">
-    @for (panel of panels; track panel) {
+    @for (panel of panels; track panel.key) {
       <button mat-menu-item (click)="layout.togglePanel(panel)">
-        <mat-icon>{{ layout.isOpen(panel) ? resources.icons["selected"] : resources.panelIcons[panel] }}</mat-icon>
-        <span>{{ resources.panelLabels[panel] }}</span>
-        <span class="tr-muted ml-4">{{ shortcuts.keysOf(resources.panelShortcutActions[panel]) }}</span>
+        <mat-icon>{{ layout.isOpen(panel) ? resources.icons["selected"] : resources.panelIcons[panel.kind] }}</mat-icon>
+        <span>{{ resources.panelLabels[panel.kind] }}</span>
+        @if (resources.panelShortcutActions[panel.kind]; as action) {
+          <span class="tr-muted ml-4">{{ shortcuts.keysOf(action) }}</span>
+        }
       </button>
     }
     <mat-divider />

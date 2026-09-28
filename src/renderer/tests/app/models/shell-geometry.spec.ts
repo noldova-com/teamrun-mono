@@ -8,13 +8,16 @@
 
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { GroupFrame } from "../../../src/app/models/group-frame";
+import { Panel } from "../../../src/app/models/panel";
 import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
 import { ShellGeometry } from "../../../src/app/models/shell-geometry";
 import { TabGroup } from "../../../src/app/models/tab-group";
 
 describe("ShellGeometry", () => {
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
   const box = (rect: DOMRectReadOnly | null | undefined): readonly number[] => (rect ? [rect.x, rect.y, rect.width, rect.height] : []);
 
   it("places the docks around the middle and the groups within them", () => {
@@ -39,8 +42,8 @@ describe("ShellGeometry", () => {
 
   it("lists groups by id and splits the middle and docks with handles", () => {
     const arrangement = PanelArrangement.createDefault()
-      .splitGroup(PanelId.Changes, TabGroup.documentsId, PanelEdge.Right)
-      .openPanel(PanelId.Activity);
+      .splitGroup(changes, TabGroup.documentsId, PanelEdge.Right)
+      .openPanel(activity);
     const geometry = new ShellGeometry(1920, 1045, arrangement);
 
     expect(box(geometry.dock(DockSide.Right))).toEqual([1916, 0, 0, 1041]);
@@ -57,7 +60,7 @@ describe("ShellGeometry", () => {
     expect(box(geometry.sidePreview(DockSide.Left))).toEqual([4, 0, 206, 1041]);
     expect(box(geometry.sidePreview(DockSide.Right))).toEqual([1718, 0, 198, 1041]);
     expect(box(geometry.sidePreview(DockSide.Bottom))).toEqual([424, 781, 1088, 260]);
-    const empty = new ShellGeometry(1920, 1045, PanelArrangement.createDefault().closePanel(PanelId.Changes).resizeDock(DockSide.Right, 300));
+    const empty = new ShellGeometry(1920, 1045, PanelArrangement.createDefault().closePanel(changes).resizeDock(DockSide.Right, 300));
     expect(box(empty.sidePreview(DockSide.Right))).toEqual([1616, 0, 300, 1041]);
 
     const bounds = new DOMRectReadOnly(100, 200, 404, 304);
@@ -76,15 +79,15 @@ describe("ShellGeometry", () => {
     expect(box(geometry.guideBounds(DockSide.Bottom))).toEqual([948, 891, 40, 40]);
 
     expect(box(geometry.compassBounds(geometry.documents))).toEqual([902, 430.5, 132, 132]);
-    const narrow = new GroupFrame(new TabGroup(9, [PanelId.Changes], null), new DOMRectReadOnly(4, 0, 300, 1041), DockSide.Left);
+    const narrow = new GroupFrame(new TabGroup(9, [changes], null), new DOMRectReadOnly(4, 0, 300, 1041), DockSide.Left);
     expect(box(geometry.compassBounds(narrow))).toEqual([135, 454.5, 132, 132]);
-    const corner = new GroupFrame(new TabGroup(9, [PanelId.Changes], null), new DOMRectReadOnly(0, 1000, 100, 41), null);
+    const corner = new GroupFrame(new TabGroup(9, [changes], null), new DOMRectReadOnly(0, 1000, 100, 41), null);
     expect(box(geometry.compassBounds(corner))).toEqual([4, 909, 132, 132]);
-    const top = new GroupFrame(new TabGroup(9, [PanelId.Changes], null), new DOMRectReadOnly(1800, 0, 120, 20), null);
+    const top = new GroupFrame(new TabGroup(9, [changes], null), new DOMRectReadOnly(1800, 0, 120, 20), null);
     expect(box(geometry.compassBounds(top))).toEqual([1784, 0, 132, 132]);
     expect(box(new ShellGeometry(100, 100, PanelArrangement.createDefault()).compassBounds(corner))).toEqual([-16, -18, 132, 132]);
 
-    const open = new ShellGeometry(1920, 1045, PanelArrangement.createDefault().openPanel(PanelId.Activity));
+    const open = new ShellGeometry(1920, 1045, PanelArrangement.createDefault().openPanel(activity));
     expect(box(open.guideBounds(DockSide.Bottom))).toEqual([948, 957, 40, 40]);
     expect(box(open.compassBounds(open.frameOf(3)!))).toEqual([902, 817, 132, 132]);
   });
