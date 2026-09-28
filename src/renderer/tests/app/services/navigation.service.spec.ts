@@ -10,8 +10,9 @@ import { TestBed } from "@angular/core/testing";
 
 import { MemoryStorage } from "../../fixtures/memory-storage";
 import { AppView } from "../../../src/app/enums/app-view";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { SettingsSection } from "../../../src/app/enums/settings-section";
+import { Panel } from "../../../src/app/models/panel";
 import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
 import { TabGroup } from "../../../src/app/models/tab-group";
 import { LayoutService } from "../../../src/app/services/layout.service";
@@ -19,6 +20,8 @@ import { NavigationService } from "../../../src/app/services/navigation.service"
 import { ImageSource } from "../../../src/app/models/image-source";
 
 describe("NavigationService", () => {
+  const changes = new Panel(PanelKind.Changes);
+
   it("reuses image tabs, closes neighbours and leaves an active settings tab alone", () => {
     const navigation = TestBed.inject(NavigationService);
     const first = new ImageSource("1", "same.png", "D:/one.png", null);
@@ -86,14 +89,14 @@ describe("NavigationService", () => {
     const layout = TestBed.inject(LayoutService);
     const image = new ImageSource("1", "one.png", "D:/one.png", null);
 
-    layout.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    layout.movePanel(changes, new TabDropTarget(TabGroup.documentsId, 0));
     expect(navigation.view()).toBe(AppView.Panel);
-    expect(navigation.panel()).toBe(PanelId.Changes);
+    expect(navigation.panel()).toEqual(changes);
 
     navigation.openSettings();
     expect(navigation.view()).toBe(AppView.Settings);
     expect(navigation.panel()).toBeNull();
-    layout.activatePanel(PanelId.Changes);
+    layout.activatePanel(changes);
     navigation.closeSettingsTab();
     expect(navigation.settingsOpen()).toBe(false);
     expect(navigation.view()).toBe(AppView.Panel);
@@ -101,12 +104,12 @@ describe("NavigationService", () => {
     expect(navigation.view()).toBe(AppView.Chat);
 
     navigation.openImage(image);
-    layout.activatePanel(PanelId.Changes);
+    layout.activatePanel(changes);
     navigation.closeImages();
     expect(navigation.view()).toBe(AppView.Panel);
     navigation.openImage(image);
     expect(navigation.view()).toBe(AppView.Image);
-    layout.closePanel(PanelId.Changes);
+    layout.closePanel(changes);
     expect(navigation.view()).toBe(AppView.Image);
     navigation.closeImages();
   });

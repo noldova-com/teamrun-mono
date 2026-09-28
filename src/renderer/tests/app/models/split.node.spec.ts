@@ -8,18 +8,19 @@
 
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { SplitAxis } from "../../../src/app/enums/split-axis";
 import type { GroupFrame } from "../../../src/app/models/group-frame";
+import { Panel } from "../../../src/app/models/panel";
 import type { SplitHandle } from "../../../src/app/models/split-handle";
 import { SplitNode } from "../../../src/app/models/split.node";
 import { TabGroup } from "../../../src/app/models/tab-group";
 import { Resources } from "../../../src/app/resources";
 
 describe("SplitNode", () => {
-  const explorer = new TabGroup(1, [PanelId.Explorer], null);
-  const changes = new TabGroup(2, [PanelId.Changes], null);
-  const activity = new TabGroup(3, [PanelId.Activity], null);
+  const explorer = new TabGroup(1, [new Panel(PanelKind.Explorer)], null);
+  const changes = new TabGroup(2, [new Panel(PanelKind.Changes)], null);
+  const activity = new TabGroup(3, [new Panel(PanelKind.Activity)], null);
   const width = Resources.groupMinimumLengths[SplitAxis.Horizontal];
   const height = Resources.groupMinimumLengths[SplitAxis.Vertical];
   const gap = Resources.shellGap;
@@ -61,7 +62,7 @@ describe("SplitNode", () => {
     expect(node.minimumLength(SplitAxis.Horizontal)).toBe(width * 2 + gap);
     expect(node.minimumLength(SplitAxis.Vertical)).toBe(height * 2 + gap);
 
-    const renamed = new TabGroup(3, [PanelId.Activity, PanelId.Explorer], null);
+    const renamed = new TabGroup(3, [new Panel(PanelKind.Activity), new Panel(PanelKind.Explorer)], null);
     expect(node.withGroup(new TabGroup(8, [], null))).toBe(node);
     expect(node.withGroup(renamed).groups).toEqual([explorer, changes, renamed]);
 
@@ -74,7 +75,7 @@ describe("SplitNode", () => {
     expect(new SplitNode(6, SplitAxis.Vertical, [explorer, changes, activity], [0.2, 0.3, 0.5]).withoutGroup(2)?.toJson())
       .toEqual({ axis: "Vertical", children: [explorer.toJson(), activity.toJson()], weights: [0.2 / 0.7, 0.5 / 0.7] });
 
-    const added = new TabGroup(7, [PanelId.Activity], null);
+    const added = new TabGroup(7, [new Panel(PanelKind.Activity)], null);
     expect(node.splitGroup(9, added, PanelEdge.Top, 8)).toBe(node);
     const split = node.splitGroup(1, added, PanelEdge.Top, 8);
     expect(split.groups).toEqual([added, explorer, changes, activity]);

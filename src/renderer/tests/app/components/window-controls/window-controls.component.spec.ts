@@ -10,12 +10,18 @@ import { signal } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { AppUpdateState, AppUpdateStatus } from "@noldova/teamrun-protocol";
 
+import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { WindowControlsComponent } from "../../../../src/app/components/window-controls/window-controls.component";
 import { AppView } from "../../../../src/app/enums/app-view";
+import { PanelKind } from "../../../../src/app/enums/panel-kind";
 import { SettingsSection } from "../../../../src/app/enums/settings-section";
+import { ShortcutAction } from "../../../../src/app/enums/shortcut-action";
+import { Panel } from "../../../../src/app/models/panel";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
+import { LayoutService } from "../../../../src/app/services/layout.service";
 import { NavigationService } from "../../../../src/app/services/navigation.service";
+import { ShortcutsService } from "../../../../src/app/services/shortcuts.service";
 import { UpdateRestartService } from "../../../../src/app/services/update-restart.service";
 
 describe("WindowControlsComponent", () => {
@@ -75,5 +81,25 @@ describe("WindowControlsComponent", () => {
     waitingFor.set(null);
     await fixture.whenStable();
     expect(label()).toBe("Update 0.0.5 ready to install");
+  });
+
+  it("lists each panel that opens once in the Panels menu with its shortcut and no panel that opens more than once", async () => {
+    MemoryStorage.install(window);
+    TestBed.configureTestingModule({ imports: [WindowControlsComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    TestBed.inject(LayoutService).openPanel(new Panel(PanelKind.Terminal, "terminal-1"));
+    const shortcuts = TestBed.inject(ShortcutsService);
+    const fixture = TestBed.createComponent(WindowControlsComponent);
+    await fixture.whenStable();
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(".tr-panels-menu")!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const items = Array.from(document.querySelectorAll<HTMLButtonElement>(".mat-mdc-menu-panel [mat-menu-item]:not(.tr-reset-layout)"));
+
+    expect(items.map(t => Array.from(t.querySelectorAll(".mat-mdc-menu-item-text > span")).map(k => k.textContent?.trim()))).toEqual([
+      ["Explorer", shortcuts.keysOf(ShortcutAction.ToggleExplorer)],
+      ["Changes", shortcuts.keysOf(ShortcutAction.ToggleChanges)],
+      ["Activity", shortcuts.keysOf(ShortcutAction.ToggleActivity)]
+    ]);
   });
 });

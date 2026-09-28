@@ -17,7 +17,7 @@ import { OpenMode } from "./enums/open-mode";
 import { ImageOpenMode } from "./enums/image-open-mode";
 import { DockSide } from "./enums/dock-side";
 import { PanelEdge } from "./enums/panel-edge";
-import { PanelId } from "./enums/panel-id";
+import { PanelKind } from "./enums/panel-kind";
 import { ShortcutAction } from "./enums/shortcut-action";
 import { SplitAxis } from "./enums/split-axis";
 import { FontChoice } from "./enums/font-choice";
@@ -406,6 +406,8 @@ export class Resources {
   public static readonly invalidSplitMessage: string = "A split needs two or more parts, each with a weight.";
   public static readonly missingDocumentsGroupMessage: string = "The middle of the window needs the conversations group.";
   public static readonly repeatedPanelMessage: string = "A panel can be in only one place.";
+  public static readonly panelInstanceMessage: string = "A panel names an instance exactly when its kind opens more than once.";
+  public static readonly panelKeySeparator: string = ":";
   public static readonly dockMinimumSize: number = 160;
   public static readonly dockMaximumSize: number = 900;
   public static readonly dockStripSize: number = 44;
@@ -434,6 +436,8 @@ export class Resources {
   public static readonly tabIndexData: string = "tabIndex";
   public static readonly dropSideSelector: string = "[data-drop-side]";
   public static readonly tabIndexSelector: string = "[data-tab-index]";
+  public static readonly panelData: string = "panel";
+  public static readonly panelTabSelector: string = ".tr-tab[data-panel]";
   public static readonly dropGroupData: string = "dropGroup";
   public static readonly dropEdgeData: string = "dropEdge";
   public static readonly dropGroupSelector: string = "[data-drop-group]";
@@ -452,10 +456,10 @@ export class Resources {
   public static readonly groupLabelJoiner: string = ", ";
   public static readonly panelsMenuLabel: string = "Panels";
   public static readonly resetLayoutLabel: string = "Reset the layout";
-  public static readonly panelShortcutActions: Readonly<Record<PanelId, ShortcutAction>> = {
-    [PanelId.Explorer]: ShortcutAction.ToggleExplorer,
-    [PanelId.Changes]: ShortcutAction.ToggleChanges,
-    [PanelId.Activity]: ShortcutAction.ToggleActivity
+  public static readonly panelShortcutActions: Readonly<Partial<Record<PanelKind, ShortcutAction>>> = {
+    [PanelKind.Explorer]: ShortcutAction.ToggleExplorer,
+    [PanelKind.Changes]: ShortcutAction.ToggleChanges,
+    [PanelKind.Activity]: ShortcutAction.ToggleActivity
   };
 
   public static readonly dockGuideLabels: Readonly<Record<DockSide, string>> = {
@@ -716,10 +720,13 @@ export class Resources {
     [FontChoice.System]: "System"
   };
 
-  public static readonly defaultDockSides: Readonly<Record<PanelId, DockSide>> = {
-    [PanelId.Explorer]: DockSide.Left,
-    [PanelId.Changes]: DockSide.Right,
-    [PanelId.Activity]: DockSide.Bottom
+  public static readonly singlePanelKinds: readonly PanelKind[] = [PanelKind.Explorer, PanelKind.Changes, PanelKind.Activity];
+
+  public static readonly defaultDockSides: Readonly<Record<PanelKind, DockSide>> = {
+    [PanelKind.Explorer]: DockSide.Left,
+    [PanelKind.Changes]: DockSide.Right,
+    [PanelKind.Activity]: DockSide.Bottom,
+    [PanelKind.Terminal]: DockSide.Bottom
   };
 
   public static readonly defaultCollapsedDocks: readonly DockSide[] = [DockSide.Bottom];
@@ -773,16 +780,18 @@ export class Resources {
     [DockSide.Bottom]: 260
   };
 
-  public static readonly panelLabels: Readonly<Record<PanelId, string>> = {
-    [PanelId.Explorer]: "Explorer",
-    [PanelId.Changes]: "Changes",
-    [PanelId.Activity]: "Activity"
+  public static readonly panelLabels: Readonly<Record<PanelKind, string>> = {
+    [PanelKind.Explorer]: "Explorer",
+    [PanelKind.Changes]: "Changes",
+    [PanelKind.Activity]: "Activity",
+    [PanelKind.Terminal]: "Terminal"
   };
 
-  public static readonly panelIcons: Readonly<Record<PanelId, string>> = {
-    [PanelId.Explorer]: "folder_open",
-    [PanelId.Changes]: "difference",
-    [PanelId.Activity]: "list_alt"
+  public static readonly panelIcons: Readonly<Record<PanelKind, string>> = {
+    [PanelKind.Explorer]: "folder_open",
+    [PanelKind.Changes]: "difference",
+    [PanelKind.Activity]: "list_alt",
+    [PanelKind.Terminal]: "terminal"
   };
 
   public static readonly openModeLabels: Readonly<Record<OpenMode, string>> = {
@@ -1123,10 +1132,6 @@ export class Resources {
 
   public static formatThemeUnreadable(id: string): string {
     return `The built-in theme "${id}" could not be read.`;
-  }
-
-  public static formatPanelTabSelector(panel: PanelId): string {
-    return `.tr-tab[data-panel="${panel}"]`;
   }
 
   public static formatPixelSize(value: number): string {

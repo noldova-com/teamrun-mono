@@ -17,7 +17,7 @@ import { MatTooltipModule } from "@angular/material/tooltip";
 import "@noldova/teamrun-foundation-core";
 
 import { AppView } from "../../enums/app-view";
-import type { PanelId } from "../../enums/panel-id";
+import type { Panel } from "../../models/panel";
 import type { TabGroup } from "../../models/tab-group";
 import { Resources } from "../../resources";
 import { ChatStore } from "../../services/chat-store.service";
@@ -86,12 +86,12 @@ export class DocumentTabsComponent {
     this.closeImage(event, id);
   }
 
-  protected closePanel(event: globalThis.Event, panel: PanelId): void {
+  protected closePanel(event: globalThis.Event, panel: Panel): void {
     event.stopPropagation();
     this.layout.closePanel(panel);
   }
 
-  protected onPanelAuxClick(event: MouseEvent, panel: PanelId): void {
+  protected onPanelAuxClick(event: MouseEvent, panel: Panel): void {
     if (event.button !== Resources.middleButton)
       return;
     event.preventDefault();

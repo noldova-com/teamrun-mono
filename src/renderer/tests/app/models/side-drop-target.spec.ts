@@ -7,18 +7,22 @@
  */
 
 import { DockSide } from "../../../src/app/enums/dock-side";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
+import { Panel } from "../../../src/app/models/panel";
 import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
 import { ShellGeometry } from "../../../src/app/models/shell-geometry";
 import { SideDropTarget } from "../../../src/app/models/side-drop-target";
 import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
 
 describe("SideDropTarget", () => {
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
+
   it("docks the panel along the side, previews the area and compares by side", () => {
     const arrangement = PanelArrangement.createDefault();
     const target = new SideDropTarget(DockSide.Right);
 
-    expect(target.place(arrangement, PanelId.Activity).dock(DockSide.Right).panels).toEqual([PanelId.Changes, PanelId.Activity]);
+    expect(target.place(arrangement, activity).dock(DockSide.Right).panels).toEqual([changes, activity]);
     const geometry = new ShellGeometry(1920, 1045, arrangement);
     const preview = target.preview(geometry);
     const expected = geometry.sidePreview(DockSide.Right);

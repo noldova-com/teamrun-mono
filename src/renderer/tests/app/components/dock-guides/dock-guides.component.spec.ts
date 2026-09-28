@@ -12,7 +12,8 @@ import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { DockSide } from "../../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../../src/app/enums/panel-kind";
+import { Panel } from "../../../../src/app/models/panel";
 import { Resources } from "../../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { LayoutService } from "../../../../src/app/services/layout.service";
@@ -30,8 +31,8 @@ describe("DockGuidesComponent", () => {
     const fixture = TestBed.createComponent(DockGuidesComponent);
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    const explorer = layout.arrangement().groupOf(PanelId.Explorer)?.id ?? -1;
-    const changes = layout.arrangement().groupOf(PanelId.Changes)?.id ?? -1;
+    const explorer = layout.arrangement().groupOf(new Panel(PanelKind.Explorer))?.id ?? -1;
+    const changes = layout.arrangement().groupOf(new Panel(PanelKind.Changes))?.id ?? -1;
     const card = (group: number): HTMLElement => {
       const created = document.createElement("section");
       created.dataset["dropGroup"] = String(group);
@@ -51,13 +52,13 @@ describe("DockGuidesComponent", () => {
     const pixels = (rect: DOMRectReadOnly): readonly string[] => [`${rect.x}px`, `${rect.y}px`, `${rect.width}px`, `${rect.height}px`];
     expect(element.children).toHaveLength(0);
 
-    drag.begin(PanelId.Changes, new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button: 0 }));
+    drag.begin(new Panel(PanelKind.Changes), new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button: 0 }));
     move(changesCard);
     expect(Array.from(element.querySelectorAll<HTMLElement>(".tr-dock-guide-edge")).map(t => [t.dataset["dropSide"], t.style.left, t.style.top]))
       .toEqual(Object.values(DockSide).map(side => [side, `${shell.geometry().guideBounds(side).x}px`, `${shell.geometry().guideBounds(side).y}px`]));
     expect(element.querySelector(".tr-dock-compass")).toBeNull();
     expect(element.querySelector(".tr-drop-preview")).toBeNull();
-    expect(element.querySelector(".tr-drag-ghost")?.textContent).toContain(Resources.panelLabels[PanelId.Changes]);
+    expect(element.querySelector(".tr-drag-ghost")?.textContent).toContain(Resources.panelLabels[PanelKind.Changes]);
     expect(element.querySelector<HTMLElement>(".tr-drag-ghost")?.style.left).toBe(`${300 + Resources.ghostOffset}px`);
 
     move(explorerCard);
@@ -83,7 +84,7 @@ describe("DockGuidesComponent", () => {
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 300, clientY: 200, bubbles: true }));
     fixture.detectChanges();
     expect(element.children).toHaveLength(0);
-    expect(layout.dock(DockSide.Bottom).panels).toEqual([PanelId.Activity, PanelId.Changes]);
+    expect(layout.dock(DockSide.Bottom).panels).toEqual([new Panel(PanelKind.Activity), new Panel(PanelKind.Changes)]);
     explorerCard.remove();
     changesCard.remove();
   });

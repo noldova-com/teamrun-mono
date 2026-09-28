@@ -13,8 +13,9 @@ import { Conversation, MethodName } from "@noldova/teamrun-protocol";
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { AppView } from "../../../../src/app/enums/app-view";
-import { PanelId } from "../../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../../src/app/enums/panel-kind";
 import { ImageSource } from "../../../../src/app/models/image-source";
+import { Panel } from "../../../../src/app/models/panel";
 import { TabDropTarget } from "../../../../src/app/models/tab-drop-target";
 import { TabGroup } from "../../../../src/app/models/tab-group";
 import { Resources } from "../../../../src/app/resources";
@@ -26,6 +27,9 @@ import { NavigationService } from "../../../../src/app/services/navigation.servi
 import { DocumentTabsComponent } from "../../../../src/app/components/document-tabs/document-tabs.component";
 
 describe("DocumentTabsComponent", () => {
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
+
   it("switches image tabs and closes them with the cross or middle click without closing conversations", async () => {
     MemoryStorage.install(window);
     TestBed.configureTestingModule({ imports: [DocumentTabsComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
@@ -174,11 +178,11 @@ describe("DocumentTabsComponent", () => {
     const fixture = TestBed.createComponent(DocumentTabsComponent);
     const element = fixture.nativeElement as HTMLElement;
     const panels = (): HTMLButtonElement[] => Array.from(element.querySelectorAll<HTMLButtonElement>(".tr-panel-tab"));
-    layout.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    layout.movePanel(changes, new TabDropTarget(TabGroup.documentsId, 0));
     fixture.detectChanges();
     expect(element.classList.contains("hidden")).toBe(false);
-    expect(panels().map(t => [t.dataset["panel"], t.dataset["tabIndex"], t.getAttribute("aria-selected")])).toEqual([[PanelId.Changes, "0", "true"]]);
-    expect(panels()[0]!.textContent).toContain(Resources.panelLabels[PanelId.Changes]);
+    expect(panels().map(t => [t.dataset["panel"], t.dataset["tabIndex"], t.getAttribute("aria-selected")])).toEqual([["Changes", "0", "true"]]);
+    expect(panels()[0]!.textContent).toContain(Resources.panelLabels[PanelKind.Changes]);
     expect(element.querySelector(".tr-tab-strip")?.hasAttribute("data-drop-tabs")).toBe(true);
 
     await store.initialize();
@@ -193,9 +197,9 @@ describe("DocumentTabsComponent", () => {
     expect(navigation.view()).toBe(AppView.Panel);
     expect(element.querySelector('[data-conversation-id="c1"]')?.classList.contains("tr-tab-active")).toBe(false);
 
-    layout.movePanel(PanelId.Activity, new TabDropTarget(TabGroup.documentsId, 0));
+    layout.movePanel(activity, new TabDropTarget(TabGroup.documentsId, 0));
     fixture.detectChanges();
-    expect(panels().map(t => t.dataset["panel"])).toEqual([PanelId.Activity, PanelId.Changes]);
+    expect(panels().map(t => t.dataset["panel"])).toEqual(["Activity", "Changes"]);
     element.dataset["dropGroup"] = String(TabGroup.documentsId);
     panels()[1]!.dispatchEvent(new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button: 0, bubbles: true }));
     document.elementFromPoint = (): Element | null => element.querySelector(".tr-tab-strip > span.flex-1");
@@ -205,27 +209,54 @@ describe("DocumentTabsComponent", () => {
     expect(element.querySelector(".tr-tab-strip > span.flex-1")?.classList.contains("tr-drop-before")).toBe(true);
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 60, clientY: 10, bubbles: true }));
     fixture.detectChanges();
-    expect(panels().map(t => t.dataset["panel"])).toEqual([PanelId.Activity, PanelId.Changes]);
-    expect(navigation.panel()).toBe(PanelId.Changes);
+    expect(panels().map(t => t.dataset["panel"])).toEqual(["Activity", "Changes"]);
+    expect(navigation.panel()).toEqual(changes);
 
     navigation.showChat();
     element.querySelector<HTMLButtonElement>(".tr-documents-menu")!.click();
     fixture.detectChanges();
     const listed = document.querySelector<HTMLButtonElement>(".tr-documents-panel-item")!;
-    expect(listed.textContent).toContain(Resources.panelLabels[PanelId.Activity]);
+    expect(listed.textContent).toContain(Resources.panelLabels[PanelKind.Activity]);
     listed.click();
     fixture.detectChanges();
-    expect(navigation.panel()).toBe(PanelId.Activity);
+    expect(navigation.panel()).toEqual(activity);
 
     panels()[0]!.dispatchEvent(new MouseEvent("auxclick", { button: 2, bubbles: true }));
-    expect(layout.isOpen(PanelId.Activity)).toBe(true);
+    expect(layout.isOpen(activity)).toBe(true);
     panels()[0]!.dispatchEvent(new MouseEvent("auxclick", { button: 1, bubbles: true, cancelable: true }));
     fixture.detectChanges();
-    expect(layout.isOpen(PanelId.Activity)).toBe(false);
+    expect(layout.isOpen(activity)).toBe(false);
     panels()[0]!.querySelector<HTMLElement>(".tr-tab-close")!.click();
     fixture.detectChanges();
     expect(panels()).toHaveLength(0);
     expect(navigation.view()).toBe(AppView.Chat);
     store.dispose();
+  });
+
+  it("shows each panel of one kind among the conversations as its own tab", () => {
+    MemoryStorage.install(window);
+    TestBed.configureTestingModule({ imports: [DocumentTabsComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const layout = TestBed.inject(LayoutService);
+    const navigation = TestBed.inject(NavigationService);
+    const fixture = TestBed.createComponent(DocumentTabsComponent);
+    const element = fixture.nativeElement as HTMLElement;
+    const panels = (): HTMLButtonElement[] => Array.from(element.querySelectorAll<HTMLButtonElement>(".tr-panel-tab"));
+    const first = new Panel(PanelKind.Terminal, "terminal-1");
+    const second = new Panel(PanelKind.Terminal, "terminal-2");
+    layout.movePanel(first, new TabDropTarget(TabGroup.documentsId, 0));
+    layout.movePanel(second, new TabDropTarget(TabGroup.documentsId, 1));
+    fixture.detectChanges();
+
+    expect(panels().map(t => [t.dataset["panel"], t.querySelector(".truncate")?.textContent, t.getAttribute("aria-selected")])).toEqual([
+      ["Terminal:terminal-1", "Terminal", "false"],
+      ["Terminal:terminal-2", "Terminal", "true"]
+    ]);
+    panels()[0]!.click();
+    fixture.detectChanges();
+    expect(navigation.panel()).toEqual(first);
+    panels()[0]!.querySelector<HTMLElement>(".tr-tab-close")!.click();
+    fixture.detectChanges();
+    expect(panels().map(t => t.dataset["panel"])).toEqual(["Terminal:terminal-2"]);
+    expect(navigation.panel()).toEqual(second);
   });
 });

@@ -12,7 +12,8 @@ import { TestBed } from "@angular/core/testing";
 import { MemoryStorage } from "../../fixtures/memory-storage";
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
+import { Panel } from "../../../src/app/models/panel";
 import { SideDropTarget } from "../../../src/app/models/side-drop-target";
 import { SplitDropTarget } from "../../../src/app/models/split-drop-target";
 import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
@@ -20,6 +21,9 @@ import { LayoutService } from "../../../src/app/services/layout.service";
 import { PanelDragService } from "../../../src/app/services/panel-drag.service";
 
 describe("PanelDragService", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
   const pointer = (document: Document, type: string, x: number, y: number): void => {
     document.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));
   };
@@ -50,22 +54,22 @@ describe("PanelDragService", () => {
     const nothing = element(document, "div", {});
     let under: Element | null = null;
     document.elementFromPoint = (): Element | null => under;
-    const down = (panel: PanelId, button: number = 0): void =>
+    const down = (panel: Panel, button: number = 0): void =>
       drag.begin(panel, new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button }));
     const move = (target: Element | null, x: number = 120): void => {
       under = target;
       pointer(document, "pointermove", x, 10);
     };
 
-    down(PanelId.Changes);
+    down(changes);
     pointer(document, "pointermove", 12, 12);
     expect(drag.dragging()).toBeNull();
     pointer(document, "pointerup", 12, 12);
-    expect(layout.dock(DockSide.Right).panels).toEqual([PanelId.Changes]);
+    expect(layout.dock(DockSide.Right).panels).toEqual([changes]);
 
-    down(PanelId.Changes);
+    down(changes);
     move(tab);
-    expect(drag.dragging()).toBe(PanelId.Changes);
+    expect(drag.dragging()).toEqual(changes);
     expect(drag.point()).toEqual([120, 10]);
     expect(document.body.classList.contains("tr-dragging-body")).toBe(true);
     expect(drag.hoveredGroup()).toBe(1);
@@ -80,10 +84,10 @@ describe("PanelDragService", () => {
     expect(drag.target()).toBeNull();
     expect(drag.hoveredGroup()).toBeNull();
     expect(document.body.classList.contains("tr-dragging-body")).toBe(false);
-    expect(layout.dock(DockSide.Left).panels).toEqual([PanelId.Changes, PanelId.Explorer]);
+    expect(layout.dock(DockSide.Left).panels).toEqual([changes, explorer]);
     expect(layout.dock(DockSide.Right).isEmpty).toBe(true);
 
-    down(PanelId.Changes);
+    down(changes);
     move(tab, 180);
     expect(drag.target()).toEqual(new TabDropTarget(1, 1));
     move(strip);
@@ -112,9 +116,9 @@ describe("PanelDragService", () => {
     expect(escape.defaultPrevented).toBe(true);
     expect(drag.dragging()).toBeNull();
     pointer(document, "pointerup", 120, 10);
-    expect(layout.dock(DockSide.Left).panels).toEqual([PanelId.Changes, PanelId.Explorer]);
+    expect(layout.dock(DockSide.Left).panels).toEqual([changes, explorer]);
 
-    down(PanelId.Explorer);
+    down(explorer);
     const early = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     document.body.dispatchEvent(early);
     expect(early.defaultPrevented).toBe(false);
@@ -123,16 +127,38 @@ describe("PanelDragService", () => {
     document.body.dispatchEvent(other);
     expect(other.defaultPrevented).toBe(false);
     pointer(document, "pointerup", 120, 10);
-    expect(layout.dock(DockSide.Right).panels).toEqual([PanelId.Explorer]);
+    expect(layout.dock(DockSide.Right).panels).toEqual([explorer]);
 
-    down(PanelId.Activity);
+    down(activity);
     move(top);
     pointer(document, "pointercancel", 120, 10);
-    expect(layout.dock(DockSide.Bottom).panels).toEqual([PanelId.Activity]);
-    down(PanelId.Activity, 2);
+    expect(layout.dock(DockSide.Bottom).panels).toEqual([activity]);
+    down(activity, 2);
     move(top);
     expect(drag.dragging()).toBeNull();
     for (const created of [card, compass, guide, upward, stranger, nothing])
       created.remove();
+  });
+
+  it("moves only the dragged panel of a kind", () => {
+    MemoryStorage.install(window);
+    const document = TestBed.inject(DOCUMENT);
+    const layout = TestBed.inject(LayoutService);
+    const drag = TestBed.inject(PanelDragService);
+    const first = new Panel(PanelKind.Terminal, "terminal-1");
+    const second = new Panel(PanelKind.Terminal, "terminal-2");
+    layout.openPanel(first);
+    layout.openPanel(second);
+    const guide = element(document, "button", { dropSide: DockSide.Left });
+    document.elementFromPoint = (): Element | null => guide;
+
+    drag.begin(second, new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button: 0 }));
+    pointer(document, "pointermove", 120, 10);
+    expect(drag.dragging()).toEqual(second);
+    pointer(document, "pointerup", 120, 10);
+
+    expect(layout.dock(DockSide.Left).root?.groups.map(t => t.panels)).toEqual([[second], [explorer]]);
+    expect(layout.dock(DockSide.Bottom).panels).toEqual([activity, first]);
+    guide.remove();
   });
 });

@@ -9,14 +9,15 @@
 import { describe, expect, it } from "vitest";
 
 import { DockSide } from "../../../src/app/enums/dock-side";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { Resources } from "../../../src/app/resources";
 import { Dock } from "../../../src/app/models/dock";
+import { Panel } from "../../../src/app/models/panel";
 import { ShellFit } from "../../../src/app/models/shell-fit";
 import { TabGroup } from "../../../src/app/models/tab-group";
 
-const open = (side: DockSide, size: number | null = null): Dock => new Dock(side, new TabGroup(1, [PanelId.Explorer], null), size, false);
-const collapsed = (side: DockSide): Dock => new Dock(side, new TabGroup(1, [PanelId.Explorer], null), null, true);
+const open = (side: DockSide, size: number | null = null): Dock => new Dock(side, new TabGroup(1, [new Panel(PanelKind.Explorer)], null), size, false);
+const collapsed = (side: DockSide): Dock => new Dock(side, new TabGroup(1, [new Panel(PanelKind.Explorer)], null), null, true);
 const empty = (side: DockSide): Dock => new Dock(side, null, null, false);
 const gap = Resources.shellGap;
 const chrome = Resources.shellPadding * 2;

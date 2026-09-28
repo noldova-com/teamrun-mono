@@ -13,9 +13,10 @@ import "@noldova/teamrun-foundation-core";
 
 import { AppView } from "../enums/app-view";
 import { DockSide } from "../enums/dock-side";
-import { PanelId } from "../enums/panel-id";
+import { PanelKind } from "../enums/panel-kind";
 import { SettingsSection } from "../enums/settings-section";
 import { ShortcutAction } from "../enums/shortcut-action";
+import { Panel } from "../models/panel";
 import type { Shortcut } from "../models/shortcut";
 import { Resources } from "../resources";
 import { ChatStore } from "./chat-store.service";
@@ -111,13 +112,13 @@ export class ShortcutsService {
         this.search.open();
         return true;
       case ShortcutAction.ToggleExplorer:
-        this.layout.togglePanel(PanelId.Explorer);
+        this.layout.togglePanel(new Panel(PanelKind.Explorer));
         return true;
       case ShortcutAction.ToggleChanges:
-        this.layout.togglePanel(PanelId.Changes);
+        this.layout.togglePanel(new Panel(PanelKind.Changes));
         return true;
       case ShortcutAction.ToggleActivity:
-        this.layout.togglePanel(PanelId.Activity);
+        this.layout.togglePanel(new Panel(PanelKind.Activity));
         return true;
       case ShortcutAction.ToggleBottomDock:
         this.layout.toggleDock(DockSide.Bottom);

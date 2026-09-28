@@ -9,10 +9,10 @@ LICENSE file in the root directory of this source tree.
 @if (dock().collapsed) {
   <div class="tr-dock-strip tr-panel-card flex flex-1 items-center gap-1 p-1" [class.flex-col]="isVertical()" [attr.data-drop-group]="cornerId()"
     data-drop-tabs>
-    @for (panel of dock().panels; track panel) {
-      <button mat-icon-button class="tr-small-icon-button tr-dock-strip-button" [matTooltip]="resources.panelLabels[panel]"
-        [matTooltipPosition]="tooltipPosition()" [attr.aria-label]="resources.panelLabels[panel]" (click)="layout.openPanel(panel)">
-        <mat-icon>{{ resources.panelIcons[panel] }}</mat-icon>
+    @for (panel of dock().panels; track panel.key) {
+      <button mat-icon-button class="tr-small-icon-button tr-dock-strip-button" [matTooltip]="resources.panelLabels[panel.kind]"
+        [matTooltipPosition]="tooltipPosition()" [attr.aria-label]="resources.panelLabels[panel.kind]" (click)="layout.openPanel(panel)">
+        <mat-icon>{{ resources.panelIcons[panel.kind] }}</mat-icon>
       </button>
     }
   </div>

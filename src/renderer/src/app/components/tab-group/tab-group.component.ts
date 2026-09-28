@@ -15,8 +15,8 @@ import { MatTooltipModule } from "@angular/material/tooltip";
 import "@noldova/teamrun-foundation-core";
 
 import type { DockSide } from "../../enums/dock-side";
-import type { PanelId } from "../../enums/panel-id";
 import type { GroupFrame } from "../../models/group-frame";
+import type { Panel } from "../../models/panel";
 import type { TabGroup } from "../../models/tab-group";
 import { Resources } from "../../resources";
 import { LayoutService } from "../../services/layout.service";
@@ -51,7 +51,7 @@ export class TabGroupComponent {
 
   public readonly frame: InputSignal<GroupFrame> = input.required<GroupFrame>();
 
-  protected close(event: globalThis.Event, panel: PanelId): void {
+  protected close(event: globalThis.Event, panel: Panel): void {
     event.stopPropagation();
     this.layout.closePanel(panel);
   }
@@ -61,7 +61,7 @@ export class TabGroupComponent {
       event.preventDefault();
   }
 
-  protected onTabAuxClick(event: MouseEvent, panel: PanelId): void {
+  protected onTabAuxClick(event: MouseEvent, panel: Panel): void {
     if (event.button !== Resources.middleButton)
       return;
     event.preventDefault();

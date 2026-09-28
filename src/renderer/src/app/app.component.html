@@ -26,8 +26,8 @@ LICENSE file in the root directory of this source tree.
           <span class="truncate tr-emphasis">{{ image.data.image.label }}</span>
         }
       } @else if (navigation.panel(); as panel) {
-        <mat-icon class="tr-muted tr-nav-icon">{{ resources.panelIcons[panel] }}</mat-icon>
-        <span class="truncate tr-emphasis">{{ resources.panelLabels[panel] }}</span>
+        <mat-icon class="tr-muted tr-nav-icon">{{ resources.panelIcons[panel.kind] }}</mat-icon>
+        <span class="truncate tr-emphasis">{{ resources.panelLabels[panel.kind] }}</span>
       } @else {
         @if (store.selectedProject(); as project) {
           <mat-icon class="tr-muted tr-nav-icon">{{ resources.icons["folder"] }}</mat-icon>

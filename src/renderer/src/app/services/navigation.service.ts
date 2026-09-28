@@ -12,10 +12,10 @@ import { DestroyRef, Injectable, type Signal, type WritableSignal, computed, inj
 import "@noldova/teamrun-foundation-core";
 
 import { AppView } from "../enums/app-view";
-import type { PanelId } from "../enums/panel-id";
 import { SettingsSection } from "../enums/settings-section";
 import { ImageDocument } from "../models/image-document";
 import type { ImageSource } from "../models/image-source";
+import type { Panel } from "../models/panel";
 import { Resources } from "../resources";
 import { LayoutService } from "./layout.service";
 
@@ -32,7 +32,7 @@ export class NavigationService {
   public readonly images = this.imagesSignal.asReadonly();
   public readonly activeImage = computed(() => this.images().find(t => t.id === this.imageId()) ?? null);
 
-  public readonly panel: Signal<PanelId | null> = computed(() => this.layout.arrangement().documents.activePanel);
+  public readonly panel: Signal<Panel | null> = computed(() => this.layout.arrangement().documents.activePanel);
   public readonly view: Signal<AppView> = computed(() => (Object.isNull(this.panel()) ? this.documentView() : AppView.Panel));
   public readonly section: Signal<SettingsSection> = this.sectionSignal.asReadonly();
   public readonly settingsOpen: Signal<boolean> = this.settingsOpenSignal.asReadonly();

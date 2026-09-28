@@ -9,9 +9,9 @@
 import "@noldova/teamrun-foundation-core";
 
 import type { DockSide } from "../enums/dock-side";
-import type { PanelId } from "../enums/panel-id";
 import { Resources } from "../resources";
 import type { LayoutNode } from "./layout.node";
+import type { Panel } from "./panel";
 
 export class Dock {
   public readonly side: DockSide;
@@ -34,7 +34,7 @@ export class Dock {
     return Object.isNull(this.root);
   }
 
-  public get panels(): readonly PanelId[] {
+  public get panels(): readonly Panel[] {
     return this.root?.groups.flatMap(t => t.panels) ?? [];
   }
 

@@ -53,16 +53,16 @@ LICENSE file in the root directory of this source tree.
         </span>
       </button>
     }
-    @for (panel of group().panels; track panel; let index = $index) {
+    @for (panel of group().panels; track panel.key; let index = $index) {
       <tr-panel-menu #menu [panel]="panel" />
-      <button #tab type="button" class="tr-tab tr-panel-tab max-w-[16rem]" role="tab" [attr.data-panel]="panel" [attr.data-tab-index]="index"
-        [class.tr-tab-active]="navigation.panel() === panel" [attr.aria-selected]="navigation.panel() === panel"
-        [class.tr-drop-before]="drag.isDropBefore(group().id, index)" [class.tr-dragging]="drag.dragging() === panel"
+      <button #tab type="button" class="tr-tab tr-panel-tab max-w-[16rem]" role="tab" [attr.data-panel]="panel.key" [attr.data-tab-index]="index"
+        [class.tr-tab-active]="panel.equals(navigation.panel())" [attr.aria-selected]="panel.equals(navigation.panel())"
+        [class.tr-drop-before]="drag.isDropBefore(group().id, index)" [class.tr-dragging]="panel.equals(drag.dragging())"
         [matContextMenuTriggerFor]="menu.menu() ?? null" (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)"
         (auxclick)="onPanelAuxClick($event, panel)" (keydown)="menu.openFromKeyboard($event, tab)">
         <span class="tr-tab-label flex items-center gap-1.5">
-          <mat-icon class="tr-tab-icon">{{ resources.panelIcons[panel] }}</mat-icon>
-          <span class="truncate">{{ resources.panelLabels[panel] }}</span>
+          <mat-icon class="tr-tab-icon">{{ resources.panelIcons[panel.kind] }}</mat-icon>
+          <span class="truncate">{{ resources.panelLabels[panel.kind] }}</span>
         </span>
         <span class="tr-tab-actions">
           <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="closePanel($event, panel)"
@@ -94,9 +94,9 @@ LICENSE file in the root directory of this source tree.
       <mat-icon>{{ resources.icons['image'] }}</mat-icon>{{ image.data.image.label }}
     </button>
   }
-  @for (panel of group().panels; track panel) {
+  @for (panel of group().panels; track panel.key) {
     <button mat-menu-item class="tr-documents-panel-item" (click)="layout.activatePanel(panel)">
-      <mat-icon>{{ resources.panelIcons[panel] }}</mat-icon>{{ resources.panelLabels[panel] }}
+      <mat-icon>{{ resources.panelIcons[panel.kind] }}</mat-icon>{{ resources.panelLabels[panel.kind] }}
     </button>
   }
   <button mat-menu-item (click)="closeAll()">{{ resources.closeAllLabel }}</button>

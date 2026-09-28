@@ -13,8 +13,8 @@ import "@noldova/teamrun-foundation-core";
 
 import { DockSide } from "../enums/dock-side";
 import { PanelEdge } from "../enums/panel-edge";
-import type { PanelId } from "../enums/panel-id";
 import type { DropTarget } from "../models/drop-target";
+import type { Panel } from "../models/panel";
 import { SideDropTarget } from "../models/side-drop-target";
 import { SplitDropTarget } from "../models/split-drop-target";
 import { TabDropTarget } from "../models/tab-drop-target";
@@ -25,7 +25,7 @@ import { LayoutService } from "./layout.service";
 export class PanelDragService {
   private readonly document: Document = inject(DOCUMENT);
   private readonly layout: LayoutService = inject(LayoutService);
-  private readonly draggingSignal: WritableSignal<PanelId | null> = signal(null);
+  private readonly draggingSignal: WritableSignal<Panel | null> = signal(null);
   private readonly targetSignal: WritableSignal<DropTarget | null> = signal(null);
   private readonly hoveredSignal: WritableSignal<number | null> = signal(null);
   private readonly pointSignal: WritableSignal<readonly [number, number]> = signal([0, 0]);
@@ -33,14 +33,14 @@ export class PanelDragService {
   private readonly onEnd: () => void = () => this.end();
   private readonly onCancel: () => void = () => this.stop();
   private readonly onKey: (event: KeyboardEvent) => void = event => this.cancelOnEscape(event);
-  private pending: { panel: PanelId; x: number; y: number } | null = null;
+  private pending: { panel: Panel; x: number; y: number } | null = null;
 
-  public readonly dragging: Signal<PanelId | null> = this.draggingSignal.asReadonly();
+  public readonly dragging: Signal<Panel | null> = this.draggingSignal.asReadonly();
   public readonly target: Signal<DropTarget | null> = this.targetSignal.asReadonly();
   public readonly hoveredGroup: Signal<number | null> = this.hoveredSignal.asReadonly();
   public readonly point: Signal<readonly [number, number]> = this.pointSignal.asReadonly();
 
-  public begin(panel: PanelId, event: PointerEvent): void {
+  public begin(panel: Panel, event: PointerEvent): void {
     if (event.button !== Resources.primaryButton)
       return;
     this.pending = { panel, x: event.clientX, y: event.clientY };

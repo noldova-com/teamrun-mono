@@ -6,8 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export enum PanelId {
+export enum PanelKind {
   Explorer = "Explorer",
   Changes = "Changes",
-  Activity = "Activity"
+  Activity = "Activity",
+  Terminal = "Terminal"
 }

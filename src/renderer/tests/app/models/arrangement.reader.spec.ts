@@ -8,24 +8,28 @@
 
 import { DockSide } from "../../../src/app/enums/dock-side";
 import { PanelEdge } from "../../../src/app/enums/panel-edge";
-import { PanelId } from "../../../src/app/enums/panel-id";
+import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { SplitAxis } from "../../../src/app/enums/split-axis";
 import { ArrangementReader } from "../../../src/app/models/arrangement.reader";
+import { Panel } from "../../../src/app/models/panel";
 import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
 import { SplitNode } from "../../../src/app/models/split.node";
 import { TabGroup } from "../../../src/app/models/tab-group";
 
 describe("ArrangementReader", () => {
+  const explorer = new Panel(PanelKind.Explorer);
+  const changes = new Panel(PanelKind.Changes);
+  const activity = new Panel(PanelKind.Activity);
   const read = (record: Record<string, unknown>): PanelArrangement => new ArrangementReader().read(record);
   const shape = (arrangement: PanelArrangement): unknown => JSON.parse(JSON.stringify(arrangement.toJson()));
 
   it("reads what an arrangement writes, with the same groups, splits, weights and sizes", () => {
     const documentsId = TabGroup.documentsId;
     const arrangement = PanelArrangement.createDefault()
-      .splitGroup(PanelId.Activity, 1, PanelEdge.Bottom)
+      .splitGroup(activity, 1, PanelEdge.Bottom)
       .resizeDock(DockSide.Left, 300)
-      .insertTab(PanelId.Changes, documentsId, 0)
-      .splitGroup(PanelId.Changes, documentsId, PanelEdge.Right);
+      .insertTab(changes, documentsId, 0)
+      .splitGroup(changes, documentsId, PanelEdge.Right);
     const split = arrangement.dock(DockSide.Left).root as SplitNode;
     const resized = arrangement.resizeSplit(split.id, [2, 1]).toggleDock(DockSide.Left);
 
@@ -34,7 +38,7 @@ describe("ArrangementReader", () => {
     expect(restored.dock(DockSide.Left).collapsed).toBe(true);
     expect(restored.dock(DockSide.Left).size).toBe(300);
     expect((restored.dock(DockSide.Left).root as SplitNode).weights).toEqual([2 / 3, 1 / 3]);
-    expect(restored.middle.groups.map(t => t.panels)).toEqual([[], [PanelId.Changes]]);
+    expect(restored.middle.groups.map(t => t.panels)).toEqual([[], [changes]]);
     expect(restored.documents.id).toBe(documentsId);
     expect(new Set(restored.groups.map(t => t.id)).size).toBe(restored.groups.length);
   });
@@ -49,13 +53,37 @@ describe("ArrangementReader", () => {
       documents: { open: ["c1"], active: "c1", preview: null }
     });
 
-    expect(restored.dock(DockSide.Left).panels).toEqual([PanelId.Explorer, PanelId.Changes]);
-    expect(restored.groupOf(PanelId.Changes)?.activePanel).toBe(PanelId.Changes);
+    expect(restored.dock(DockSide.Left).panels).toEqual([explorer, changes]);
+    expect(restored.groupOf(changes)?.activePanel).toEqual(changes);
     expect(restored.dock(DockSide.Left).size).toBe(350);
     expect(restored.dock(DockSide.Right).isEmpty).toBe(true);
     expect(restored.dock(DockSide.Bottom).collapsed).toBe(true);
     expect(restored.middle).toBe(restored.documents);
     expect(restored.documents.panels).toEqual([]);
+  });
+
+  it("restores several panels of one kind and drops keys that name no panel", () => {
+    const terminal = (instance: string): Panel => new Panel(PanelKind.Terminal, instance);
+    const arrangement = PanelArrangement.createDefault()
+      .openPanel(terminal("terminal-1"))
+      .openPanel(terminal("terminal-2"))
+      .splitGroup(terminal("terminal-2"), 1, PanelEdge.Bottom)
+      .insertTab(terminal("terminal-1"), TabGroup.documentsId, 0);
+    expect(shape(read(shape(arrangement) as Record<string, unknown>))).toEqual(shape(arrangement));
+
+    const restored = read({
+      docks: {
+        Bottom: {
+          root: { panels: ["Activity", "Terminal:terminal-1", "Terminal", "Terminal:", "Explorer:x", "Terminal:terminal-2"], activePanel: "Terminal:terminal-2" }
+        }
+      },
+      middle: { documentsGroup: true, panels: ["Terminal:terminal-1", "Terminal:terminal-3"], activePanel: "Terminal:terminal-3" }
+    });
+
+    expect(restored.dock(DockSide.Bottom).panels).toEqual([activity, terminal("terminal-1"), terminal("terminal-2")]);
+    expect(restored.groupOf(terminal("terminal-2"))?.activePanel).toEqual(terminal("terminal-2"));
+    expect(restored.documents.panels).toEqual([terminal("terminal-3")]);
+    expect(restored.documents.activePanel).toEqual(terminal("terminal-3"));
   });
 
   it("drops what it cannot use and keeps the documents group in the middle", () => {
@@ -68,13 +96,13 @@ describe("ArrangementReader", () => {
       middle: { axis: SplitAxis.Vertical, children: [{ panels: ["Activity"] }, { documentsGroup: true, panels: ["Changes"], activePanel: "Changes" }] }
     });
 
-    expect(restored.dock(DockSide.Left).panels).toEqual([PanelId.Explorer]);
-    expect(restored.groupOf(PanelId.Explorer)?.activePanel).toBe(PanelId.Explorer);
+    expect(restored.dock(DockSide.Left).panels).toEqual([explorer]);
+    expect(restored.groupOf(explorer)?.activePanel).toEqual(explorer);
     expect(restored.dock(DockSide.Left).size).toBeNull();
     expect(restored.dock(DockSide.Left).collapsed).toBe(false);
     expect(restored.dock(DockSide.Right).root).toBeInstanceOf(TabGroup);
-    expect(restored.dock(DockSide.Right).panels).toEqual([PanelId.Changes]);
-    expect(restored.dock(DockSide.Bottom).panels).toEqual([PanelId.Activity]);
+    expect(restored.dock(DockSide.Right).panels).toEqual([changes]);
+    expect(restored.dock(DockSide.Bottom).panels).toEqual([activity]);
     expect(restored.dock(DockSide.Bottom).root).not.toBe(restored.documents);
     expect(restored.middle).toBe(restored.documents);
     expect(restored.documents.panels).toEqual([]);
@@ -91,7 +119,7 @@ describe("ArrangementReader", () => {
 
     const unmarked = read({ middle: { panels: ["Changes"] } });
     const wrapped = unmarked.middle as SplitNode;
-    expect([wrapped.axis, wrapped.groups.map(t => t.panels)]).toEqual([SplitAxis.Horizontal, [[], [PanelId.Changes]]]);
+    expect([wrapped.axis, wrapped.groups.map(t => t.panels)]).toEqual([SplitAxis.Horizontal, [[], [changes]]]);
     expect(unmarked.documents.isDocuments).toBe(true);
 
     expect(shape(read({}))).toEqual(shape(new PanelArrangement([], new TabGroup(TabGroup.documentsId, [], null))));
