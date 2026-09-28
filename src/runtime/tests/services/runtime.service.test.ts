@@ -203,14 +203,13 @@ export class RuntimeServiceTests {
 
     const opened = TerminalState.fromJson((await owner.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
     await owner.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
-    await Wait.until(() => existsSync(join(settings.terminalsPath, `${opened.id}.jsonl`)));
+    await Wait.until(() => desktop.names.includes(EventName.TerminalOutput) && existsSync(join(settings.terminalsPath, `${opened.id}.jsonl`)));
     const refused = await other.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "exit 0\r").toJson());
     const listed = await other.call(MethodName.TerminalList, null);
     owner.close();
     await Wait.until(() => readdirSync(settings.terminalsPath).length === 0);
 
     Assert.areEqual(0, leftovers);
-    Assert.isTrue(desktop.names.includes(EventName.TerminalOutput));
     Assert.isFalse(cli.names.some(t => t.startsWith("Terminal")));
     Assert.areEqual(ErrorCode.NotFound, refused.info?.name);
     Assert.areEqual("[]", JSON.stringify(listed.payload));
