@@ -90,6 +90,28 @@ describe("TerminalPanelComponent", () => {
     terminalWindow.restore();
   });
 
+  it("shows only the terminal its tab names when the panel switches between terminals", async () => {
+    const terminals = await prepare("win32");
+    await terminals.open();
+    const fixture = await render("t1");
+    const screen = (fixture.nativeElement as HTMLElement).querySelector(".tr-terminal-screen")!;
+    const first = screen.firstElementChild;
+    const show = async (id: string): Promise<void> => {
+      fixture.componentRef.setInput("panel", new Panel(PanelKind.Terminal, id));
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+
+    await show("t2");
+    const second = screen.firstElementChild;
+    expect(screen.children.length).toBe(1);
+    expect(second).not.toBe(first);
+    await show("t1");
+
+    expect(screen.children.length).toBe(1);
+    expect(screen.firstElementChild).toBe(first);
+  });
+
   it("draws its terminal, shows how its shell ended, restarts it and counts as the last used when focused", async () => {
     const terminals = await prepare("win32");
     const layout = TestBed.inject(LayoutService);
