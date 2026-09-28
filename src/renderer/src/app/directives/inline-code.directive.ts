@@ -61,29 +61,30 @@ export class InlineCodeDirective {
   private append(parent: Node, text: string, tokens: readonly Token[]): void {
     let position = 0;
     for (const token of tokens) {
-      const start = text.indexOf(token.raw, position);
-      if (start < position)
+      const source = [token.raw, token.raw.trimEnd()].find(t => t.length > 0 && text.includes(t, position));
+      if (Object.isUndefined(source))
         continue;
+      const start = text.indexOf(source, position);
       this.appendText(parent, text.slice(position, start));
       if (token.type === Resources.markdownCodeSpanType) {
         let delimiter = 0;
-        while (token.raw[delimiter] === Resources.markdownBacktick)
+        while (source[delimiter] === Resources.markdownBacktick)
           delimiter += 1;
         const code = this.box.ownerDocument.createElement(Resources.composerCodeTag);
         code.className = Resources.composerCodeClass;
-        this.appendDelimiter(code, token.raw.slice(0, delimiter));
-        this.appendText(code, token.raw.slice(delimiter, -delimiter));
-        this.appendDelimiter(code, token.raw.slice(-delimiter));
+        this.appendDelimiter(code, source.slice(0, delimiter));
+        this.appendText(code, source.slice(delimiter, -delimiter));
+        this.appendDelimiter(code, source.slice(-delimiter));
         parent.appendChild(code);
       } else if ("tokens" in token && !Object.isUndefined(token.tokens))
-        this.append(parent, token.raw, token.tokens);
+        this.append(parent, source, token.tokens);
       else if (token.type === Resources.markdownListType && "items" in token)
-        this.append(parent, token.raw, token.items);
+        this.append(parent, source, token.items);
       else if (token.type === Resources.markdownTableType)
-        this.append(parent, token.raw, Lexer.lexInline(token.raw));
+        this.append(parent, source, Lexer.lexInline(source));
       else
-        this.appendText(parent, token.raw);
-      position = start + token.raw.length;
+        this.appendText(parent, source);
+      position = start + source.length;
     }
     this.appendText(parent, text.slice(position));
   }
