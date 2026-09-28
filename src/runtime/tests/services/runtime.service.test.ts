@@ -196,7 +196,7 @@ export class RuntimeServiceTests {
     const leftovers = readdirSync(settings.terminalsPath).length;
     const desktop = new RecordingClientListener();
     const cli = new RecordingClientListener();
-    const owner = await host.connect(service, "desktop", desktop);
+    const owner = await host.connect(service, "desktop", desktop, host.terminalTimings);
     const other = await host.connect(service, "cli", cli);
     mkdirSync(host.directory.resolve("repo"));
     const project = Project.fromJson((await owner.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
@@ -220,7 +220,7 @@ export class RuntimeServiceTests {
     await using host = new RuntimeTestHost();
     const service = host.createService();
     await service.start();
-    const client = await host.connect(service, "desktop");
+    const client = await host.connect(service, "desktop", new RecordingClientListener(), host.terminalTimings);
     mkdirSync(host.directory.resolve("repo"));
     const project = Project.fromJson((await client.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
     const opened = TerminalState.fromJson((await client.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
