@@ -32,6 +32,19 @@ describe("InlineCodeDirective", () => {
     expect(element.querySelector("textarea")?.value).toBe(text);
   });
 
+  it("keeps highlighting a list whose last line ends in spaces", async () => {
+    const fixture = TestBed.createComponent(InlineCodeTestHost);
+    const element = fixture.nativeElement as HTMLElement;
+    for (const text of ["1. `one`\n2. `two` ", "- `one`\n- `two`  "]) {
+      fixture.componentInstance.text.set(text);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect([...element.querySelectorAll(".tr-composer-inline-code")].map(t => t.textContent)).toEqual(["`one`", "`two`"]);
+      expect(element.querySelector(".tr-composer-highlight")?.textContent).toBe(text + "\u200b");
+    }
+  });
+
   it("treats HTML as text and does not replace the native input or its selection when typing", async () => {
     const fixture = TestBed.createComponent(InlineCodeTestHost);
     fixture.detectChanges();
