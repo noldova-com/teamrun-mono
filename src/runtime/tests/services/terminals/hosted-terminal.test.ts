@@ -123,7 +123,7 @@ export class HostedTerminalTests {
   }
 
   @TestMethod
-  public async answersTheDeviceAttributesQueryOfItsShell(): Promise<void> {
+  public async answersTheDeviceAttributesQueryBeforeAndAfterARestart(): Promise<void> {
     using directory = new TemporaryDirectory();
     const owner = new RecordingTerminalOwner();
     const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings());
@@ -131,8 +131,12 @@ export class HostedTerminalTests {
       await Wait.until(() => owner.output.includes("ready"));
 
       terminal.input("attributes\r");
-
       await Wait.until(() => owner.output.includes("attributes ?1;2c"));
+      await terminal.restart(FixtureShell.environment());
+      await Wait.until(() => owner.output.split("ready").length >= 3);
+      terminal.input("attributes\r");
+
+      await Wait.until(() => owner.output.split("attributes ?1;2c").length >= 3);
     }
     finally {
       await terminal.close();
