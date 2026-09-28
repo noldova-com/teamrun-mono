@@ -6,18 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { DockSide } from "../enums/dock-side";
+import type { PanelId } from "../enums/panel-id";
+import type { PanelArrangement } from "./panel-arrangement";
+import type { ShellGeometry } from "./shell-geometry";
 
-export class DropTarget {
-  public readonly side: DockSide;
-  public readonly index: number;
+export abstract class DropTarget {
+  public abstract place(arrangement: PanelArrangement, panel: PanelId): PanelArrangement;
 
-  public constructor(side: DockSide, index: number) {
-    this.side = side;
-    this.index = Math.max(0, Math.round(index));
-  }
+  public abstract preview(geometry: ShellGeometry): DOMRectReadOnly | null;
 
-  public equals(other: DropTarget | null): boolean {
-    return other !== null && other.side === this.side && other.index === this.index;
-  }
+  public abstract equals(other: DropTarget | null): boolean;
 }

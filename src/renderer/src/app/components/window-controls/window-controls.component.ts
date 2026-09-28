@@ -37,7 +37,7 @@ export class WindowControlsComponent {
   protected readonly resources: typeof Resources = Resources;
   protected readonly layout: LayoutService = inject(LayoutService);
   protected readonly leftSide: DockSide = DockSide.Left;
-  protected readonly isLeftCollapsed: Signal<boolean> = computed(() => this.layout.layout().dock(DockSide.Left).collapsed);
+  protected readonly isLeftCollapsed: Signal<boolean> = computed(() => this.layout.dock(DockSide.Left).collapsed);
   protected readonly history: HistoryService = inject(HistoryService);
   protected readonly search: SearchLauncher = inject(SearchLauncher);
   protected readonly navigation: NavigationService = inject(NavigationService);

@@ -12,8 +12,12 @@ import { Injectable, type Signal, type WritableSignal, inject, signal } from "@a
 import "@noldova/teamrun-foundation-core";
 
 import { DockSide } from "../enums/dock-side";
+import { PanelEdge } from "../enums/panel-edge";
 import type { PanelId } from "../enums/panel-id";
-import { DropTarget } from "../models/drop-target";
+import type { DropTarget } from "../models/drop-target";
+import { SideDropTarget } from "../models/side-drop-target";
+import { SplitDropTarget } from "../models/split-drop-target";
+import { TabDropTarget } from "../models/tab-drop-target";
 import { Resources } from "../resources";
 import { LayoutService } from "./layout.service";
 
@@ -23,13 +27,17 @@ export class PanelDragService {
   private readonly layout: LayoutService = inject(LayoutService);
   private readonly draggingSignal: WritableSignal<PanelId | null> = signal(null);
   private readonly targetSignal: WritableSignal<DropTarget | null> = signal(null);
+  private readonly hoveredSignal: WritableSignal<number | null> = signal(null);
   private readonly pointSignal: WritableSignal<readonly [number, number]> = signal([0, 0]);
   private readonly onMove: (event: PointerEvent) => void = event => this.move(event);
-  private readonly onEnd: (event: PointerEvent) => void = event => this.end(event);
+  private readonly onEnd: () => void = () => this.end();
+  private readonly onCancel: () => void = () => this.stop();
+  private readonly onKey: (event: KeyboardEvent) => void = event => this.cancelOnEscape(event);
   private pending: { panel: PanelId; x: number; y: number } | null = null;
 
   public readonly dragging: Signal<PanelId | null> = this.draggingSignal.asReadonly();
   public readonly target: Signal<DropTarget | null> = this.targetSignal.asReadonly();
+  public readonly hoveredGroup: Signal<number | null> = this.hoveredSignal.asReadonly();
   public readonly point: Signal<readonly [number, number]> = this.pointSignal.asReadonly();
 
   public begin(panel: PanelId, event: PointerEvent): void {
@@ -38,12 +46,13 @@ export class PanelDragService {
     this.pending = { panel, x: event.clientX, y: event.clientY };
     this.document.addEventListener(Resources.pointerMoveEvent, this.onMove);
     this.document.addEventListener(Resources.pointerUpEvent, this.onEnd);
-    this.document.addEventListener(Resources.pointerCancelEvent, this.onEnd);
+    this.document.addEventListener(Resources.pointerCancelEvent, this.onCancel);
+    this.document.addEventListener(Resources.keydownEvent, this.onKey, { capture: true });
   }
 
-  public isDropBefore(side: DockSide, index: number): boolean {
+  public isDropBefore(groupId: number, index: number): boolean {
     const target = this.targetSignal();
-    return !Object.isNull(target) && target.side === side && target.index === index;
+    return !Object.isNull(target) && target.equals(new TabDropTarget(groupId, index));
   }
 
   private move(event: PointerEvent): void {
@@ -56,40 +65,69 @@ export class PanelDragService {
       this.document.body.classList.add(Resources.draggingBodyClass);
     }
     this.pointSignal.set([event.clientX, event.clientY]);
-    const target = this.targetAt(event.clientX, event.clientY);
+    const element = this.document.elementFromPoint(event.clientX, event.clientY);
+    this.hoveredSignal.set(this.groupAt(element));
+    const target = this.targetAt(element, event.clientX);
     if (!(target?.equals(this.targetSignal()) ?? Object.isNull(this.targetSignal())))
       this.targetSignal.set(target);
   }
 
-  private end(_event: PointerEvent): void {
+  private end(): void {
     const panel = this.draggingSignal();
     const target = this.targetSignal();
+    this.stop();
+    if (!Object.isNull(panel) && !Object.isNull(target))
+      this.layout.movePanel(panel, target);
+  }
+
+  private cancelOnEscape(event: KeyboardEvent): void {
+    if (event.key !== Resources.escapeKey || Object.isNull(this.draggingSignal()))
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.stop();
+  }
+
+  private stop(): void {
     this.document.removeEventListener(Resources.pointerMoveEvent, this.onMove);
     this.document.removeEventListener(Resources.pointerUpEvent, this.onEnd);
-    this.document.removeEventListener(Resources.pointerCancelEvent, this.onEnd);
+    this.document.removeEventListener(Resources.pointerCancelEvent, this.onCancel);
+    this.document.removeEventListener(Resources.keydownEvent, this.onKey, { capture: true });
     this.pending = null;
     this.draggingSignal.set(null);
     this.targetSignal.set(null);
+    this.hoveredSignal.set(null);
     this.document.body.classList.remove(Resources.draggingBodyClass);
-    if (!Object.isNull(panel) && !Object.isNull(target))
-      this.layout.movePanel(panel, target.side, target.index);
   }
 
-  private targetAt(x: number, y: number): DropTarget | null {
-    const element = this.document.elementFromPoint(x, y);
-    if (Object.isNull(element))
+  private groupAt(element: Element | null): number | null {
+    const zone = element?.closest<HTMLElement>(Resources.dropGroupSelector) ?? null;
+    return Object.isNull(zone) ? null : Number(zone.dataset[Resources.dropGroupData]);
+  }
+
+  private targetAt(element: Element | null, x: number): DropTarget | null {
+    const guide = element?.closest<HTMLElement>(Resources.dropSideSelector) ?? null;
+    if (!Object.isNull(guide)) {
+      const side = Object.values(DockSide).find(t => t === guide.dataset[Resources.dropSideData]);
+      return Object.isUndefined(side) ? null : new SideDropTarget(side);
+    }
+    const groupId = this.groupAt(element);
+    const group = Object.isNull(groupId) ? null : this.layout.arrangement().group(groupId);
+    if (Object.isNull(element) || Object.isNull(group))
       return null;
-    const zone = element.closest<HTMLElement>(Resources.dropSideSelector);
-    if (Object.isNull(zone))
-      return null;
-    const side = Object.values(DockSide).find(t => t === zone.dataset[Resources.dropSideData]);
-    if (Object.isUndefined(side))
+    const arrow = element.closest<HTMLElement>(Resources.dropEdgeSelector);
+    if (!Object.isNull(arrow)) {
+      const edge = Object.values(PanelEdge).find(t => t === arrow.dataset[Resources.dropEdgeData]);
+      return Object.isUndefined(edge) ? null : new SplitDropTarget(group.id, edge);
+    }
+    if (!Object.isNull(element.closest(Resources.dropCenterSelector)))
+      return new TabDropTarget(group.id, group.panels.length);
+    if (Object.isNull(element.closest(Resources.dropTabsSelector)))
       return null;
     const tab = element.closest<HTMLElement>(Resources.tabIndexSelector);
     if (Object.isNull(tab))
-      return new DropTarget(side, this.layout.dock(side).panels.length);
+      return new TabDropTarget(group.id, group.panels.length);
     const bounds = tab.getBoundingClientRect();
-    const past = x > bounds.left + bounds.width / 2;
-    return new DropTarget(side, Number(tab.dataset[Resources.tabIndexData]) + (past ? 1 : 0));
+    return new TabDropTarget(group.id, Number(tab.dataset[Resources.tabIndexData]) + (x > bounds.left + bounds.width / 2 ? 1 : 0));
   }
 }

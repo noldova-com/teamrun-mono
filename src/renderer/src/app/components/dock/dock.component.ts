@@ -14,56 +14,42 @@ import { MatTooltipModule, type TooltipPosition } from "@angular/material/toolti
 import "@noldova/teamrun-foundation-core";
 
 import { DockSide } from "../../enums/dock-side";
-import { PanelEdge } from "../../enums/panel-edge";
-import { PanelId } from "../../enums/panel-id";
+import type { PanelEdge } from "../../enums/panel-edge";
 import type { Dock } from "../../models/dock";
 import { Resources } from "../../resources";
 import { LayoutService } from "../../services/layout.service";
-import { PanelDragService } from "../../services/panel-drag.service";
 import { ShellService } from "../../services/shell.service";
-import { ActivityPanelComponent } from "../activity-panel/activity-panel.component";
-import { ChangesPanelComponent } from "../changes-panel/changes-panel.component";
 import { ResizeHandleComponent } from "../resize-handle/resize-handle.component";
-import { SidebarComponent } from "../sidebar/sidebar.component";
 
+/** A dock's area: its strip of panel buttons while collapsed, or the handle that resizes it while open. Its tab groups are drawn by the shell. */
 @Component({
   selector: "tr-dock",
-  imports: [ActivityPanelComponent, ChangesPanelComponent, MatButtonModule, MatIconModule, MatTooltipModule, ResizeHandleComponent, SidebarComponent],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, ResizeHandleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: "relative flex min-h-0 min-w-0 flex-col", "[class.hidden]": "isEmpty()", "[attr.data-side]": "side()" },
+  host: {
+    class: "absolute flex",
+    "[class.hidden]": "dock().isEmpty",
+    "[attr.data-side]": "side()",
+    "[style.left.px]": "bounds().x",
+    "[style.top.px]": "bounds().y",
+    "[style.width.px]": "bounds().width",
+    "[style.height.px]": "bounds().height"
+  },
   templateUrl: "./dock.component.html"
 })
 export class DockComponent {
-  public readonly side: InputSignal<DockSide> = input.required<DockSide>();
+  private readonly shell: ShellService = inject(ShellService);
+
   protected readonly resources: typeof Resources = Resources;
   protected readonly layout: LayoutService = inject(LayoutService);
-  protected readonly drag: PanelDragService = inject(PanelDragService);
-  private readonly shell: ShellService = inject(ShellService);
-  protected readonly explorer: PanelId = PanelId.Explorer;
-  protected readonly changes: PanelId = PanelId.Changes;
-  protected readonly activity: PanelId = PanelId.Activity;
-  protected readonly dock: Signal<Dock> = computed(() => this.layout.layout().dock(this.side()));
-  protected readonly isEmpty: Signal<boolean> = computed(() => this.dock().panels.length === 0);
+  protected readonly dock: Signal<Dock> = computed(() => this.layout.dock(this.side()));
+  protected readonly bounds: Signal<DOMRectReadOnly> = computed(() => this.shell.geometry().dock(this.side()));
+  protected readonly cornerId: Signal<number | null> = computed(() => this.dock().root?.cornerGroup.id ?? null);
   protected readonly isVertical: Signal<boolean> = computed(() => this.side() !== DockSide.Bottom);
   protected readonly handleEdge: Signal<PanelEdge> = computed(() => Resources.dockHandleEdges[this.side()]);
   protected readonly tooltipPosition: Signal<TooltipPosition> = computed(() => Resources.dockTooltipPositions[this.side()]);
 
-  protected close(event: globalThis.Event, panel: PanelId): void {
-    event.stopPropagation();
-    this.layout.closePanel(panel);
-  }
-
-  protected onTabMouseDown(event: MouseEvent): void {
-    if (event.button === Resources.middleButton)
-      event.preventDefault();
-  }
-
-  protected onTabAuxClick(event: MouseEvent, panel: PanelId): void {
-    if (event.button !== Resources.middleButton)
-      return;
-    event.preventDefault();
-    this.close(event, panel);
-  }
+  public readonly side: InputSignal<DockSide> = input.required<DockSide>();
 
   protected resize(size: number): void {
     this.layout.resizeDock(this.side(), Math.min(size, this.shell.maximumSize(this.side())));

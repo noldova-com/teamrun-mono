@@ -1,0 +1,43 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+@if (drag.dragging(); as panel) {
+  @if (preview(); as box) {
+    <div class="tr-drop-preview pointer-events-none absolute z-40" [style.left.px]="box.x" [style.top.px]="box.y" [style.width.px]="box.width"
+      [style.height.px]="box.height"></div>
+  }
+  @for (side of sides; track side) {
+    @let guide = geometry().guideBounds(side);
+    <button type="button" tabindex="-1" class="tr-dock-guide tr-dock-guide-edge absolute z-40 grid place-items-center" [style.left.px]="guide.x"
+      [style.top.px]="guide.y" [class.tr-dock-guide-active]="isSide(side)" [attr.data-guide]="side" [attr.data-drop-side]="side"
+      [attr.aria-label]="resources.dockGuideLabels[side]">
+      <mat-icon>{{ resources.dockGuideIcons[side] }}</mat-icon>
+    </button>
+  }
+  @if (compass(); as frame) {
+    @let box = geometry().compassBounds(frame);
+    <div class="tr-dock-compass absolute z-40 grid grid-cols-3 grid-rows-3 gap-0.5 p-1" [attr.data-drop-group]="frame.group.id"
+      [style.left.px]="box.x" [style.top.px]="box.y">
+      @for (edge of edges; track edge) {
+        <button type="button" tabindex="-1" class="tr-dock-guide tr-dock-guide-arm grid place-items-center" [attr.data-arm]="edge"
+          [attr.data-drop-edge]="edge" [class.tr-dock-guide-active]="isSplit(frame, edge)" [attr.aria-label]="resources.splitGuideLabels[edge]">
+          <mat-icon>{{ resources.splitGuideIcons[edge] }}</mat-icon>
+        </button>
+      }
+      <button type="button" tabindex="-1" class="tr-dock-guide tr-dock-guide-center grid place-items-center" data-drop-center
+        [class.tr-dock-guide-active]="isCenter(frame)" [attr.aria-label]="resources.addAsTabLabel">
+        <mat-icon>{{ resources.addAsTabIcon }}</mat-icon>
+      </button>
+    </div>
+  }
+  <div class="tr-drag-ghost pointer-events-none flex items-center gap-1 px-2 py-1" [style.left.px]="drag.point()[0] + ghostOffset"
+    [style.top.px]="drag.point()[1] + ghostOffset">
+    <mat-icon class="tr-nav-icon">{{ resources.panelIcons[panel] }}</mat-icon>
+    <span>{{ resources.panelLabels[panel] }}</span>
+  </div>
+}

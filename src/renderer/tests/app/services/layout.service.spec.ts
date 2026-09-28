@@ -10,8 +10,15 @@ import { TestBed } from "@angular/core/testing";
 
 import { MemoryStorage } from "../../fixtures/memory-storage";
 import { DockSide } from "../../../src/app/enums/dock-side";
+import { PanelEdge } from "../../../src/app/enums/panel-edge";
 import { PanelId } from "../../../src/app/enums/panel-id";
 import { Layout } from "../../../src/app/models/layout";
+import { PanelArrangement } from "../../../src/app/models/panel-arrangement";
+import { SideDropTarget } from "../../../src/app/models/side-drop-target";
+import { SplitDropTarget } from "../../../src/app/models/split-drop-target";
+import type { SplitNode } from "../../../src/app/models/split.node";
+import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
+import { TabGroup } from "../../../src/app/models/tab-group";
 import { Resources } from "../../../src/app/resources";
 import { LayoutService } from "../../../src/app/services/layout.service";
 
@@ -30,19 +37,30 @@ describe("LayoutService", () => {
 
     service.closePanel(PanelId.Activity);
     expect(service.isOpen(PanelId.Activity)).toBe(false);
-    expect(stored().isOpen(PanelId.Activity)).toBe(false);
+    expect(stored().arrangement.isOpen(PanelId.Activity)).toBe(false);
     service.openPanel(PanelId.Activity);
     service.togglePanel(PanelId.Activity);
     expect(service.isOpen(PanelId.Activity)).toBe(false);
     service.togglePanel(PanelId.Activity);
-    service.movePanel(PanelId.Activity, DockSide.Right, 0);
+    service.movePanel(PanelId.Activity, new TabDropTarget(service.arrangement().groupOf(PanelId.Changes)?.id ?? -1, 0));
     service.activatePanel(PanelId.Changes);
-    expect(stored().dock(DockSide.Right).panels).toEqual([PanelId.Activity, PanelId.Changes]);
-    expect(stored().dock(DockSide.Right).activePanel).toBe(PanelId.Changes);
+    expect(stored().arrangement.dock(DockSide.Right).panels).toEqual([PanelId.Activity, PanelId.Changes]);
+    expect(stored().arrangement.groupOf(PanelId.Changes)?.activePanel).toBe(PanelId.Changes);
     service.toggleDock(DockSide.Right);
     service.resizeDock(DockSide.Left, 300);
-    expect(stored().dock(DockSide.Right).collapsed).toBe(true);
-    expect(stored().dock(DockSide.Left).size).toBe(300);
+    expect(stored().arrangement.dock(DockSide.Right).collapsed).toBe(true);
+    expect(stored().arrangement.dock(DockSide.Left).size).toBe(300);
+
+    service.movePanel(PanelId.Explorer, new SplitDropTarget(TabGroup.documentsId, PanelEdge.Left));
+    const split = service.arrangement().middle as SplitNode;
+    service.resizeSplit(split.id, [1, 3]);
+    expect((stored().arrangement.middle as SplitNode).weights).toEqual([0.25, 0.75]);
+    service.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    expect(stored().arrangement.documents.activePanel).toBe(PanelId.Changes);
+    service.showDocuments();
+    expect(stored().arrangement.documents.activePanel).toBeNull();
+    service.movePanel(PanelId.Activity, new SideDropTarget(DockSide.Bottom));
+    expect(stored().arrangement.dock(DockSide.Bottom).panels).toEqual([PanelId.Activity]);
 
     service.showDocument("c1");
     service.showDocument("c2");
@@ -54,17 +72,18 @@ describe("LayoutService", () => {
 
     storage.removeItem(Resources.layoutStorageKey);
     service.closeDocument("nope");
+    service.showDocuments();
     expect(storage.getItem(Resources.layoutStorageKey)).toBeNull();
 
     service.showDocument("kept");
     service.reset();
-    expect(service.layout().docks).toEqual(Layout.createDefault().docks);
+    expect(service.arrangement().toJson()).toEqual(PanelArrangement.createDefault().toJson());
     expect(service.documents()).toEqual(["c1", "kept"]);
-    expect(stored().dock(DockSide.Left).size).toBeNull();
+    expect(stored().arrangement.dock(DockSide.Left).size).toBeNull();
   });
 
   it("reads the stored layout and falls back to the default for unreadable storage", () => {
-    storage.setItem(Resources.layoutStorageKey, JSON.stringify(Layout.createDefault().resizeDock(DockSide.Bottom, 333).toJson()));
+    storage.setItem(Resources.layoutStorageKey, JSON.stringify(Layout.createDefault().withArrangement(PanelArrangement.createDefault().resizeDock(DockSide.Bottom, 333)).toJson()));
     expect(TestBed.inject(LayoutService).dock(DockSide.Bottom).size).toBe(333);
 
     TestBed.resetTestingModule();

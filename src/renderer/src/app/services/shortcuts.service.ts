@@ -86,7 +86,7 @@ export class ShortcutsService {
   private perform(action: ShortcutAction): boolean {
     switch (action) {
       case ShortcutAction.NewConversation:
-        this.navigation.closeSettings();
+        this.navigation.showChat();
         void this.store.startConversation();
         return true;
       case ShortcutAction.OpenFolder:
@@ -125,7 +125,7 @@ export class ShortcutsService {
       case ShortcutAction.CloseDocument:
         return this.closeDocument();
       case ShortcutAction.FocusComposer:
-        this.navigation.closeSettings();
+        this.navigation.showChat();
         if (Object.isNull(this.focusComposer))
           this.focusPending = true;
         else
@@ -134,11 +134,11 @@ export class ShortcutsService {
       case ShortcutAction.StopOrBack:
         return this.stopOrBack();
       case ShortcutAction.PreviousConversation:
-        this.navigation.closeSettings();
+        this.navigation.showChat();
         void this.store.stepConversation(-1);
         return true;
       case ShortcutAction.NextConversation:
-        this.navigation.closeSettings();
+        this.navigation.showChat();
         void this.store.stepConversation(1);
         return true;
       default:
@@ -157,6 +157,11 @@ export class ShortcutsService {
       this.navigation.closeSettingsTab();
       return true;
     }
+    const panel = this.navigation.panel();
+    if (!Object.isNull(panel)) {
+      this.layout.closePanel(panel);
+      return true;
+    }
     const conversationId = this.store.selectedConversationId();
     if (Object.isNull(conversationId))
       return false;
@@ -169,7 +174,7 @@ export class ShortcutsService {
     if (this.navigation.view() === AppView.Image)
       return this.closeDocument();
     if (this.navigation.view() === AppView.Settings) {
-      this.navigation.closeSettings();
+      this.navigation.showChat();
       return true;
     }
     const running = this.store.runningReply();

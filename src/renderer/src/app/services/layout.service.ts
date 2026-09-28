@@ -14,7 +14,9 @@ import "@noldova/teamrun-foundation-core";
 import type { DockSide } from "../enums/dock-side";
 import type { PanelId } from "../enums/panel-id";
 import type { Dock } from "../models/dock";
+import type { DropTarget } from "../models/drop-target";
 import { Layout } from "../models/layout";
+import type { PanelArrangement } from "../models/panel-arrangement";
 import { Resources } from "../resources";
 
 @Injectable({ providedIn: "root" })
@@ -23,6 +25,7 @@ export class LayoutService {
   private readonly current: WritableSignal<Layout> = signal(this.read());
 
   public readonly layout: Signal<Layout> = this.current.asReadonly();
+  public readonly arrangement: Signal<PanelArrangement> = computed(() => this.current().arrangement);
   public readonly documents: Signal<readonly string[]> = computed(() => this.current().documents.open);
   public readonly activeDocument: Signal<string | null> = computed(() => this.current().documents.active);
   public readonly previewDocument: Signal<string | null> = computed(() => this.current().documents.preview);
@@ -31,39 +34,47 @@ export class LayoutService {
   public readonly conversationOrder: Signal<ReadonlyMap<string, readonly string[]>> = computed(() => this.current().conversationOrder);
 
   public dock(side: DockSide): Dock {
-    return this.current().dock(side);
+    return this.arrangement().dock(side);
   }
 
   public isOpen(panel: PanelId): boolean {
-    return this.current().isOpen(panel);
+    return this.arrangement().isOpen(panel);
   }
 
   public openPanel(panel: PanelId): void {
-    this.update(t => t.openPanel(panel));
+    this.arrange(t => t.openPanel(panel));
   }
 
   public closePanel(panel: PanelId): void {
-    this.update(t => t.closePanel(panel));
+    this.arrange(t => t.closePanel(panel));
   }
 
-  public movePanel(panel: PanelId, side: DockSide, index?: number): void {
-    this.update(t => t.movePanel(panel, side, index));
+  public movePanel(panel: PanelId, target: DropTarget): void {
+    this.arrange(t => target.place(t, panel));
   }
 
   public togglePanel(panel: PanelId): void {
-    this.update(t => t.togglePanel(panel));
+    this.arrange(t => t.togglePanel(panel));
   }
 
   public activatePanel(panel: PanelId): void {
-    this.update(t => t.activatePanel(panel));
+    this.arrange(t => t.activatePanel(panel));
+  }
+
+  public showDocuments(): void {
+    this.arrange(t => t.showDocuments());
   }
 
   public toggleDock(side: DockSide): void {
-    this.update(t => t.toggleDock(side));
+    this.arrange(t => t.toggleDock(side));
   }
 
   public resizeDock(side: DockSide, size: number | null): void {
-    this.update(t => t.resizeDock(side, size));
+    this.arrange(t => t.resizeDock(side, size));
+  }
+
+  public resizeSplit(splitId: number, weights: readonly number[]): void {
+    this.arrange(t => t.resizeSplit(splitId, weights));
   }
 
   public toggleProject(projectId: string): void {
@@ -103,7 +114,7 @@ export class LayoutService {
   }
 
   public reset(): void {
-    this.update(layout => layout.resetDocks());
+    this.update(t => t.resetArrangement());
   }
 
   public flush(): boolean {
@@ -117,6 +128,10 @@ export class LayoutService {
     catch {
       return false;
     }
+  }
+
+  private arrange(change: (arrangement: PanelArrangement) => PanelArrangement): void {
+    this.update(t => t.withArrangement(change(t.arrangement)));
   }
 
   private update(change: (layout: Layout) => Layout): void {

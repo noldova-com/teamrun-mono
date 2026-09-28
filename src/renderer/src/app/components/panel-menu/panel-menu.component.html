@@ -1,0 +1,42 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+<mat-menu #panelMenu="matMenu">
+  <button mat-menu-item class="tr-panel-move" [matMenuTriggerFor]="moveMenu" [disabled]="destinations().length === 0">
+    <mat-icon>{{ resources.icons["moveTo"] }}</mat-icon><span>{{ resources.moveToLabel }}</span>
+  </button>
+  <button mat-menu-item class="tr-panel-split" [matMenuTriggerFor]="splitMenu" [disabled]="!canSplit()">
+    <mat-icon>{{ resources.icons["split"] }}</mat-icon><span>{{ resources.splitLabel }}</span>
+  </button>
+  <button mat-menu-item class="tr-panel-dock" [matMenuTriggerFor]="dockMenu">
+    <mat-icon>{{ resources.icons["dock"] }}</mat-icon><span>{{ resources.dockLabel }}</span>
+  </button>
+  <mat-divider />
+  <button mat-menu-item class="tr-panel-close" (click)="close()">
+    <mat-icon>{{ resources.icons["close"] }}</mat-icon><span>{{ resources.closePanelLabel }}</span>
+  </button>
+</mat-menu>
+<mat-menu #moveMenu="matMenu">
+  @for (group of destinations(); track group.id) {
+    <button mat-menu-item class="tr-panel-destination" [attr.data-group]="group.id" (click)="moveTo(group)">{{ labelOf(group) }}</button>
+  }
+</mat-menu>
+<mat-menu #splitMenu="matMenu">
+  @for (edge of edges; track edge) {
+    <button mat-menu-item [attr.data-edge]="edge" (click)="split(edge)">
+      <mat-icon>{{ resources.splitGuideIcons[edge] }}</mat-icon><span>{{ resources.splitGuideLabels[edge] }}</span>
+    </button>
+  }
+</mat-menu>
+<mat-menu #dockMenu="matMenu">
+  @for (side of sides; track side) {
+    <button mat-menu-item [attr.data-side]="side" (click)="dock(side)">
+      <mat-icon>{{ resources.dockGuideIcons[side] }}</mat-icon><span>{{ resources.dockGuideLabels[side] }}</span>
+    </button>
+  }
+</mat-menu>

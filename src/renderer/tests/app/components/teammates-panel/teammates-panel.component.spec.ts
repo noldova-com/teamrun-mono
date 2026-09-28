@@ -46,7 +46,7 @@ describe("TeammatesPanelComponent", () => {
     await fixture.whenStable();
     expect(root.textContent).toContain("Open a conversation");
     expect(root.textContent).not.toContain("Bob");
-    navigation.closeSettings();
+    navigation.showChat();
     await fixture.whenStable();
     expect(root.textContent).toContain("Bob");
     store.deselectConversation();

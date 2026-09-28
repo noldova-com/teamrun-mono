@@ -8,8 +8,13 @@
 
 import { TestBed } from "@angular/core/testing";
 
+import { MemoryStorage } from "../../fixtures/memory-storage";
 import { AppView } from "../../../src/app/enums/app-view";
+import { PanelId } from "../../../src/app/enums/panel-id";
 import { SettingsSection } from "../../../src/app/enums/settings-section";
+import { TabDropTarget } from "../../../src/app/models/tab-drop-target";
+import { TabGroup } from "../../../src/app/models/tab-group";
+import { LayoutService } from "../../../src/app/services/layout.service";
 import { NavigationService } from "../../../src/app/services/navigation.service";
 import { ImageSource } from "../../../src/app/models/image-source";
 
@@ -65,7 +70,7 @@ describe("NavigationService", () => {
     expect(navigation.section()).toBe(SettingsSection.Teammates);
 
     navigation.showSection(SettingsSection.About);
-    navigation.closeSettings();
+    navigation.showChat();
     expect(navigation.settingsOpen()).toBe(true);
     navigation.openSettings();
     expect(navigation.section()).toBe(SettingsSection.About);
@@ -73,5 +78,36 @@ describe("NavigationService", () => {
     navigation.closeSettingsTab();
     expect(navigation.settingsOpen()).toBe(false);
     expect(navigation.view()).toBe(AppView.Chat);
+  });
+
+  it("shows a panel placed among the conversations until a conversation, Settings or an image is shown", () => {
+    MemoryStorage.install(window);
+    const navigation = TestBed.inject(NavigationService);
+    const layout = TestBed.inject(LayoutService);
+    const image = new ImageSource("1", "one.png", "D:/one.png", null);
+
+    layout.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    expect(navigation.view()).toBe(AppView.Panel);
+    expect(navigation.panel()).toBe(PanelId.Changes);
+
+    navigation.openSettings();
+    expect(navigation.view()).toBe(AppView.Settings);
+    expect(navigation.panel()).toBeNull();
+    layout.activatePanel(PanelId.Changes);
+    navigation.closeSettingsTab();
+    expect(navigation.settingsOpen()).toBe(false);
+    expect(navigation.view()).toBe(AppView.Panel);
+    navigation.showChat();
+    expect(navigation.view()).toBe(AppView.Chat);
+
+    navigation.openImage(image);
+    layout.activatePanel(PanelId.Changes);
+    navigation.closeImages();
+    expect(navigation.view()).toBe(AppView.Panel);
+    navigation.openImage(image);
+    expect(navigation.view()).toBe(AppView.Image);
+    layout.closePanel(PanelId.Changes);
+    expect(navigation.view()).toBe(AppView.Image);
+    navigation.closeImages();
   });
 });

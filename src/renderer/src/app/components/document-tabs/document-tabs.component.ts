@@ -17,16 +17,20 @@ import { MatTooltipModule } from "@angular/material/tooltip";
 import "@noldova/teamrun-foundation-core";
 
 import { AppView } from "../../enums/app-view";
+import type { PanelId } from "../../enums/panel-id";
+import type { TabGroup } from "../../models/tab-group";
 import { Resources } from "../../resources";
 import { ChatStore } from "../../services/chat-store.service";
 import { DocumentsService } from "../../services/documents.service";
 import { LayoutService } from "../../services/layout.service";
 import { NavigationService } from "../../services/navigation.service";
+import { PanelDragService } from "../../services/panel-drag.service";
 import { ViewportService } from "../../services/viewport.service";
+import { PanelMenuComponent } from "../panel-menu/panel-menu.component";
 
 @Component({
   selector: "tr-document-tabs",
-  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule],
+  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, PanelMenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: "block shrink-0", "[class.hidden]": "isEmpty()" },
   templateUrl: "./document-tabs.component.html"
@@ -37,8 +41,11 @@ export class DocumentTabsComponent {
   protected readonly layout: LayoutService = inject(LayoutService);
   protected readonly documents: DocumentsService = inject(DocumentsService);
   protected readonly navigation: NavigationService = inject(NavigationService);
+  protected readonly drag: PanelDragService = inject(PanelDragService);
   protected readonly settingsView: AppView = AppView.Settings;
-  protected readonly isEmpty: Signal<boolean> = computed(() => this.layout.documents().length === 0 && !this.navigation.settingsOpen() && this.navigation.images().length === 0);
+  protected readonly group: Signal<TabGroup> = computed(() => this.layout.arrangement().documents);
+  protected readonly isEmpty: Signal<boolean> = computed(() => this.layout.documents().length === 0 && !this.navigation.settingsOpen() &&
+    this.navigation.images().length === 0 && this.group().panels.length === 0);
   private readonly viewport: ViewportService = inject(ViewportService);
   private readonly strip = viewChild<ElementRef<HTMLElement>>("strip");
 
@@ -48,6 +55,7 @@ export class DocumentTabsComponent {
       this.store.selectedConversationId();
       this.navigation.view();
       this.navigation.activeImage();
+      this.navigation.panel();
       this.viewport.width();
       this.reveal();
     });
@@ -58,7 +66,7 @@ export class DocumentTabsComponent {
   }
 
   protected show(conversationId: string): void {
-    this.navigation.closeSettings();
+    this.navigation.showChat();
     void this.documents.show(conversationId);
   }
 
@@ -76,6 +84,18 @@ export class DocumentTabsComponent {
       return;
     event.preventDefault();
     this.closeImage(event, id);
+  }
+
+  protected closePanel(event: globalThis.Event, panel: PanelId): void {
+    event.stopPropagation();
+    this.layout.closePanel(panel);
+  }
+
+  protected onPanelAuxClick(event: MouseEvent, panel: PanelId): void {
+    if (event.button !== Resources.middleButton)
+      return;
+    event.preventDefault();
+    this.closePanel(event, panel);
   }
 
   protected closeAll(): void {

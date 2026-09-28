@@ -13,10 +13,11 @@ import { PanelId } from "../../../src/app/enums/panel-id";
 import { Resources } from "../../../src/app/resources";
 import { Dock } from "../../../src/app/models/dock";
 import { ShellFit } from "../../../src/app/models/shell-fit";
+import { TabGroup } from "../../../src/app/models/tab-group";
 
-const open = (side: DockSide, size: number | null = null): Dock => new Dock(side, [PanelId.Explorer], PanelId.Explorer, size, false);
-const collapsed = (side: DockSide): Dock => new Dock(side, [PanelId.Explorer], PanelId.Explorer, null, true);
-const empty = (side: DockSide): Dock => new Dock(side, [], null, null, false);
+const open = (side: DockSide, size: number | null = null): Dock => new Dock(side, new TabGroup(1, [PanelId.Explorer], null), size, false);
+const collapsed = (side: DockSide): Dock => new Dock(side, new TabGroup(1, [PanelId.Explorer], null), null, true);
+const empty = (side: DockSide): Dock => new Dock(side, null, null, false);
 const gap = Resources.shellGap;
 const chrome = Resources.shellPadding * 2;
 

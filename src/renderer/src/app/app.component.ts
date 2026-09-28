@@ -7,7 +7,7 @@
  */
 
 import {
-  ChangeDetectionStrategy, Component, type OnDestroy, type OnInit, type Signal, type WritableSignal, computed, effect, inject, signal, untracked
+  ChangeDetectionStrategy, Component, type OnDestroy, type OnInit, type Signal, type WritableSignal, effect, inject, signal, untracked
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
@@ -19,19 +19,23 @@ import { ConversationMembersComponent } from "./components/conversation-members/
 import { MessageListComponent } from "./components/message-list/message-list.component";
 import { SettingsPageComponent } from "./components/settings-page/settings-page.component";
 import { DockComponent } from "./components/dock/dock.component";
+import { DockGuidesComponent } from "./components/dock-guides/dock-guides.component";
 import { DocumentTabsComponent } from "./components/document-tabs/document-tabs.component";
+import { PanelContentComponent } from "./components/panel-content/panel-content.component";
+import { ResizeHandleComponent } from "./components/resize-handle/resize-handle.component";
+import { TabGroupComponent } from "./components/tab-group/tab-group.component";
 import { WindowControlsComponent } from "./components/window-controls/window-controls.component";
 import { FileDropDirective } from "./directives/file-drop.directive";
 import { AppView } from "./enums/app-view";
 import { DockSide } from "./enums/dock-side";
-import { DropPreview } from "./models/drop-preview";
+import type { ShellGeometry } from "./models/shell-geometry";
+import { TabGroup } from "./models/tab-group";
 import { Resources } from "./resources";
 import { ImageViewerComponent } from "./components/image-viewer/image-viewer.component";
 import { ChatStore } from "./services/chat-store.service";
 import { DocumentsService } from "./services/documents.service";
 import { RestartPreparationService } from "./services/restart-preparation.service";
 import { LayoutService } from "./services/layout.service";
-import { PanelDragService } from "./services/panel-drag.service";
 import { NavigationService } from "./services/navigation.service";
 import { PlatformService } from "./services/platform.service";
 import { ShellService } from "./services/shell.service";
@@ -41,8 +45,9 @@ import { TitleBarService } from "./services/title-bar.service";
 @Component({
   selector: "tr-app",
   imports: [
-    ComposerComponent, DockComponent, DocumentTabsComponent, MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
-    MessageListComponent, SettingsPageComponent, WindowControlsComponent, ImageViewerComponent, FileDropDirective, ConversationMembersComponent
+    ComposerComponent, DockComponent, DockGuidesComponent, DocumentTabsComponent, MatButtonModule, MatIconModule, MatProgressBarModule,
+    MatTooltipModule, MessageListComponent, PanelContentComponent, ResizeHandleComponent, SettingsPageComponent, TabGroupComponent,
+    WindowControlsComponent, ImageViewerComponent, FileDropDirective, ConversationMembersComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./app.component.html"
@@ -61,21 +66,13 @@ export class AppComponent implements OnInit, OnDestroy {
   protected readonly leftSide: DockSide = DockSide.Left;
   protected readonly rightSide: DockSide = DockSide.Right;
   protected readonly bottomSide: DockSide = DockSide.Bottom;
+  protected readonly documentsId: number = TabGroup.documentsId;
+  protected readonly geometry: Signal<ShellGeometry> = this.shell.geometry;
   private readonly shortcuts: ShortcutsService = inject(ShortcutsService);
-  private readonly layout: LayoutService = inject(LayoutService);
+  protected readonly layout: LayoutService = inject(LayoutService);
   private readonly documents: DocumentsService = inject(DocumentsService);
-  protected readonly drag: PanelDragService = inject(PanelDragService);
   protected readonly busyShown: WritableSignal<boolean> = signal(false);
   private busyTimer: number | null = null;
-  protected readonly ghostOffset: number = Resources.ghostOffset;
-  protected readonly sides: readonly DockSide[] = Object.values(DockSide);
-  protected readonly preview: Signal<DropPreview | null> = computed(() => {
-    const target = this.drag.target();
-    return Object.isNull(target) ? null : this.areaOf(target.side);
-  });
-  protected readonly guides: Signal<readonly DropPreview[]> = computed(() => this.sides.map(side => this.areaOf(side)));
-  protected readonly columns: Signal<string> = this.shell.columns;
-  protected readonly rows: Signal<string> = this.shell.rows;
 
   public constructor() {
     effect(() => {
@@ -108,10 +105,5 @@ export class AppComponent implements OnInit, OnDestroy {
       this.busyTimer = null;
       this.busyShown.set(true);
     }, Resources.busyBarDelay);
-  }
-
-  private areaOf(side: DockSide): DropPreview {
-    const size = this.layout.layout().dock(side).size ?? Resources.defaultDockSizes[side];
-    return new DropPreview(side, Resources.formatPixels(size), this.shell.track(DockSide.Left), this.shell.track(DockSide.Right));
   }
 }

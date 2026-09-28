@@ -14,10 +14,15 @@ import type { FakeTeamRunBridge } from "../fixtures/fake-teamrun-bridge";
 import { MemoryStorage } from "../fixtures/memory-storage";
 import { SampleData } from "../fixtures/sample-data";
 import { AppComponent } from "../../src/app/app.component";
+import { AppView } from "../../src/app/enums/app-view";
 import { DockSide } from "../../src/app/enums/dock-side";
+import { PanelEdge } from "../../src/app/enums/panel-edge";
 import { PanelId } from "../../src/app/enums/panel-id";
 import { Resources } from "../../src/app/resources";
 import { ImageSource } from "../../src/app/models/image-source";
+import { SplitDropTarget } from "../../src/app/models/split-drop-target";
+import { TabDropTarget } from "../../src/app/models/tab-drop-target";
+import { TabGroup } from "../../src/app/models/tab-group";
 import { NavigationService } from "../../src/app/services/navigation.service";
 import { LayoutService } from "../../src/app/services/layout.service";
 import { TEAMRUN_BRIDGE } from "../../src/app/services/bridge.service";
@@ -63,7 +68,7 @@ describe("AppComponent", () => {
     TestBed.inject(NavigationService).openSettings();
     await fixture.whenStable();
     expect(region.querySelector(".tr-file-drop-overlay")).toBeNull();
-    TestBed.inject(NavigationService).closeSettings();
+    TestBed.inject(NavigationService).showChat();
     await fixture.whenStable();
     expect(root.querySelectorAll("tr-composer .tr-attachment")).toHaveLength(2);
     expect(region.querySelector(".tr-file-drop-overlay")).toBeNull();
@@ -118,7 +123,7 @@ describe("AppComponent", () => {
     expect(root.querySelector<HTMLElement>('.tr-chat-view')?.style.visibility).toBe('hidden');
     navigation.openSettings();
     fixture.detectChanges();
-    navigation.closeSettings();
+    navigation.showChat();
     fixture.detectChanges();
     expect(root.querySelector('tr-composer textarea')).toBe(textarea);
     expect(textarea.value).toBe('Keep this draft');
@@ -126,21 +131,28 @@ describe("AppComponent", () => {
     fixture.destroy();
   });
 
-  it("lays the docks out around the document area and hides the left one from the toggle", async () => {
+  it("lays the docks and groups out around the documents, hides the left dock from the toggle, and docks a dragged tab", async () => {
     MemoryStorage.install(window);
     Object.defineProperty(window, "innerWidth", { value: 1920, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: 1080, configurable: true });
     const fixture = await start(SampleData.createBridge(), store => store.selectedConversationId() !== null && !store.isBusy());
     const element = fixture.nativeElement as HTMLElement;
+    const layout = TestBed.inject(LayoutService);
+    const gap = Resources.shellGap;
+    const padding = Resources.shellPadding;
+    const left = Resources.defaultDockSizes.Left;
+    const right = Resources.defaultDockSizes.Right;
     const docks = (): string[] => Array.from(element.querySelectorAll("tr-dock")).map(t => `${t.getAttribute("data-side")}:${t.classList.contains("hidden")}`);
-    const columns = (): string => element.querySelector<HTMLElement>("tr-dock[data-side='Left']")!.parentElement!.style.gridTemplateColumns;
+    const groups = (): string[] => Array.from(element.querySelectorAll<HTMLElement>("tr-tab-group")).map(t => `${t.dataset["side"]}:${t.style.left}:${t.style.width}`);
+    const documents = (): HTMLElement => element.querySelector<HTMLElement>(".tr-documents")!;
 
-    expect(docks()).toEqual(["Left:false", "Bottom:false", "Right:false"]);
-    expect(element.querySelector("tr-dock[data-side='Left'] tr-sidebar")).not.toBeNull();
+    expect(docks()).toEqual(["Left:false", "Right:false", "Bottom:false"]);
+    expect(element.querySelector("tr-tab-group[data-side='Left'] tr-sidebar")).not.toBeNull();
     expect(element.querySelectorAll("tr-document-tabs .tr-tab")).toHaveLength(1);
     expect(element.querySelector("tr-dock[data-side='Bottom'] .tr-dock-strip")).not.toBeNull();
-    const gap = Resources.shellGap;
-    expect(columns()).toBe(`${Resources.defaultDockSizes.Left + gap}px minmax(0, 1fr) ${Resources.defaultDockSizes.Right + gap}px`);
+    expect(groups()).toEqual([`Left:${padding}px:${left}px`, `Right:${1920 - padding - right}px:${right}px`]);
+    expect([documents().style.left, documents().style.width]).toEqual([`${padding + left + gap}px`, `${1920 - 2 * padding - left - right - 2 * gap}px`]);
+    expect(documents().dataset["dropGroup"]).toBe("0");
     expect(element.querySelector<HTMLButtonElement>(".tr-history-back")!.disabled).toBe(true);
     expect(element.querySelector(".tr-search-open")).not.toBeNull();
     element.querySelector<HTMLButtonElement>(".tr-settings-open")!.click();
@@ -154,14 +166,13 @@ describe("AppComponent", () => {
     element.querySelector<HTMLButtonElement>(".tr-panel-toggle")!.click();
     fixture.detectChanges();
     expect(element.querySelector("tr-dock[data-side='Left'] .tr-dock-strip")).not.toBeNull();
-    expect(columns()).toBe(`${Resources.dockStripSize + Resources.shellGap}px minmax(0, 1fr) ${Resources.defaultDockSizes.Right + Resources.shellGap}px`);
+    expect(groups()).toEqual([`Right:${1920 - padding - right}px:${right}px`]);
+    expect(documents().style.left).toBe(`${padding + Resources.dockStripSize + gap}px`);
 
-    TestBed.inject(LayoutService).closePanel(PanelId.Changes);
+    layout.closePanel(PanelId.Changes);
     fixture.detectChanges();
-    expect(docks()).toEqual(["Left:false", "Bottom:false", "Right:true"]);
-    expect(columns()).toBe(`${Resources.dockStripSize + Resources.shellGap}px minmax(0, 1fr) 0`);
-    expect(element.querySelector("tr-dock[data-side='Right']")?.classList.contains("col-start-3")).toBe(true);
-    expect(element.querySelector("tr-dock[data-side='Bottom']")?.classList.contains("row-start-2")).toBe(true);
+    expect(docks()).toEqual(["Left:false", "Right:true", "Bottom:false"]);
+    expect(documents().style.width).toBe(`${1920 - 2 * padding - Resources.dockStripSize - gap}px`);
 
     element.querySelector<HTMLButtonElement>(".tr-panels-menu")!.click();
     fixture.detectChanges();
@@ -169,46 +180,87 @@ describe("AppComponent", () => {
     expect(items.map(t => t.textContent?.includes(Resources.panelLabels[PanelId.Changes]))).toContain(true);
     items.find(t => t.textContent?.includes(Resources.panelLabels[PanelId.Changes]))!.click();
     fixture.detectChanges();
-    expect(TestBed.inject(LayoutService).isOpen(PanelId.Changes)).toBe(true);
+    expect(layout.isOpen(PanelId.Changes)).toBe(true);
     element.querySelector<HTMLButtonElement>(".tr-panels-menu")!.click();
     fixture.detectChanges();
     document.querySelector<HTMLButtonElement>(".mat-mdc-menu-panel .tr-reset-layout")!.click();
     fixture.detectChanges();
-    expect(TestBed.inject(LayoutService).dock(DockSide.Left).collapsed).toBe(false);
-    TestBed.inject(LayoutService).closePanel(PanelId.Changes);
-    TestBed.inject(LayoutService).toggleDock(DockSide.Left);
+    expect(layout.dock(DockSide.Left).collapsed).toBe(false);
+    layout.closePanel(PanelId.Changes);
+    layout.toggleDock(DockSide.Left);
     fixture.detectChanges();
 
     expect(element.querySelectorAll(".tr-dock-guide")).toHaveLength(0);
-    const tab = element.querySelector<HTMLElement>("tr-dock[data-side='Left'] .tr-dock-strip-button")!;
-    tab.click();
+    element.querySelector<HTMLElement>("tr-dock[data-side='Left'] .tr-dock-strip-button")!.click();
     fixture.detectChanges();
     let under: Element | null = null;
     document.elementFromPoint = (): Element | null => under;
-    element.querySelector<HTMLElement>("tr-dock[data-side='Left'] .tr-tab")!
+    element.querySelector<HTMLElement>("tr-tab-group[data-side='Left'] .tr-tab")!
       .dispatchEvent(new PointerEvent("pointerdown", { clientX: 10, clientY: 10, button: 0, bubbles: true }));
-    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 200, clientY: 200, bubbles: true }));
+    under = documents();
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 900, clientY: 200, bubbles: true }));
     fixture.detectChanges();
     expect(Array.from(element.querySelectorAll<HTMLElement>(".tr-dock-guide-edge")).map(t => t.dataset["guide"])).toEqual(["Left", "Right", "Bottom"]);
     expect(Array.from(element.querySelectorAll<HTMLElement>(".tr-dock-compass .tr-dock-guide-arm")).map(t => t.dataset["arm"]))
-      .toEqual(["Left", "Right", "Bottom"]);
+      .toEqual(["Left", "Right", "Top", "Bottom"]);
     expect(element.querySelector(".tr-drop-preview")).toBeNull();
     expect(element.querySelector(".tr-drag-ghost")?.textContent).toContain(Resources.panelLabels[PanelId.Explorer]);
-    expect(element.querySelector<HTMLElement>(".tr-drag-ghost")?.style.left).toBe(`${200 + Resources.ghostOffset}px`);
+    expect(element.querySelector<HTMLElement>(".tr-drag-ghost")?.style.left).toBe(`${900 + Resources.ghostOffset}px`);
     const guide = element.querySelector<HTMLElement>(".tr-dock-guide-edge[data-guide='Right']")!;
     under = guide;
-    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 900, clientY: 300, bubbles: true }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 1900, clientY: 300, bubbles: true }));
     fixture.detectChanges();
     expect(guide.classList.contains("tr-dock-guide-active")).toBe(true);
-    expect(element.querySelector<HTMLElement>(".tr-dock-guide-arm[data-arm='Right']")?.classList.contains("tr-dock-guide-active")).toBe(true);
+    expect(element.querySelector(".tr-dock-compass")).toBeNull();
     const preview = element.querySelector<HTMLElement>(".tr-drop-preview")!;
-    expect(preview.dataset["preview"]).toBe("Right");
-    expect(preview.style.width).toBe(`${Resources.defaultDockSizes.Right}px`);
-    expect(preview.style.right).toBe("0px");
-    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 900, clientY: 300, bubbles: true }));
+    expect([preview.style.left, preview.style.width]).toEqual([`${1920 - padding - right}px`, `${right}px`]);
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 1900, clientY: 300, bubbles: true }));
     fixture.detectChanges();
     expect(element.querySelectorAll(".tr-dock-guide")).toHaveLength(0);
-    expect(TestBed.inject(LayoutService).dock(DockSide.Right).panels).toEqual([PanelId.Explorer]);
+    expect(layout.dock(DockSide.Right).panels).toEqual([PanelId.Explorer]);
+    expect(groups()).toEqual([`Right:${1920 - padding - right}px:${right}px`]);
+    fixture.destroy();
+  });
+
+  it("shows a panel placed among the conversations in the documents card and splits the middle beside them", async () => {
+    MemoryStorage.install(window);
+    Object.defineProperty(window, "innerWidth", { value: 1920, configurable: true });
+    Object.defineProperty(window, "innerHeight", { value: 1080, configurable: true });
+    const fixture = await start(SampleData.createBridge(), store => store.selectedConversationId() !== null && !store.isBusy());
+    const element = fixture.nativeElement as HTMLElement;
+    const layout = TestBed.inject(LayoutService);
+    const navigation = TestBed.inject(NavigationService);
+
+    layout.movePanel(PanelId.Changes, new TabDropTarget(TabGroup.documentsId, 0));
+    fixture.detectChanges();
+    expect(navigation.view()).toBe(AppView.Panel);
+    expect(element.querySelector(".tr-documents main tr-panel-content tr-changes-panel")).not.toBeNull();
+    expect(element.querySelector<HTMLElement>(".tr-chat-view")?.style.visibility).toBe("hidden");
+    expect(element.querySelector("header")?.textContent).toContain(Resources.panelLabels[PanelId.Changes]);
+    expect(element.querySelector("tr-dock[data-side='Right']")?.classList.contains("hidden")).toBe(true);
+
+    layout.movePanel(PanelId.Changes, new SplitDropTarget(TabGroup.documentsId, PanelEdge.Right));
+    fixture.detectChanges();
+    expect(navigation.view()).toBe(AppView.Chat);
+    expect(element.querySelector(".tr-documents tr-panel-content")).toBeNull();
+    const group = element.querySelector<HTMLElement>("tr-tab-group:not([data-side])")!;
+    expect(group.querySelector("tr-changes-panel")).not.toBeNull();
+    const handles = element.querySelectorAll<HTMLElement>("tr-resize-handle.tr-split-handle");
+    expect(handles).toHaveLength(1);
+    const handle = handles[0]!;
+    const documents = element.querySelector<HTMLElement>(".tr-documents")!;
+    expect(handle.style.left).toBe(`${Number.parseFloat(documents.style.left) + Number.parseFloat(documents.style.width)}px`);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    const before = Number.parseFloat(documents.style.width);
+    handle.dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: 800, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent("pointermove", { clientX: 700, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent("pointerup", { clientX: 700, bubbles: true }));
+    fixture.detectChanges();
+    expect(Number.parseFloat(documents.style.width)).toBe(before - 100);
+    handle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    fixture.detectChanges();
+    expect(Number.parseFloat(documents.style.width)).toBe(before);
     fixture.destroy();
   });
 

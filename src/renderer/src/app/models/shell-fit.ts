@@ -56,7 +56,7 @@ export class ShellFit {
   }
 
   private static wanted(dock: Dock): number {
-    if (dock.panels.length === 0)
+    if (dock.isEmpty)
       return 0;
     if (dock.collapsed)
       return Resources.dockStripSize + Resources.shellGap;
@@ -65,7 +65,7 @@ export class ShellFit {
   }
 
   private static floor(dock: Dock): number {
-    if (dock.panels.length === 0)
+    if (dock.isEmpty)
       return 0;
     if (dock.collapsed)
       return Resources.dockStripSize + Resources.shellGap;
