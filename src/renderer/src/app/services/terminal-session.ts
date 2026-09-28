@@ -8,6 +8,7 @@
 
 import { type Signal, type WritableSignal, signal } from "@angular/core";
 import type { FitAddon } from "@xterm/addon-fit";
+import type { WebglAddon } from "@xterm/addon-webgl";
 import type { ITheme, Terminal } from "@xterm/xterm";
 
 import "@noldova/teamrun-foundation-core";
@@ -29,6 +30,7 @@ import type { BridgeService } from "./bridge.service";
 export class TerminalSession {
   private readonly terminal: Terminal;
   private readonly fit: FitAddon;
+  private readonly webgl: WebglAddon;
   private readonly bridge: BridgeService;
   private readonly stateSignal: WritableSignal<TerminalState>;
   private readonly waiting: (() => void)[] = [];
@@ -36,13 +38,16 @@ export class TerminalSession {
   private sequence: number = 0;
   private processed: number = 0;
   private focusPending: boolean = false;
+  private theme: ITheme;
 
   public readonly id: string;
   public readonly state: Signal<TerminalState>;
 
-  public constructor(state: TerminalState, terminal: Terminal, fit: FitAddon, bridge: BridgeService) {
+  public constructor(state: TerminalState, terminal: Terminal, fit: FitAddon, webgl: WebglAddon, bridge: BridgeService) {
     this.terminal = terminal;
     this.fit = fit;
+    this.webgl = webgl;
+    this.theme = terminal.options.theme ?? {};
     this.bridge = bridge;
     this.stateSignal = signal(state);
     this.id = state.id;
@@ -104,10 +109,12 @@ export class TerminalSession {
     if (Object.isUndefined(element)) {
       host.replaceChildren();
       this.terminal.open(host);
+      this.drawWithWebgl();
     }
     else if (element.parentElement !== host)
       host.replaceChildren(element);
     this.terminal.attachCustomKeyEventHandler(keys);
+    this.paint();
     this.fitToHost();
     if (this.focusPending) {
       this.focusPending = false;
@@ -137,7 +144,8 @@ export class TerminalSession {
   public configure(fontFamily: string, fontSize: number, theme: ITheme): void {
     this.terminal.options.fontFamily = fontFamily;
     this.terminal.options.fontSize = fontSize;
-    this.terminal.options.theme = theme;
+    this.theme = theme;
+    this.paint();
     this.fitToHost();
   }
 
@@ -165,6 +173,31 @@ export class TerminalSession {
     const params = new TerminalAcknowledgeParams(this.id, this.processed);
     this.processed = 0;
     this.call(MethodName.TerminalAcknowledge, params.toJson());
+  }
+
+  private paint(): void {
+    const surface = this.surface();
+    this.terminal.options.theme = Object.isNull(surface) ? this.theme : { ...this.theme, background: surface };
+  }
+
+  private surface(): string | null {
+    for (let element = this.terminal.element?.parentElement ?? null; !Object.isNull(element); element = element.parentElement) {
+      const color = getComputedStyle(element).backgroundColor;
+      if (!Resources.transparentBackgrounds.includes(color))
+        return color;
+    }
+    return null;
+  }
+
+  private drawWithWebgl(): void {
+    try {
+      this.terminal.loadAddon(this.webgl);
+    }
+    catch {
+      this.webgl.dispose();
+      return;
+    }
+    this.webgl.onContextLoss(() => this.webgl.dispose());
   }
 
   private call(method: string, payload: JsonValue): void {

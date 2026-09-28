@@ -22,6 +22,7 @@ import {
 } from "@noldova/teamrun-protocol";
 
 import { FakeFitAddon } from "../../fixtures/fake-fit-addon";
+import { FakeWebglAddon } from "../../fixtures/fake-webgl-addon";
 import type { FakeTeamRunBridge } from "../../fixtures/fake-teamrun-bridge";
 import { SampleData } from "../../fixtures/sample-data";
 import { TerminalWindow } from "../../fixtures/terminal-window";
@@ -33,6 +34,7 @@ describe("TerminalSession", () => {
   let bridge: FakeTeamRunBridge;
   let terminal: Terminal;
   let fit: FakeFitAddon;
+  let webgl: FakeWebglAddon;
   let session: TerminalSession;
 
   const output = (sequence: number, data: string): TerminalOutputPayload => new TerminalOutputPayload("t1", sequence, data, stored);
@@ -48,7 +50,8 @@ describe("TerminalSession", () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     terminal = new Terminal();
     fit = new FakeFitAddon();
-    session = new TerminalSession(SampleData.terminal("t1"), terminal, fit, TestBed.inject(BridgeService));
+    webgl = new FakeWebglAddon();
+    session = new TerminalSession(SampleData.terminal("t1"), terminal, fit, webgl, TestBed.inject(BridgeService));
   });
 
   afterEach(() => session.dispose());
@@ -78,7 +81,7 @@ describe("TerminalSession", () => {
   it("follows the Windows pseudo-console only for a terminal that runs in one", () => {
     const windows = new TerminalState("t2", SampleData.project.id, "PowerShell", 26200, new TerminalSize(80, 24), null, 0, 0, stored);
     const other = new Terminal();
-    const onWindows = new TerminalSession(windows, other, new FakeFitAddon(), TestBed.inject(BridgeService));
+    const onWindows = new TerminalSession(windows, other, new FakeFitAddon(), new FakeWebglAddon(), TestBed.inject(BridgeService));
 
     expect(other.options.windowsPty).toEqual({ backend: "conpty", buildNumber: 26200 });
     expect(other.options.reflowCursorLine).toBe(true);
@@ -132,6 +135,51 @@ describe("TerminalSession", () => {
     expect([terminal.cols, terminal.rows]).toEqual([100, 30]);
     expect(requests(MethodName.TerminalResize).map(t => TerminalResizeParams.fromJson(t).size.columns)).toEqual([100]);
     expect([terminal.options.fontFamily, terminal.options.fontSize, terminal.options.theme?.foreground]).toEqual(["monospace", 17, "#123456"]);
+  });
+
+  it("draws with WebGL once it opens, and with the DOM renderer where WebGL is unavailable or its context is lost", () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const first = document.body.appendChild(document.createElement("div"));
+    const second = document.body.appendChild(document.createElement("div"));
+    const unavailable = new FakeWebglAddon(true);
+    const other = new Terminal();
+    const withoutWebgl = new TerminalSession(SampleData.terminal("t2"), other, new FakeFitAddon(), unavailable, TestBed.inject(BridgeService));
+
+    session.show(first, () => true);
+    session.show(second, () => true);
+    webgl.loseContext();
+    withoutWebgl.show(first, () => true);
+
+    expect(webgl.activations).toBe(1);
+    expect(webgl.disposals).toBe(1);
+    expect(unavailable.disposals).toBe(1);
+    expect(other.element?.parentElement).toBe(first);
+    withoutWebgl.dispose();
+    first.remove();
+    second.remove();
+  });
+
+  it("paints its background in the color of the surface it is shown on, also after it is configured again", () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const dock = document.body.appendChild(document.createElement("div"));
+    dock.style.backgroundColor = "rgb(24, 24, 24)";
+    const inDock = dock.appendChild(document.createElement("div"));
+    const bare = document.body.appendChild(document.createElement("div"));
+
+    session.show(inDock, () => true);
+    const shown = terminal.options.theme?.background;
+    session.configure("monospace", 13, { background: "#1f1f1f", foreground: "#cccccc" });
+    const configured = terminal.options.theme;
+    session.show(bare, () => true);
+
+    expect(shown).toBe("rgb(24, 24, 24)");
+    expect(configured?.background).toBe("rgb(24, 24, 24)");
+    expect(configured?.foreground).toBe("#cccccc");
+    expect(terminal.options.theme?.background).toBe("#1f1f1f");
+    dock.remove();
+    bare.remove();
   });
 
   it("opens in its panel, moves to another, takes focus once shown and copies its selection", async () => {
