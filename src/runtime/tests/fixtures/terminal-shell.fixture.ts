@@ -12,12 +12,21 @@ class TerminalShellFixture {
   private static readonly NEW_LINE: string = "\r\n";
   private static readonly LINE_END_PATTERN: RegExp = /[\r\n]/;
   private static readonly FLOOD_LINE: string = "0123456789".repeat(10);
+  private static readonly ATTRIBUTES_QUERY: string = "\u001b[c";
+  private static readonly ATTRIBUTES_START: string = "[";
+  private static readonly ATTRIBUTES_END: string = "c";
+  private static asking: boolean = false;
+  private static reply: string = "";
 
   public static run(): void {
     let pending = "";
     process.stdout.write(`ready${TerminalShellFixture.NEW_LINE}`);
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk: string) => {
+      if (TerminalShellFixture.asking) {
+        TerminalShellFixture.collectReply(chunk);
+        return;
+      }
       pending += chunk;
       let end = pending.search(TerminalShellFixture.LINE_END_PATTERN);
       while (end >= 0) {
@@ -52,6 +61,11 @@ class TerminalShellFixture {
           process.stdout.write(`${TerminalShellFixture.FLOOD_LINE}${TerminalShellFixture.NEW_LINE}`);
         process.stdout.write(`flooded${TerminalShellFixture.NEW_LINE}`);
         break;
+      case "attributes":
+        TerminalShellFixture.asking = true;
+        process.stdin.setRawMode(true);
+        process.stdout.write(TerminalShellFixture.ATTRIBUTES_QUERY);
+        break;
       case "ignore-hangup":
         process.on("SIGHUP", () => undefined);
         process.stdout.write(`ignoring${TerminalShellFixture.NEW_LINE}`);
@@ -59,6 +73,19 @@ class TerminalShellFixture {
       case "exit":
         process.exit(Number(argument));
     }
+  }
+
+  private static collectReply(chunk: string): void {
+    TerminalShellFixture.reply += chunk;
+    const end = TerminalShellFixture.reply.indexOf(TerminalShellFixture.ATTRIBUTES_END);
+    if (end < 0)
+      return;
+
+    const answer = TerminalShellFixture.reply.slice(TerminalShellFixture.reply.indexOf(TerminalShellFixture.ATTRIBUTES_START) + 1, end + 1);
+    TerminalShellFixture.asking = false;
+    TerminalShellFixture.reply = "";
+    process.stdin.setRawMode(false);
+    process.stdout.write(`attributes ${answer}${TerminalShellFixture.NEW_LINE}`);
   }
 }
 

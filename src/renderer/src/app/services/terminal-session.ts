@@ -50,6 +50,11 @@ export class TerminalSession {
     terminal.loadAddon(fit);
     terminal.onData(t => this.type(t));
     terminal.onBinary(t => this.type(t));
+    terminal.parser.registerCsiHandler({ final: Resources.deviceAttributesFinal }, t => TerminalSession.isAttributesQuery(t));
+    if (!Object.isNull(state.conptyBuild)) {
+      terminal.options.windowsPty = { backend: Resources.conptyBackend, buildNumber: state.conptyBuild };
+      terminal.options.reflowCursorLine = true;
+    }
   }
 
   public get hasFocus(): boolean {
@@ -162,5 +167,9 @@ export class TerminalSession {
 
   private call(method: string, payload: JsonValue): void {
     this.bridge.call(method, payload).catch(() => undefined);
+  }
+
+  private static isAttributesQuery(params: readonly (number | number[])[]): boolean {
+    return params.length === 0 || (params.length === 1 && params[0] === 0);
   }
 }

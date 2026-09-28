@@ -173,10 +173,15 @@ export class Resources {
   public static readonly terminalLowWatermark: number = 256 * 1024;
   public static readonly forceKillSignal: string = "SIGKILL";
   public static readonly conptyBackend: "conpty" = "conpty";
+  public static readonly ptyAgentField: "_agent" = "_agent";
+  public static readonly ptyOutputReaderField: "_conoutSocketWorker" = "_conoutSocketWorker";
+  public static readonly disposeMethod: "dispose" = "dispose";
   public static readonly normalBufferType: "normal" = "normal";
   public static readonly eraseInDisplayFinal: string = "J";
   public static readonly privatePrefix: string = "?";
   public static readonly fullResetFinal: string = "c";
+  public static readonly deviceAttributesFinal: string = "c";
+  public static readonly deviceAttributesAnswer: string = "\u001b[?1;2c";
   public static readonly eraseSavedLinesParameter: number = 3;
   public static readonly blankCell: string = " ";
   public static readonly terminalTermName: string = "xterm-256color";

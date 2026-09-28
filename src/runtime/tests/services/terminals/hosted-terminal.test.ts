@@ -100,6 +100,46 @@ export class HostedTerminalTests {
   }
 
   @TestMethod
+  public async repeatsNothingWhenResizedManyTimesInARow(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const owner = new RecordingTerminalOwner();
+    const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings());
+    try {
+      await Wait.until(() => owner.output.includes("ready"));
+
+      for (let step = 0; step < 40; step++) {
+        terminal.resize(new TerminalSize(200, 3 + step % 10 * 3));
+        await Wait.delay(10);
+      }
+      await HostedTerminalTests.settledOutput(owner);
+      const stored = (await terminal.lines(0, 500)).lines.filter(t => t.text.includes("ready")).length;
+      const shown = terminal.screen().screen.split("ready").length - 1;
+
+      Assert.areEqual(1, stored + shown);
+    }
+    finally {
+      await terminal.close();
+    }
+  }
+
+  @TestMethod
+  public async answersTheDeviceAttributesQueryOfItsShell(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const owner = new RecordingTerminalOwner();
+    const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings());
+    try {
+      await Wait.until(() => owner.output.includes("ready"));
+
+      terminal.input("attributes\r");
+
+      await Wait.until(() => owner.output.includes("attributes ?1;2c"));
+    }
+    finally {
+      await terminal.close();
+    }
+  }
+
+  @TestMethod
   public async reportsTheExitAndRefusesInputAfterIt(): Promise<void> {
     using directory = new TemporaryDirectory();
     const owner = new RecordingTerminalOwner();

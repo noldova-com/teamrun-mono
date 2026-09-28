@@ -447,6 +447,7 @@ export class Resources {
   public static readonly terminalScrollback: number = 1000;
   public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
   public static readonly conptyBackend: "conpty" = "conpty";
+  public static readonly deviceAttributesFinal: string = "c";
   public static readonly transparentColor: string = "#00000000";
   public static readonly terminalRestartReset: string = "\u001b[?1047l\u001b[!p\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?2004l\r";
   public static readonly terminalLineFeed: string = "\n";
