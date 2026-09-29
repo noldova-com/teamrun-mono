@@ -702,10 +702,16 @@ export declare enum MethodName {
    */
   TerminalList = "TerminalList",
   /**
-   * Starts the default shell in a project's folder with a fresh environment read from the operating system. The
-   * terminal belongs to the calling connection: only it receives the terminal's events and can use it, and the
-   * terminal ends when that connection closes. Parameters: `TerminalOpenParams`. Result: `TerminalState`. Fails with
-   * `NotFound` for an unknown project or a missing folder, and `Unavailable` when the shell cannot start.
+   * Lists the shells installed on the computer, found again on each call, with the platform's default shell marked.
+   * Parameters: `null`. Result: an array of `TerminalShell`.
+   */
+  TerminalShells = "TerminalShells",
+  /**
+   * Starts a shell, the platform's default shell unless the parameters name another, in a project's folder or in the
+   * person's home folder, with a fresh environment read from the operating system. The terminal belongs to the calling
+   * connection: only it receives the terminal's events and can use it, and the terminal ends when that connection
+   * closes. Parameters: `TerminalOpenParams`. Result: `TerminalState`. Fails with `NotFound` for an unknown project, a
+   * missing folder or a shell that is not installed, and `Unavailable` when the shell cannot start.
    */
   TerminalOpen = "TerminalOpen",
   /**
@@ -1437,6 +1443,10 @@ export declare class Resources {
    * Name of a terminal's shell name field: `shell`.
    */
   public static readonly shellField: string;
+  /**
+   * Name of the field naming the shell a terminal opens with: `shellId`.
+   */
+  public static readonly shellIdField: string;
   /**
    * Name of a terminal's exit code field: `exitCode`.
    */
@@ -4700,6 +4710,90 @@ export declare enum RoleApplication {
 }
 
 /**
+ * The family of an installed shell, which chooses its icon.
+ */
+export declare enum TerminalShellKind {
+  /**
+   * PowerShell 7, Windows PowerShell or a Visual Studio developer PowerShell.
+   */
+  PowerShell = "PowerShell",
+  /**
+   * Command Prompt or a Visual Studio developer command prompt.
+   */
+  CommandPrompt = "CommandPrompt",
+  /**
+   * Bash, including Git Bash on Windows.
+   */
+  Bash = "Bash",
+  /**
+   * Zsh.
+   */
+  Zsh = "Zsh",
+  /**
+   * Fish.
+   */
+  Fish = "Fish",
+  /**
+   * A Windows Subsystem for Linux distribution.
+   */
+  Wsl = "Wsl",
+  /**
+   * Any other shell.
+   */
+  Other = "Other"
+}
+
+/**
+ * A shell installed on the computer that a terminal can start.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
+ * path; `toJson` renders the canonical wire shape.
+ */
+export declare class TerminalShell {
+  /**
+   * The shell's id, stable while the shell stays installed, such as `pwsh`, `wsl:Ubuntu` or `/bin/zsh`.
+   */
+  public readonly id: string;
+  /**
+   * The shell's display name, such as `PowerShell` or `Ubuntu`.
+   */
+  public readonly name: string;
+  /**
+   * The shell's family.
+   */
+  public readonly kind: TerminalShellKind;
+  /**
+   * Whether this is the platform's default shell, which a terminal starts when no shell is named.
+   */
+  public readonly isDefault: boolean;
+
+  /**
+   * Initializes the shell.
+   * @param id The shell's id; must not be blank.
+   * @param name The shell's display name; must not be blank.
+   * @param kind The shell's family.
+   * @param isDefault Whether this is the platform's default shell.
+   * @throws ArgumentException when `id` or `name` is blank.
+   */
+  public constructor(id: string, name: string, kind: TerminalShellKind, isDefault: boolean);
+
+  /**
+   * Reads the shell from untrusted JSON.
+   * @param value The untrusted value, expected to carry `id`, `name`, `kind` and `isDefault`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The shell.
+   * @throws JsonException when a field is missing or invalid; the exception names the field's path.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalShell;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `id`, `name`, `kind` and `isDefault`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
  * Style flags of terminal text; a `TerminalTextRun` combines them with bitwise OR.
  */
 export declare enum TerminalTextStyle {
@@ -5052,6 +5146,10 @@ export declare class TerminalOpenParams {
    */
   public readonly projectId: string | null;
   /**
+   * The id of the `TerminalShell` to start, or `null` for the platform's default shell.
+   */
+  public readonly shellId: string | null;
+  /**
    * The terminal's starting size.
    */
   public readonly size: TerminalSize;
@@ -5059,14 +5157,15 @@ export declare class TerminalOpenParams {
   /**
    * Initializes the parameters.
    * @param projectId The `Project` id, or `null` for the home folder; a given id must not be blank.
+   * @param shellId The `TerminalShell` id, or `null` for the platform's default shell; a given id must not be blank.
    * @param size The terminal's starting size.
-   * @throws ArgumentException when `projectId` is blank.
+   * @throws ArgumentException when `projectId` or `shellId` is blank.
    */
-  public constructor(projectId: string | null, size: TerminalSize);
+  public constructor(projectId: string | null, shellId: string | null, size: TerminalSize);
 
   /**
    * Reads the parameters from untrusted JSON.
-   * @param value The untrusted value, expected to carry the nullable `projectId` and `size`.
+   * @param value The untrusted value, expected to carry the nullable `projectId`, the nullable `shellId` and `size`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The parameters.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
@@ -5076,7 +5175,7 @@ export declare class TerminalOpenParams {
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `projectId` and `size`.
+   * @returns The object with `projectId`, `shellId` and `size`.
    */
   public toJson(): JsonObject;
 }

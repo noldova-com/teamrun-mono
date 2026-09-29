@@ -95,9 +95,11 @@ export class ProtocolApiTests {
     Assert.isDefined(api.WireDecoder);
     Assert.isDefined(api.WireMessage);
     Assert.isDefined(api.WireMessageKind);
+    Assert.isDefined(api.TerminalShellKind);
     Assert.isDefined(api.TerminalTextStyle);
     Assert.isDefined(api.TerminalLine);
     Assert.isDefined(api.TerminalLineRange);
+    Assert.isDefined(api.TerminalShell);
     Assert.isDefined(api.TerminalSize);
     Assert.isDefined(api.TerminalState);
     Assert.isDefined(api.TerminalTextRun);

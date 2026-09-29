@@ -82,7 +82,7 @@ describe("TerminalsService", () => {
     const layout = TestBed.inject(LayoutService);
 
     await terminals.open();
-    expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, new TerminalSize(80, 24)).toJson()]);
+    expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, null, new TerminalSize(80, 24)).toJson()]);
     expect(layout.dock(DockSide.Bottom).panels).toEqual([activity, terminal("t1")]);
     expect(layout.dock(DockSide.Bottom).collapsed).toBe(false);
     expect([...terminals.sessions().keys()]).toEqual(["t1"]);

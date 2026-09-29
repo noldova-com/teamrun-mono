@@ -11,4 +11,5 @@ import type { ShellEnvironment } from "../models/shell-environment.js";
 
 export interface IShellLocator {
   findDefault(environment: ShellEnvironment): Shell;
+  findAll(environment: ShellEnvironment): readonly Shell[];
 }

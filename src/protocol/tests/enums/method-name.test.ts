@@ -34,6 +34,7 @@ export class MethodNameTests {
     Assert.areEqual("ApprovalList", MethodName.ApprovalList);
     Assert.areEqual("ApprovalDecide", MethodName.ApprovalDecide);
     Assert.areEqual("TerminalList", MethodName.TerminalList);
+    Assert.areEqual("TerminalShells", MethodName.TerminalShells);
     Assert.areEqual("TerminalOpen", MethodName.TerminalOpen);
     Assert.areEqual("TerminalInput", MethodName.TerminalInput);
     Assert.areEqual("TerminalResize", MethodName.TerminalResize);
