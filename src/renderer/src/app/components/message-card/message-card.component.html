@@ -78,7 +78,8 @@ LICENSE file in the root directory of this source tree.
               </p>
             } @else {
               <div [class.tr-interim]="isInterim(segment)">
-                <tr-markdown [text]="detail.text" [wrapChoices]="state().wrappingFor(detail.sequence)" (wrapChanged)="rememberControls()" />
+                <tr-markdown [text]="detail.text" [wrapChoices]="state().wrappingFor(detail.sequence)" [streaming]="isActive()" [entering]="isEntering(segment)"
+                  (wrapChanged)="rememberControls()" />
               </div>
             }
           }
@@ -91,7 +92,7 @@ LICENSE file in the root directory of this source tree.
         @default {
           @if (isActivityOpen()) {
             <tr-activity-block [entries]="segment.entries" [label]="formatter.activitySummary(segment.entries)" [rootPath]="rootPath()"
-              [expansion]="state().expansion" />
+              [expansion]="state().expansion" [streaming]="isActive()" [entering]="isEntering(segment)" />
           }
         }
       }

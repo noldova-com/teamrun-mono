@@ -9,6 +9,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DesktopFixture } from "./fixtures/desktop.fixture.ts";
+import { FixtureProvider } from "./fixtures/fixture-provider.fixture.ts";
 
 let desktop: DesktopFixture;
 
@@ -40,6 +41,33 @@ async function dragTab(page: Page, panel: string, over: Locator, target: () => L
   await expect(page.locator(".tr-drop-preview")).toBeVisible();
   await page.mouse.up();
   await expect(page.locator(".tr-dock-guide")).toHaveCount(0);
+}
+
+async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thought: string[] }> {
+  const sampling = page.evaluate(() => new Promise<{ answer: string[]; thought: string[] }>(resolve => {
+    const answer: string[] = [];
+    const thought: string[] = [];
+    let started = false;
+    let quiet = 0;
+    const sample = (): void => {
+      const card = Array.from(document.querySelectorAll<HTMLElement>("tr-message-card")).at(-1);
+      const active = document.querySelector(".tr-reply-status") !== null;
+      started ||= active;
+      if (started) {
+        answer.push(card?.querySelector<HTMLElement>("tr-markdown")?.innerText ?? "");
+        thought.push(card?.querySelector<HTMLElement>("tr-activity-block li button span")?.innerText ?? "");
+      }
+      quiet = started && !active ? quiet + 1 : 0;
+      if (quiet > 90)
+        resolve({ answer, thought });
+      else
+        requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }));
+  await page.locator("tr-composer textarea").fill("Stream slowly");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  return sampling;
 }
 
 test("captures the full renderer viewport when the native window starts smaller", async () => {
@@ -266,4 +294,35 @@ test("keeps Settings reachable at enlarged zoom and presents provider and teamma
   await desktop.setZoom(2);
   await expect(page.getByRole("button", { name: "Add teammate", exact: true })).toBeInViewport();
   await desktop.capture("settings-at-200-percent");
+});
+
+test("reveals a streamed reply in small steps and never shows Markdown symbols", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const { answer, thought } = await sampleStreamedReply(page);
+  const symbols = ["**", "`", "](", "|", "```"];
+
+  expect(new Set(answer).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedAnswer).length * 2);
+  expect(new Set(thought).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedThought).length * 2);
+  expect(answer.filter(t => symbols.some(u => t.includes(u)))).toEqual([]);
+  expect(answer.every((t, index) => index === 0 || t.trimEnd().startsWith(answer[index - 1]!.trimEnd()))).toBe(true);
+  expect(answer.at(-1)).toContain("Here is bold text, some inline code and a link.");
+  expect(answer.at(-1)).toContain("let x = 1;");
+  expect(answer.at(-1)).toContain("All done, with a last sentence that takes a moment.");
+  expect(thought.filter(t => t.length > 0).at(-1)).toBe(FixtureProvider.streamedThought);
+  await expect(page.locator("tr-message-card").last().locator("[aria-live]")).toHaveCount(0);
+  await desktop.capture("streamed-reply");
+});
+
+test("shows a streamed reply as it arrives when reduced motion is preferred", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const { answer, thought } = await sampleStreamedReply(page);
+
+  expect(new Set(answer).size).toBeLessThanOrEqual(FixtureProvider.batches(FixtureProvider.streamedAnswer).length + 3);
+  expect(new Set(thought).size).toBeLessThanOrEqual(FixtureProvider.batches(FixtureProvider.streamedThought).length + 3);
+  expect(answer.filter(t => ["**", "`", "](", "|", "```"].some(u => t.includes(u)))).toEqual([]);
+  expect(answer.at(-1)).toContain("All done, with a last sentence that takes a moment.");
 });

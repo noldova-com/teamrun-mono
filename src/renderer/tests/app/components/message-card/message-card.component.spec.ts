@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { TestBed } from "@angular/core/testing";
+import { type ComponentFixture, TestBed } from "@angular/core/testing";
 import { By } from "@angular/platform-browser";
 
 import { MatDialog } from "@angular/material/dialog";
@@ -15,6 +15,7 @@ import { MatTooltip } from "@angular/material/tooltip";
 import { Conversation, ConversationRewindResult, DetailKind, Message, MessageDetail, MessageIdParams, MessageStatus, MethodName } from "@noldova/teamrun-protocol";
 
 import { SampleData } from "../../../fixtures/sample-data";
+import { VisibleText } from "../../../fixtures/visible-text";
 import { Resources } from "../../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../../src/app/services/chat-store.service";
@@ -229,5 +230,91 @@ describe("MessageCardComponent", () => {
     dialogs.openDialogs[0]!.close(false);
     await vi.waitFor(() => expect(TestBed.inject(DraftService).pending()).toBe("hello"));
     expect(bridge.methods).toContain(MethodName.ConversationRewind);
+  });
+
+  describe("while a reply streams", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    });
+    afterEach(() => vi.useRealTimers());
+
+    const answer = "The answer is being written while you watch it appear on the screen.";
+    const running = (...details: MessageDetail[]): Message => SampleData.withStatus(SampleData.reply, MessageStatus.Running, details);
+    const frames = (fixture: ComponentFixture<MessageCardComponent>, count: number): void => {
+      for (let frame = 0; frame < count; frame++) {
+        vi.advanceTimersByTime(16);
+        fixture.detectChanges();
+      }
+    };
+    const shown = (fixture: ComponentFixture<MessageCardComponent>): string => VisibleText.of((fixture.nativeElement as HTMLElement).querySelector("tr-markdown")!);
+
+    it("reveals an answer that appears in a live reply, and shows an answer that was already there at once", () => {
+      const live = TestBed.createComponent(MessageCardComponent);
+      live.componentRef.setInput("message", running());
+      live.detectChanges();
+      live.componentRef.setInput("message", running(SampleData.detail(0, DetailKind.Text, answer)));
+      live.detectChanges();
+      const seen: string[] = [shown(live)];
+      for (let frame = 0; frame < 400; frame++) {
+        frames(live, 1);
+        seen.push(shown(live));
+      }
+
+      expect(seen[0]).toBe("");
+      expect(seen.at(-1)).toBe(answer);
+      expect(new Set(seen).size).toBeGreaterThan(20);
+
+      const revisited = TestBed.createComponent(MessageCardComponent);
+      revisited.componentRef.setInput("message", running(SampleData.detail(0, DetailKind.Text, answer)));
+      revisited.detectChanges();
+      expect(shown(revisited)).toBe(answer);
+    });
+
+    it("reveals a thought that appears in a live reply", () => {
+      const live = TestBed.createComponent(MessageCardComponent);
+      live.componentRef.setInput("message", running());
+      live.detectChanges();
+      live.componentRef.setInput("message", running(SampleData.detail(0, DetailKind.Reasoning, "Weighing the options")));
+      live.detectChanges();
+      const title = (): string => (live.nativeElement as HTMLElement).querySelector("tr-activity-block li button span")?.textContent ?? String.empty;
+
+      expect(title()).toBe("");
+      frames(live, 300);
+      expect(title()).toBe("Weighing the options");
+    });
+
+    it("copies and rewinds with the whole answer while it is still being revealed", () => {
+      const written: string[] = [];
+      Object.defineProperty(navigator, "clipboard", { value: { writeText: (text: string): Promise<void> => { written.push(text); return Promise.resolve(); } }, configurable: true });
+      const live = TestBed.createComponent(MessageCardComponent);
+      live.componentRef.setInput("message", running());
+      live.detectChanges();
+      live.componentRef.setInput("message", running(SampleData.detail(0, DetailKind.Text, answer)));
+      live.detectChanges();
+      frames(live, 3);
+      expect(shown(live).length).toBeLessThan(answer.length);
+
+      (live.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(".tr-message-action")[0]!.click();
+
+      expect(written).toEqual([answer]);
+    });
+
+    it("shows the rest quickly once the reply has ended, without waiting for it to end the status", () => {
+      const live = TestBed.createComponent(MessageCardComponent);
+      live.componentRef.setInput("message", running());
+      live.detectChanges();
+      live.componentRef.setInput("message", running(SampleData.detail(0, DetailKind.Text, answer)));
+      live.detectChanges();
+      frames(live, 5);
+
+      live.componentRef.setInput("message", SampleData.withStatus(SampleData.reply, MessageStatus.Completed, [SampleData.detail(0, DetailKind.Text, answer)]));
+      live.detectChanges();
+      expect((live.nativeElement as HTMLElement).querySelector(".tr-reply-status")).toBeNull();
+      expect(shown(live).length).toBeLessThan(answer.length);
+      frames(live, 60);
+
+      expect(shown(live)).toBe(answer);
+    });
   });
 });
