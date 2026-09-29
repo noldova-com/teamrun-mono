@@ -82,6 +82,10 @@ Report covered/executable file counts and percentage against the tested source i
 
 Documentation changes require content, consistency, link and formatting checks. Verified commands and prerequisites belong in README or the owning tooling guide when available; do not invent commands for missing tooling.
 
+For automatic PR and `main` push runs, the Build and test workflow skips its code build/test matrix only when every changed path is a Markdown file at the repository root, under `docs/`, or under `.github/`. Markdown under source or scripts, other file types, and mixed changes require the full matrix. Renames account for both paths. PRs are compared from their merge base; pushes compare the previous and new revisions. Empty comparisons or unavailable history select the full matrix. Manual runs always select it.
+
+The required aggregate check reports a documentation-only skip explicitly. Failed change classification or any failed, cancelled or unexpectedly skipped required target fails that check. PR-description and issue validation still run for documentation changes. Installer packaging and releases remain explicit manual or tag-triggered operations with their complete verification.
+
 Package verification builds, packs and installs the selected source state before tests consume its package API. Dependency resolution must reach the intended fresh installed artifacts. Targeted checks are useful during development; before an implementation handoff, run the complete applicable gate for the actual snapshot being handed over. Do not repeat successful checks without a new change, failure or unresolved concern.
 
 Name additional evidence according to the claim:

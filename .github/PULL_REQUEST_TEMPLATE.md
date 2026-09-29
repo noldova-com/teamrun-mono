@@ -6,7 +6,8 @@
 
 Issue: #
 
-<!-- Add Closes #123 separately only when this PR completes the issue. -->
+<!-- When this PR completes the issue, replace the line above with Closes #123
+     or another GitHub closing keyword. A separate Issue line is not needed. -->
 
 ## Testing
 

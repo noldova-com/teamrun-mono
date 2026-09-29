@@ -145,13 +145,16 @@ Run `npm run test:release` to check release validation, integrity checks and pub
 
 Work on a focused branch in your fork, or a repository branch when you have the necessary access. Open the PR against `main`. Contributors do not need access to a maintainer's checkout; maintainers and agents working in a shared checkout follow [AGENTS.md](../AGENTS.md).
 
-Each PR description includes a standalone line with its actual tracking issue:
+Each PR description includes a standalone line with its actual tracking issue. Use either form when the issue should stay open:
 
 ```text
 Issue: #123
+Issue #123
 ```
 
-Replace `123` with an existing issue from this repository, not a PR or another repository's issue. Link additional issues as needed. Add `Closes #123` only when completing its scope; partial work leaves it open. Reviewers verify relevance.
+When the PR completes the issue, a GitHub closing reference such as `Closes #123` is sufficient on its own; no separate `Issue` line is needed. Accepted closing keywords are `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves` and `resolved`. Matching is case-insensitive and the colon is optional, for example `FIXES: #123`. Closing references close the issue when the PR merges into `main`; use an `Issue` reference for partial work.
+
+Replace `123` with an existing issue from this repository, not a PR or another repository's issue. References in HTML comments or fenced examples do not count. Link additional issues as needed; reviewers verify relevance.
 
 Use the [PR template](PULL_REQUEST_TEMPLATE.md). Fill `## Summary` with what changed and why, and `## Testing` with the checks run, results and remaining limitations; explain relevant checks that were not run or do not apply. These sections and a valid issue reference are required. HTML comments, headings and empty code blocks alone do not count as completed sections. `## Notes` is optional. Automated checks verify presence; reviewers assess accuracy and relevance.
 

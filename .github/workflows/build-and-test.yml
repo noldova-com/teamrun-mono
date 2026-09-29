@@ -26,8 +26,63 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run-code: ${{ steps.scope.outputs.run-code }}
+    steps:
+      - name: Check out change history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select verification scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          run_code=true
+          if [[ "$EVENT_NAME" == pull_request || "$EVENT_NAME" == push ]]; then
+            if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]] &&
+              git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null &&
+              git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
+              comparison_base=$BASE_SHA
+              if [[ "$EVENT_NAME" == pull_request ]]; then
+                comparison_base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+              fi
+              # Disabling rename detection checks both the old and new paths.
+              git diff --no-renames --name-only -z "$comparison_base" "$HEAD_SHA" -- > "$RUNNER_TEMP/teamrun-changed-files"
+              if [[ -s "$RUNNER_TEMP/teamrun-changed-files" ]]; then
+                run_code=false
+                while IFS= read -r -d '' changed_path; do
+                  if [[ "$changed_path" == *.md && ( "$changed_path" != */* || "$changed_path" == docs/* || "$changed_path" == .github/* ) ]]; then
+                    continue
+                  fi
+                  run_code=true
+                  break
+                done < "$RUNNER_TEMP/teamrun-changed-files"
+              fi
+            else
+              echo 'Comparison history is unavailable; running the full code checks.'
+            fi
+          fi
+          printf 'run-code=%s\n' "$run_code" >> "$GITHUB_OUTPUT"
+          if [[ "$run_code" == false ]]; then
+            echo 'Only Markdown documentation changed; code builds and tests are not required.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Full build and test verification selected.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   validate:
     name: Build and test (${{ matrix.target }})
+    needs: changes
+    if: needs.changes.outputs.run-code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -231,12 +286,27 @@ jobs:
 
   validation-result:
     name: Build and test (all targets)
-    needs: validate
+    needs: [changes, validate]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Require every target to pass
+      - name: Require the selected verification to pass
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_CODE: ${{ needs.changes.outputs.run-code }}
           VALIDATION_RESULT: ${{ needs.validate.result }}
-        run: test "$VALIDATION_RESULT" = success
+        run: |
+          set -euo pipefail
+          case "$CHANGES_RESULT:$RUN_CODE:$VALIDATION_RESULT" in
+            success:false:skipped)
+              echo 'Documentation-only change: the code build/test matrix was intentionally skipped.' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            success:true:success)
+              echo 'Every required build and test target passed.' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo '::error::Change classification or the required build/test targets did not complete successfully.'
+              exit 1
+              ;;
+          esac
