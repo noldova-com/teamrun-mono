@@ -51,6 +51,23 @@ export class LockFile implements Disposable {
     return !Object.isNull(lock) && this.probe.isAlive(lock.processId) ? lock : null;
   }
 
+  public isHeld(): boolean {
+    const ownership = new DatabaseSync(`${this.path}${Resources.ownershipFileSuffix}`);
+    try {
+      ownership.exec(Resources.acquireOwnershipStatement);
+      ownership.exec(Resources.releaseOwnershipStatement);
+      return false;
+    }
+    catch (error) {
+      if (Object.isObject(error) && Resources.sqliteErrorCodeField in error && error[Resources.sqliteErrorCodeField] === Resources.sqliteBusyCode)
+        return true;
+      throw error;
+    }
+    finally {
+      ownership.close();
+    }
+  }
+
   public claim(): void {
     if (!Object.isNull(this.ownership))
       return;

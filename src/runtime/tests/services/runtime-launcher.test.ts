@@ -9,9 +9,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
-import { Assert, TestClass, TestData, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { ErrorCode, MethodName, ProtocolVersion, Response } from "@noldova/teamrun-protocol";
-import { ConnectionException, Endpoint, LaunchException, RuntimeEntry, RuntimeLauncher, RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
+import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { ErrorCode, MethodName, ProtocolVersion } from "@noldova/teamrun-protocol";
+import { ConnectionException, Endpoint, LaunchException, LockFile, ProcessProbe, RuntimeBuildMismatchException, RuntimeEntry, RuntimeLauncher,
+  RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
 
 import { RecordingClientListener } from "../fixtures/recording-client-listener.fixture.js";
 import { RawServer } from "../fixtures/raw-server.fixture.js";
@@ -23,45 +24,52 @@ export class RuntimeLauncherTests {
   private static readonly timings: RuntimeTimings = new RuntimeTimings(2000, 5000, 15000, 50);
 
   @TestMethod
-  @TestData(0, 0)
-  @TestData(0, 2)
-  @TestData(1, 1)
-  public async refusesIncompatibleDiscoveryWithoutConnectingOrReplacingTheLock(major: number, minor: number): Promise<void> {
+  public async refusesAnotherBuildWithoutConnectingOrReplacingItsLock(): Promise<void> {
     using directory = new TemporaryDirectory();
     await using server = new RawServer();
-    server.linesOnConnect = [Response.success(null, ProtocolVersion.current.toJson()).toText()];
     const endpoint = await server.start();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", null);
-    const lock = new RuntimeLock(process.pid, endpoint, "fixture-token", new ProtocolVersion(major, minor), settings.productVersion, "fixture-time");
+    using owner = new LockFile(settings.lockPath, new ProcessProbe());
+    owner.claim();
+    const lock = new RuntimeLock(process.pid, endpoint, "fixture-token", ProtocolVersion.current, "0.0.7", "2026-09-28T13:52:00.000Z", "another-build",
+      "C:\\Other\\TeamRun.exe");
     RuntimeLauncherTests.writeLock(settings, lock);
     const original = readFileSync(settings.lockPath, "utf8");
     const launcher = new RuntimeLauncher(settings, process.execPath, directory.resolve("must-not-launch.js"), [], process.env, RuntimeLauncherTests.timings);
 
-    const failure = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), LaunchException);
+    const checked = Assert.throws(() => launcher.assertSameBuild(), RuntimeBuildMismatchException);
+    const refused = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), RuntimeBuildMismatchException);
 
-    Assert.isTrue(failure.message.includes("0.1"));
-    Assert.isTrue(failure.message.includes(lock.protocolVersion.toString()));
+    Assert.isTrue(refused.message.startsWith("Another TeamRun, built from different code, is using this data folder:\n" +
+      `${settings.dataDirectory}\n\nIt runs from C:\\Other\\TeamRun.exe (version 0.0.7) and started on `), refused.message);
+    Assert.areEqual(checked.message, refused.message);
+    Assert.areEqual("fixture-token", refused.lock.token);
     Assert.areEqual(0, server.sockets.length);
     Assert.areEqual(original, readFileSync(settings.lockPath, "utf8"));
   }
 
   @TestMethod
-  public async refusesADifferentLiveProductWithoutReplacingItsRuntime(): Promise<void> {
+  public async leavesARuntimeOfAnotherBuildServingItsClients(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
     const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
       RuntimeLauncherTests.timings);
     const client = await launcher.attach("original", new RecordingClientListener());
-    const original = launcher.readLiveLock();
-    const newer = new RuntimeLauncher(RuntimeSettings.forPlatform(process.platform, settings.dataDirectory, "0.0.2-launch", 400),
-      process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env, RuntimeLauncherTests.timings);
+    const lock = launcher.readLiveLock();
     try {
-      const error = await Assert.throwsAsync(() => newer.attach("newer", new RecordingClientListener()), LaunchException);
-      Assert.isTrue(error.message.includes("cannot attach to runtime"));
-      Assert.areEqual(original?.processId, launcher.readLiveLock()?.processId);
+      if (lock === null)
+        throw new Error("Expected a live lock.");
+      Assert.doesNotThrow(() => launcher.assertSameBuild());
+      RuntimeLauncherTests.writeLock(settings, new RuntimeLock(lock.processId, lock.endpoint, lock.token, lock.protocolVersion, lock.productVersion,
+        lock.startedAt, "another-build", lock.executablePath));
+      Assert.throws(() => launcher.assertSameBuild(), RuntimeBuildMismatchException);
+      await Assert.throwsAsync(() => launcher.attach("newer", new RecordingClientListener()), RuntimeBuildMismatchException);
+      Assert.areEqual(lock.processId, launcher.readLiveLock()?.processId);
       Assert.isFalse((await client.call(MethodName.ProviderList, null)).hasErrors);
     }
     finally {
+      if (lock !== null)
+        RuntimeLauncherTests.writeLock(settings, lock);
       client.close();
       await Wait.until(() => launcher.readLiveLock() === null);
     }
@@ -76,6 +84,7 @@ export class RuntimeLauncherTests {
     const first = new RecordingClientListener();
     const second = new RecordingClientListener();
 
+    Assert.doesNotThrow(() => launcher.assertSameBuild());
     const starter = await launcher.attach("starter", first);
     const lock = launcher.readLiveLock();
     const attacher = await launcher.attach("attacher", second);
@@ -89,20 +98,23 @@ export class RuntimeLauncherTests {
     Assert.areNotEqual(process.pid, lock?.processId);
     Assert.areEqual("0.0.1-launch", lock?.productVersion);
     Assert.isTrue(lock?.protocolVersion.equals(ProtocolVersion.current) ?? false);
+    Assert.isTrue(/^[0-9a-f]{64}$/.test(lock?.build ?? ""), lock?.build);
+    Assert.areEqual(process.execPath, lock?.executablePath);
     Assert.areEqual("[]", JSON.stringify(providers.payload));
     Assert.isFalse(project.hasErrors);
     Assert.areEqual(1, first.disconnections);
   }
 
   @TestMethod
-  public async replacesAStaleLockWhoseProcessIdIsAliveButNotAnswering(): Promise<void> {
+  public async replacesAStaleLockOfAnotherBuildWhoseProcessIdIsAliveButThatNoRuntimeHolds(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
     const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
       RuntimeLauncherTests.timings);
-    const staleLock = new RuntimeLock(process.pid, Endpoint.tcp(1), "token", ProtocolVersion.current, "0.0.1", "2026-09-10T00:00:00.000Z");
+    const staleLock = new RuntimeLock(process.pid, Endpoint.tcp(1), "token", ProtocolVersion.current, "0.0.1", "2026-09-10T00:00:00.000Z", "another-build");
     RuntimeLauncherTests.writeLock(settings, staleLock);
 
+    Assert.doesNotThrow(() => launcher.assertSameBuild());
     const client = await launcher.attach("client", new RecordingClientListener());
     const lock = launcher.readLiveLock();
     client.close();
@@ -137,16 +149,22 @@ export class RuntimeLauncherTests {
       RuntimeLauncherTests.timings);
     const client = await launcher.attach("starter", new RecordingClientListener());
     const lock = launcher.readLiveLock();
-    if (lock === null)
-      throw new Error("Expected a live lock.");
-    RuntimeLauncherTests.writeLock(settings, new RuntimeLock(lock.processId, lock.endpoint, "wrong-token", lock.protocolVersion, lock.productVersion, lock.startedAt));
+    try {
+      if (lock === null)
+        throw new Error("Expected a live lock.");
+      RuntimeLauncherTests.writeLock(settings, new RuntimeLock(lock.processId, lock.endpoint, "wrong-token", lock.protocolVersion, lock.productVersion,
+        lock.startedAt, lock.build, lock.executablePath));
 
-    const refused = await Assert.throwsAsync(() => launcher.attach("intruder", new RecordingClientListener()), ConnectionException);
-    RuntimeLauncherTests.writeLock(settings, lock);
-    client.close();
-    await Wait.until(() => launcher.readLiveLock() === null);
+      const refused = await Assert.throwsAsync(() => launcher.attach("intruder", new RecordingClientListener()), ConnectionException);
 
-    Assert.areEqual(ErrorCode.Unauthorized, refused.info?.name);
+      Assert.areEqual(ErrorCode.Unauthorized, refused.info?.name);
+    }
+    finally {
+      if (lock !== null)
+        RuntimeLauncherTests.writeLock(settings, lock);
+      client.close();
+      await Wait.until(() => launcher.readLiveLock() === null);
+    }
   }
 
   private static writeLock(settings: RuntimeSettings, lock: RuntimeLock): void {

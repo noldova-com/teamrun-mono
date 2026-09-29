@@ -84,7 +84,7 @@ export class Build extends Script {
       path.join(sourceDirectory, Config.API_DIRECTORY_NAME, Config.DECLARATIONS_FILE_NAME),
       path.join(outputDirectory, Config.API_DIRECTORY_NAME, Config.DECLARATIONS_FILE_NAME));
     await this.executeTypeScriptCompilerAsync([Build.PROJECT_OPTION, path.join(sourceDirectory, Config.PROJECT_FILE_NAME)]);
-    await this.stampResourcesAsync(outputDirectory);
+    await this.stampResourcesAsync(packageInfo, outputDirectory);
     await this.executeNpmCommandAsync(["pack", "--silent", "--pack-destination", path.resolve(Config.PACKAGES_FOLDER)], path.resolve(outputDirectory), true);
     await this.installPackageAsync(packageInfo);
     await BuildEvidence.record(packageInfo);
@@ -105,12 +105,14 @@ export class Build extends Script {
       true);
   }
 
-  private async stampResourcesAsync(outputDirectory: string): Promise<void> {
+  private async stampResourcesAsync(packageInfo: PackageInfo, outputDirectory: string): Promise<void> {
     const resourcesPath = path.join(outputDirectory, Config.RESOURCES_FILE_NAME);
     if (!await this.pathExistsAsync(resourcesPath))
       return;
     const resources = await this.readFileAsync(resourcesPath);
-    const stamped = resources.split(Config.PROTOCOL_VERSION_PLACEHOLDER).join(Config.PROTOCOL_VERSION).split(Config.VERSION_PLACEHOLDER).join(Config.VERSION);
+    let stamped = resources.split(Config.PROTOCOL_VERSION_PLACEHOLDER).join(Config.PROTOCOL_VERSION).split(Config.VERSION_PLACEHOLDER).join(Config.VERSION);
+    if (stamped.includes(Config.BUILD_PLACEHOLDER))
+      stamped = stamped.split(Config.BUILD_PLACEHOLDER).join(await BuildEvidence.fingerprintInputs(packageInfo));
     await this.writeFileAsync(resourcesPath, stamped);
   }
 

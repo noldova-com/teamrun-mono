@@ -20,6 +20,10 @@ export class TimedAttacher implements IRuntimeAttacher {
     this.report = report;
   }
 
+  public assertSameBuild(): void {
+    this.attacher.assertSameBuild();
+  }
+
   public async attach(clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient> {
     const started = Date.now();
     try {

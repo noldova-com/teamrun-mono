@@ -36,6 +36,10 @@ export class RuntimeConnection implements IRuntimeClientListener {
     return !Object.isNull(this.client) && this.client.isConnected;
   }
 
+  public assertSameBuild(): void {
+    this.attacher.assertSameBuild();
+  }
+
   public async call(request: Request): Promise<Response> {
     const client = await this.ensureClient();
     return client.call(request.method, request.payload);

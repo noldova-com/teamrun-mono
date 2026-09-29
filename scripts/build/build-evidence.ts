@@ -45,25 +45,29 @@ export default class BuildEvidence {
     }
   }
 
-  private static file(packageInfo: PackageInfo): string {
-    return path.join(BuildEvidence.DIRECTORY, `${packageInfo.name}.sha256`);
-  }
-
-  private static async fingerprint(packageInfo: PackageInfo): Promise<string> {
+  public static async fingerprintInputs(packageInfo: PackageInfo): Promise<string> {
     const inputs = createHash(BuildEvidence.ALGORITHM).update(Config.VERSION).update(Config.PROTOCOL_VERSION);
-    
+
     for (const file of [...BuildEvidence.ROOT_INPUTS, path.join(packageInfo.directory, Config.PACKAGE_MANIFEST_FILE_NAME)])
       inputs.update(await readFile(file));
     inputs.update(await BuildEvidence.tree(path.join(packageInfo.directory, Config.SOURCE_DIRECTORY_NAME)));
-    
+
     for (const predecessor of Config.PACKAGES) {
       if (predecessor.name === packageInfo.name)
         break;
       inputs.update(await readFile(path.join(Config.PACKAGES_FOLDER, predecessor.formatTarballFileName(Config.VERSION))));
     }
-    
+
+    return inputs.digest("hex");
+  }
+
+  private static file(packageInfo: PackageInfo): string {
+    return path.join(BuildEvidence.DIRECTORY, `${packageInfo.name}.sha256`);
+  }
+
+  private static async fingerprint(packageInfo: PackageInfo): Promise<string> {
     const tarball = createHash(BuildEvidence.ALGORITHM).update(await readFile(path.join(Config.PACKAGES_FOLDER, packageInfo.formatTarballFileName(Config.VERSION))));
-    return `${inputs.digest("hex")}\n${tarball.digest("hex")}\n${await BuildEvidence.tree(path.join(Config.NODE_MODULES_FOLDER, packageInfo.packageName))}\n`;
+    return `${await BuildEvidence.fingerprintInputs(packageInfo)}\n${tarball.digest("hex")}\n${await BuildEvidence.tree(path.join(Config.NODE_MODULES_FOLDER, packageInfo.packageName))}\n`;
   }
 
   private static async tree(directory: string): Promise<string> {

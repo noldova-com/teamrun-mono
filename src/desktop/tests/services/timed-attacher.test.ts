@@ -33,4 +33,20 @@ export class TimedAttacherTests {
     Assert.areEqual(1, lines.length);
     Assert.isTrue(/^TeamRun runtime not reached after \d+ ms: Error: no runtime$/.test(lines[0] ?? ""), lines[0]);
   }
+
+  @TestMethod
+  public async checksTheBuildThroughItsAttacherWithoutReporting(): Promise<void> {
+    await using host = new DesktopTestHost();
+    const lines: string[] = [];
+    const attacher = new TimedAttacher(host, line => lines.push(line));
+
+    attacher.assertSameBuild();
+    host.buildMismatch = new Error("another build");
+    const refused = Assert.throws(() => attacher.assertSameBuild(), Error);
+
+    Assert.areEqual("another build", refused.message);
+    Assert.areEqual(2, host.buildCheckCount);
+    Assert.areEqual(0, host.attachCount);
+    Assert.areEqual(0, lines.length);
+  }
 }

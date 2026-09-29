@@ -558,6 +558,12 @@ export interface IEventForwarder {
  */
 export interface IRuntimeAttacher {
   /**
+   * Checks, without connecting, that no runtime of another build holds the data directory.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   */
+  assertSameBuild(): void;
+
+  /**
    * Connects to the runtime, starting it when needed.
    * @param clientName The client name.
    * @param listener Receives events and the disconnection.
@@ -1374,9 +1380,17 @@ export declare class RuntimeConnection implements IRuntimeClientListener {
   public get isConnected(): boolean;
 
   /**
+   * Checks, without connecting, that no runtime of another build holds the data directory, so the desktop can refuse to open
+   * a window it could not serve.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   */
+  public assertSameBuild(): void;
+
+  /**
    * Sends a request, attaching first when needed. Concurrent first calls share one attachment.
    * @param request The request.
    * @returns The runtime's response.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
    * @throws LaunchException when the runtime cannot be started.
    * @throws ConnectionException when closed, when the runtime cannot be reached, or when it does not answer in time.
    */
@@ -1441,6 +1455,12 @@ export declare class TimedAttacher implements IRuntimeAttacher {
    * @param report Receives the elapsed time and error for each failed attempt; successful attempts are silent.
    */
   public constructor(attacher: IRuntimeAttacher, report: (line: string) => void);
+
+  /**
+   * Checks through the wrapped attacher, without reporting, that no runtime of another build holds the data directory.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   */
+  public assertSameBuild(): void;
 
   /**
    * Attaches silently on success; reports the elapsed time and rethrows on failure.

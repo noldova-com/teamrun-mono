@@ -68,13 +68,13 @@ Teammate names are normalized to NFC, contain 1–32 Unicode letters, decimal di
 
 One runtime owns each canonical data directory. The default location is `~/.noldova/teamrun`; an explicit data directory allows an isolated workspace. The runtime acquires exclusive ownership before opening the application database, reconciling interrupted work, cleaning up provider processes or publishing an endpoint.
 
-Ownership uses a process-held exclusive transaction in a separate SQLite ownership database. Discovery metadata is published atomically and identifies the endpoint, owner process and product/protocol versions. Do not delete the ownership database to break a live lock. Process cleanup must establish recorded ownership, not rely on a reused process id alone.
+Ownership uses a process-held exclusive transaction in a separate SQLite ownership database. Discovery metadata is published atomically and identifies the endpoint, the owner process and the program it runs from, product/protocol versions and the runtime's build. Do not delete the ownership database to break a live lock. Process cleanup must establish recorded ownership, not rely on a reused process id alone.
 
 Windows uses loopback TCP; macOS and Linux use a local Unix socket. Local clients authenticate with a per-runtime capability token held in protected discovery metadata, with appropriate filesystem permissions on each OS. Loopback binding alone is not authentication. The renderer receives neither the token nor the socket. The local endpoint is not exposed as a remote service.
 
 Connections begin with an authenticated version handshake. Subsequent framed requests are correlated with responses; events notify connected clients. The runtime client/server boundary owns framing, request size limits, deadlines, cancellation and disconnect handling. Shared protocol models define domain validation and failures under the coding standards' [wire contract](CODING-STANDARDS.md#the-wire-contract).
 
-The first client may start the runtime; later clients attach. Work may outlive the last client, and the runtime stops after its idle policy permits. Explicit shutdown cancels owned unfinished work, resolves approval waiters, flushes durable state and closes resources. Acknowledging shutdown and verifying process exit are separate requirements. Reconnection must recover from the durable record, not assume every event was received.
+The first client may start the runtime; later clients attach, but only to a runtime of their own build. While a runtime of another build holds the data directory, a client neither connects to it nor starts another; it names that runtime and how to quit it, and the desktop does so before it opens a window. Work may outlive the last client, and the runtime stops after its idle policy permits. Explicit shutdown cancels owned unfinished work, resolves approval waiters, flushes durable state and closes resources. Acknowledging shutdown and verifying process exit are separate requirements. Reconnection must recover from the durable record, not assume every event was received.
 
 The local capability protects the endpoint from unauthorized clients; it is not an OS sandbox against another program running with the same user's privileges. The desktop separately validates IPC senders and limits the operations its preload exposes.
 
@@ -175,7 +175,7 @@ Releasing content must not lose the reader's position. Geometry corrections happ
 
 ## 10. Build, installation and updates
 
-The repository is self-contained. Reviewed foundation source is built here; no sibling checkout, copied installation directory or private reference repository is a build dependency. Exact external dependency versions and lockfiles describe the install inputs. The root manifest owns product and protocol versions, and the build stamps sibling package versions consistently. Published application updates must use a version newer than the installed version.
+The repository is self-contained. Reviewed foundation source is built here; no sibling checkout, copied installation directory or private reference repository is a build dependency. Exact external dependency versions and lockfiles describe the install inputs. The root manifest owns product and protocol versions, and the build stamps sibling package versions consistently. It also stamps the runtime with the fingerprint of the inputs the runtime was compiled from, which identifies the runtime's build: the same inputs give the same build, and any change gives another. Published application updates must use a version newer than the installed version.
 
 Compile, package and install local packages through one reproducible path. Tests and the renderer consume the intended fresh installed artifacts; detect stale inputs before trusting results. Public declarations and documentation follow the coding standards' source-owned generation and migration rules.
 

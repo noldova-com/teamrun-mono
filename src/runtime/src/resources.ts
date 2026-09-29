@@ -45,9 +45,18 @@ export class Resources {
   public static readonly installationUpdating: string = "This TeamRun installation is preparing or installing an update. Try again when it finishes.";
   public static readonly installationMemberMissing: string = "A TeamRun instance is still starting or is not registered. Try again shortly.";
   public static readonly installationUpdateLost: string = "Update preparation expired or another process took ownership. The update was not installed.";
-  public static formatRuntimeProductMismatch(expected: string, actual: string): string {
-    return `TeamRun ${expected} cannot attach to runtime ${actual}. Close the other version after its work finishes, then retry.`;
+  public static formatRuntimeBuildMismatch(dataDirectory: string, runtime: string): string {
+    return `Another TeamRun, built from different code, is using this data folder:\n${dataDirectory}\n\n${runtime}\n\n` +
+      `Quit that TeamRun and try again. It stops about ${Resources.idleGrace / 1000} seconds after its last window closes and its replies finish.`;
   }
+  public static formatRuntimeProgram(executablePath: string, productVersion: string, date: string, time: string): string {
+    return `It runs from ${executablePath} (version ${productVersion}) and started on ${date} at ${time}.`;
+  }
+  public static formatRuntimeVersion(productVersion: string, date: string, time: string): string {
+    return `It is version ${productVersion} and started on ${date} at ${time}.`;
+  }
+  public static readonly runtimeStartedDateFormat: Intl.DateTimeFormatOptions = { dateStyle: "medium" };
+  public static readonly runtimeStartedTimeFormat: Intl.DateTimeFormatOptions = { timeStyle: "short" };
   public static readonly runtimePauseLeaseMilliseconds: number = 30_000;
   public static readonly runtimePauseBusy: string = "TeamRun is busy. Try preparing the update after active work finishes.";
   public static readonly runtimePaused: string = "TeamRun is preparing an update. New work is temporarily paused.";
@@ -66,6 +75,9 @@ export class Resources {
   public static readonly lockTemporarySuffix: string = ".tmp";
   public static readonly ownershipFileSuffix: string = ".sqlite";
   public static readonly acquireOwnershipStatement: string = "BEGIN EXCLUSIVE";
+  public static readonly releaseOwnershipStatement: string = "ROLLBACK";
+  public static readonly sqliteErrorCodeField: "errcode" = "errcode";
+  public static readonly sqliteBusyCode: number = 5;
   public static readonly socketFileName: string = "runtime.sock";
   public static readonly windowsPipePrefix: string = "\\\\.\\pipe\\teamrun-";
   public static readonly windowsPlatform: string = "win32";
@@ -100,6 +112,8 @@ export class Resources {
   public static readonly protocolVersionField: string = "protocolVersion";
   public static readonly productVersionField: string = "productVersion";
   public static readonly startedAtField: string = "startedAt";
+  public static readonly buildField: string = "build";
+  public static readonly executablePathField: string = "executablePath";
 
   public static readonly dataDirectoryArgument: string = "--data-dir";
   public static readonly productVersionArgument: string = "--product-version";
@@ -108,6 +122,7 @@ export class Resources {
   public static readonly noProvidersValue: string = "none";
   public static readonly stopOnInputEndArgument: string = "--stop-on-input-end";
   public static readonly defaultProductVersion: string = "0.0.0";
+  public static readonly build: string = "__BUILD__";
 
   public static readonly helloTimeout: number = 5_000;
   public static readonly callTimeout: number = 600_000;
