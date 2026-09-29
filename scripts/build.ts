@@ -133,5 +133,5 @@ export class Build extends Script {
   }
 }
 
-const build = new Build();
-await build.runAsync();
+if (import.meta.main)
+  await new Build().runAsync();
