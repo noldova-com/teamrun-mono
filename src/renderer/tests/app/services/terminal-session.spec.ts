@@ -44,6 +44,13 @@ describe("TerminalSession", () => {
     return Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString(true) ?? "").filter(t => t.length > 0);
   };
   const requests = (method: string): unknown[] => bridge.requests.filter(t => t.method === method).map(t => t.payload);
+  const panel = (area: { width: number; height: number }): HTMLElement => {
+    const element = document.body.appendChild(document.createElement("div"));
+    Object.defineProperty(element, "clientWidth", { get: () => area.width });
+    Object.defineProperty(element, "clientHeight", { get: () => area.height });
+    onTestFinished(() => element.remove());
+    return element;
+  };
 
   beforeEach(() => {
     bridge = SampleData.createBridge();
@@ -119,7 +126,10 @@ describe("TerminalSession", () => {
   });
 
   it("sends what is typed and resizes to fit its panel", () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
     session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
+    session.show(panel({ width: 800, height: 400 }), () => true);
 
     terminal.input("ls\r");
     fit.proposal = { cols: 100.4, rows: 30 };
@@ -135,6 +145,24 @@ describe("TerminalSession", () => {
     expect([terminal.cols, terminal.rows]).toEqual([100, 30]);
     expect(requests(MethodName.TerminalResize).map(t => TerminalResizeParams.fromJson(t).size.columns)).toEqual([100]);
     expect([terminal.options.fontFamily, terminal.options.fontSize, terminal.options.theme?.foreground]).toEqual(["monospace", 17, "#123456"]);
+  });
+
+  it("keeps its size while its panel has no width or height, as while the panel is hidden", () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    const area = { width: 800, height: 400 };
+    session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
+    session.show(panel(area), () => true);
+    fit.proposal = { cols: 2, rows: 5 };
+
+    area.width = 0;
+    session.fitToHost();
+    area.width = 800;
+    area.height = 0;
+    session.fitToHost();
+
+    expect([terminal.cols, terminal.rows]).toEqual([80, 24]);
+    expect(requests(MethodName.TerminalResize)).toEqual([]);
   });
 
   it("draws with WebGL once it opens, and with the DOM renderer where WebGL is unavailable or its context is lost", () => {
