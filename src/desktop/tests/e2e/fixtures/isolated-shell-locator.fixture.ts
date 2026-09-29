@@ -14,7 +14,7 @@ import { type IShellLocator, Shell, type ShellEnvironment, ShellLocator } from "
 
 export class IsolatedShellLocator implements IShellLocator {
   private static readonly HISTORY_NAME: string = "command-history";
-  private static readonly BASH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nHISTFILESIZE=1000\nHISTCONTROL=\nHISTIGNORE=\nPROMPT_COMMAND="history -a"\n`;
+  private static readonly BASH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nHISTFILESIZE=1000\nHISTCONTROL=\nHISTIGNORE=\nPROMPT_COMMAND="history -w"\n`;
   private static readonly ZSH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nSAVEHIST=1000\nsetopt INC_APPEND_HISTORY\n`;
 
   private readonly directory: string;
