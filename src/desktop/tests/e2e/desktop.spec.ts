@@ -354,8 +354,9 @@ for (const motion of ["no-preference", "reduce"] as const)
     for (let index = 0; index < 30; index++) {
       await page.locator("tr-composer textarea").fill(`Message ${index}`);
       await page.getByRole("button", { name: "Send", exact: true }).click();
-      await expect(page.locator("tr-message-list")).toContainText("Fixture reply completed.");
-      await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
+      await expect(page.locator("tr-composer textarea")).toHaveValue("");
+      await expect(page.locator("tr-message-card").last()).toContainText("Fixture reply completed.");
+      await expect(page.locator(".tr-reply-status")).toHaveCount(0);
     }
     await page.locator("tr-composer textarea").fill("Stream slowly");
     await page.getByRole("button", { name: "Send", exact: true }).click();
