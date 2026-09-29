@@ -27,6 +27,10 @@ export class IsolatedShellLocator implements IShellLocator {
     mkdirSync(directory, { recursive: true });
   }
 
+  public findAll(environment: ShellEnvironment): readonly Shell[] {
+    return [this.findDefault(environment)];
+  }
+
   public findDefault(environment: ShellEnvironment): Shell {
     const shell = this.locator.findDefault(environment);
     const name = path.basename(shell.executable).toLowerCase().replace(/\.exe$/, "");
@@ -54,7 +58,7 @@ export class IsolatedShellLocator implements IShellLocator {
         throw new Error(`UI tests cannot isolate the history of the default shell "${shell.name}".`);
     }
 
-    return new Shell(shell.name, "/usr/bin/env", [
+    return new Shell(shell.id, shell.name, shell.kind, "/usr/bin/env", [
       "-u", "BASH_ENV", "-u", "ENV", "-u", "SHELLOPTS", "-u", "BASHOPTS", "-u", "PROMPT_COMMAND",
       `HOME=${this.directory}`, `ZDOTDIR=${this.directory}`, `HISTFILE=${this.historyPath}`,
       `XDG_CONFIG_HOME=${path.join(this.directory, "config")}`, `XDG_DATA_HOME=${path.join(this.directory, "data")}`,
@@ -85,6 +89,7 @@ export class IsolatedShellLocator implements IShellLocator {
       `$env:APPDATA = '${directory}'\n$env:LOCALAPPDATA = '${directory}'\n$env:USERPROFILE = '${directory}'\n$env:HOME = '${directory}'\n` +
       `Import-Module PSReadLine\nSet-PSReadLineOption -HistorySavePath '${directory}/${IsolatedShellLocator.HISTORY_NAME}' -HistorySaveStyle SaveIncrementally\n` +
       `} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }\n`;
-    return new Shell(shell.name, shell.executable, ["-NoLogo", "-NoProfile", "-NoExit", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")]);
+    return new Shell(shell.id, shell.name, shell.kind, shell.executable,
+      ["-NoLogo", "-NoProfile", "-NoExit", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")]);
   }
 }

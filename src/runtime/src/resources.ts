@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { TerminalShellKind } from "@noldova/teamrun-protocol";
+
 export class Resources {
   public static readonly installationLinkFile: string = "installation.id";
   public static readonly installationIdPattern: RegExp = /^[a-f0-9]{64}$/;
@@ -178,6 +180,7 @@ export class Resources {
 
   public static readonly macPlatform: string = "darwin";
   public static readonly versionSeparator: string = ".";
+  public static readonly shellIdParameterName: string = "id";
   public static readonly shellNameParameterName: string = "name";
   public static readonly executableParameterName: string = "executable";
   public static readonly variableNameParameterName: string = "name";
@@ -223,19 +226,39 @@ export class Resources {
   public static readonly shellVariable: string = "SHELL";
   public static readonly defaultUnixShell: string = "/bin/sh";
   public static readonly loginShellArgument: string = "-l";
+  public static readonly listedShellsPath: string = "/etc/shells";
+  public static readonly listedShellsEncoding: BufferEncoding = "utf8";
+  public static readonly nonShellNames: readonly string[] = ["tmux", "screen", "git-shell", "nologin", "false"];
+  public static readonly unixShellKinds: ReadonlyMap<string, TerminalShellKind> = new Map([
+    ["bash", TerminalShellKind.Bash], ["zsh", TerminalShellKind.Zsh], ["fish", TerminalShellKind.Fish]
+  ]);
   public static readonly pathVariable: string = "Path";
   public static readonly windowsPathSeparator: string = ";";
   public static readonly trailingPathSeparators: RegExp = /;+$/;
   public static readonly environmentReferencePattern: RegExp = /%([^%]+)%/g;
   public static readonly programFilesVariable: string = "ProgramFiles";
+  public static readonly programFilesX86Variable: string = "ProgramFiles(x86)";
   public static readonly systemRootVariable: string = "SystemRoot";
+  public static readonly powerShellId: string = "pwsh";
   public static readonly powerShellName: string = "PowerShell";
   public static readonly powerShellExecutable: string = "pwsh.exe";
   public static readonly powerShellDirectorySegments: readonly string[] = ["PowerShell", "7"];
   public static readonly localAppDataVariable: string = "LOCALAPPDATA";
   public static readonly appAliasDirectorySegments: readonly string[] = ["Microsoft", "WindowsApps"];
+  public static readonly windowsPowerShellId: string = "windows-powershell";
   public static readonly windowsPowerShellName: string = "Windows PowerShell";
   public static readonly windowsPowerShellSegments: readonly string[] = ["System32", "WindowsPowerShell", "v1.0", "powershell.exe"];
+  public static readonly commandPromptId: string = "cmd";
+  public static readonly commandPromptName: string = "Command Prompt";
+  public static readonly commandPromptSegments: readonly string[] = ["System32", "cmd.exe"];
+  public static readonly gitBashId: string = "git-bash";
+  public static readonly gitBashName: string = "Git Bash";
+  public static readonly gitBashArguments: readonly string[] = ["--login", "-i"];
+  public static readonly gitInstallSegments: readonly string[] = ["Git"];
+  public static readonly gitUserInstallSegments: readonly string[] = ["Programs", "Git"];
+  public static readonly gitCommandFolder: string = "cmd";
+  public static readonly gitExecutable: string = "git.exe";
+  public static readonly gitBashSegments: readonly string[] = ["bin", "bash.exe"];
   public static readonly windowsEnvironmentArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
   public static readonly windowsEnvironmentMilliseconds: number = 20_000;
   public static readonly windowsEnvironmentEnd: string = "End";
@@ -271,6 +294,7 @@ export class Resources {
   public static readonly windowsEnvironmentUnreadable: string = "Windows PowerShell returned output TeamRun could not read.";
   public static readonly systemRootMissing: string = "Windows did not provide the SystemRoot variable, so TeamRun cannot find Windows PowerShell.";
   public static readonly terminalNotFound: string = "The terminal does not exist.";
+  public static readonly terminalShellNotFound: string = "The shell is not installed.";
   public static readonly terminalShellNotRunning: string = "The terminal's shell is not running. Restart the terminal to use it again.";
   public static readonly terminalProjectNotFound: string = "The project does not exist.";
   public static readonly terminalFolderMissing: string = "The terminal's folder does not exist.";

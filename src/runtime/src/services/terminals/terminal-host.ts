@@ -24,11 +24,14 @@ import {
   TerminalLinesParams,
   TerminalOpenParams,
   TerminalResizeParams,
+  TerminalShell,
   type TerminalSize
 } from "@noldova/teamrun-protocol";
 
 import type { IShellLocator } from "../../interfaces/i-shell-locator.js";
 import type { ITerminalOwner } from "../../interfaces/i-terminal-owner.js";
+import type { Shell } from "../../models/shell.js";
+import type { ShellEnvironment } from "../../models/shell-environment.js";
 import type { TerminalSettings } from "../../models/terminal-settings.js";
 import { Resources } from "../../resources.js";
 import { HostedTerminal } from "./hosted-terminal.js";
@@ -36,8 +39,8 @@ import type { TerminalEnvironment } from "./terminal-environment.js";
 
 export class TerminalHost {
   private static readonly methods: ReadonlySet<string> = new Set([
-    MethodName.TerminalList, MethodName.TerminalOpen, MethodName.TerminalInput, MethodName.TerminalResize, MethodName.TerminalRestart,
-    MethodName.TerminalClose, MethodName.TerminalScreen, MethodName.TerminalLines, MethodName.TerminalAcknowledge
+    MethodName.TerminalList, MethodName.TerminalShells, MethodName.TerminalOpen, MethodName.TerminalInput, MethodName.TerminalResize,
+    MethodName.TerminalRestart, MethodName.TerminalClose, MethodName.TerminalScreen, MethodName.TerminalLines, MethodName.TerminalAcknowledge
   ]);
   private readonly terminals: Map<string, HostedTerminal> = new Map();
   private readonly work: Set<Promise<void>> = new Set();
@@ -93,6 +96,8 @@ export class TerminalHost {
     switch (method) {
       case MethodName.TerminalList:
         return [...this.terminals.values()].filter(t => t.owner === owner).map(t => t.state.toJson());
+      case MethodName.TerminalShells:
+        return (await this.listShells()).map(t => t.toJson());
       case MethodName.TerminalOpen:
         return (await this.open(owner, TerminalOpenParams.fromJson(payload))).state.toJson();
       case MethodName.TerminalInput: {
@@ -136,7 +141,7 @@ export class TerminalHost {
     if (statSync(folder, { throwIfNoEntry: false })?.isDirectory() !== true)
       throw new ServiceException(ErrorCode.NotFound, Resources.terminalFolderMissing, [folder]);
 
-    const opening = this.start(owner, params.projectId, folder, params.size);
+    const opening = this.start(owner, params.projectId, folder, params.shellId, params.size);
     this.track(opening.then(() => undefined));
     return opening;
   }
@@ -148,12 +153,20 @@ export class TerminalHost {
     return project.rootPath;
   }
 
-  private async start(owner: ITerminalOwner, projectId: string | null, folder: string, size: TerminalSize): Promise<HostedTerminal> {
+  private async listShells(): Promise<readonly TerminalShell[]> {
+    const environment = await this.environment.create();
+    const defaultId = this.shells.findDefault(environment).id;
+    return this.shells.findAll(environment).map(t => new TerminalShell(t.id, t.name, t.kind, t.id === defaultId));
+  }
+
+  private async start(owner: ITerminalOwner, projectId: string | null, folder: string, shellId: string | null,
+    size: TerminalSize): Promise<HostedTerminal> {
     if (this.stopped)
       throw new ServiceException(ErrorCode.Unavailable, Resources.terminalsStopped);
     const environment = await this.environment.create();
+    const shell = Object.isNull(shellId) ? this.shells.findDefault(environment) : this.findShell(shellId, environment);
     const id = Guid.createVersion7().toString();
-    const terminal = HostedTerminal.start(id, owner, projectId, folder, this.shells.findDefault(environment), environment, size,
+    const terminal = HostedTerminal.start(id, owner, projectId, folder, shell, environment, size,
       join(this.directory, `${id}${Resources.terminalHistoryExtension}`), this.settings);
     if (this.stopped || owner.isClosed) {
       await terminal.close();
@@ -162,6 +175,13 @@ export class TerminalHost {
 
     this.terminals.set(id, terminal);
     return terminal;
+  }
+
+  private findShell(shellId: string, environment: ShellEnvironment): Shell {
+    const shell = this.shells.findAll(environment).find(t => t.id === shellId);
+    if (Object.isUndefined(shell))
+      throw new ServiceException(ErrorCode.NotFound, Resources.terminalShellNotFound, [shellId]);
+    return shell;
   }
 
   private find(owner: ITerminalOwner, terminalId: string): HostedTerminal {

@@ -92,7 +92,7 @@ export class TerminalsService {
   public async open(groupId: number | null = null): Promise<void> {
     const projectId = this.store.selectedProject()?.id ?? null;
     await this.perform(async () => {
-      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, this.nextSize()).toJson());
+      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, null, this.nextSize()).toJson());
       const session = await this.attach(TerminalState.fromJson(opened));
       session.requestFocus();
       this.place(new Panel(PanelKind.Terminal, session.id), groupId);
