@@ -48,7 +48,7 @@ jobs:
           has_summary=false
           has_testing=false
           fence_pattern='^ {0,3}(`{3,}|~{3,})(.*)$'
-          issue_pattern='^issue:[[:blank:]]*#([1-9][0-9]*)[[:blank:]]*$'
+          issue_pattern='^(issue|close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)(:[[:blank:]]*|[[:blank:]]+)#([1-9][0-9]*)[[:blank:]]*$'
           heading_pattern='^ {0,3}(#{1,6})([[:blank:]]|$)'
           section_pattern='^ {0,3}##[[:blank:]]+(summary|testing)([[:blank:]]+#+)?[[:blank:]]*$'
           while IFS= read -r line; do
@@ -71,7 +71,7 @@ jobs:
               continue
             elif [[ -z "$fence" && ${line,,} =~ $issue_pattern ]]; then
               if [[ -z "$issue_number" ]]; then
-                issue_number=${BASH_REMATCH[1]}
+                issue_number=${BASH_REMATCH[3]}
               fi
               continue
             fi
@@ -85,7 +85,7 @@ jobs:
           done <<< "$body"
 
           if [[ -z "$issue_number" ]]; then
-            echo '::error::Add a standalone Issue: #123 line naming a tracking issue in this repository. Add Closes: #123 separately only when completing it.'
+            echo '::error::Add a standalone Issue #123, Issue: #123, or GitHub closing reference such as Closes #123, Fixes #123 or Resolves #123 naming an issue in this repository.'
             exit 1
           fi
 
