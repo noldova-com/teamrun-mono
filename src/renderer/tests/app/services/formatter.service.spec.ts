@@ -118,6 +118,14 @@ describe("Formatter", () => {
     expect(Resources.formatSteps(3)).toBe("3 steps");
   });
 
+  it("labels a reply waiting for its turn without a duration", () => {
+    const pending = reply([], MessageStatus.Pending);
+
+    expect(formatter().isWaitingForTurn(pending)).toBe(true);
+    expect(formatter().isWaitingForTurn(reply([], MessageStatus.Running))).toBe(false);
+    expect(formatter().activityLabel(pending, Date.parse(SampleData.timestamp) + 12_000)).toBe("Waiting for its turn");
+  });
+
   it("renders times through the preferred formats", () => {
     const iso = new Date(2026, 8, 10, 13, 5, 0).toISOString();
     expect(formatter().time(iso)).toBe("13:05");
