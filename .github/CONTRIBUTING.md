@@ -88,7 +88,7 @@ Development launches prepare a TeamRun-branded copy of Electron in `_build/elect
 
 Linux runtime startup requires `/bin/bash` and `/proc`, including when launching from source. See the [runtime launch boundary](../docs/ARCHITECTURE.md#4-runtime-ownership-and-local-protocol).
 
-Development launches keep their data in `~/.noldova/teamrun-dev`, apart from the installed TeamRun's `~/.noldova/teamrun`. To use another folder, set `TEAMRUN_DATA_DIR` before launching:
+Development launches keep their data in `~/.noldova/teamrun-dev-<checkout>`, where `<checkout>` is the name of the folder that holds `package.json`, such as `teamrun-dev-main` or `teamrun-dev-claude_1`. Each checkout therefore has its own data and runtime, apart from the other checkouts and the installed TeamRun's `~/.noldova/teamrun`. To use another folder, set `TEAMRUN_DATA_DIR` before launching:
 
 ```bash
 TEAMRUN_DATA_DIR=_build/dev-data npm run desktop
