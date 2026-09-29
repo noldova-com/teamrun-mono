@@ -135,6 +135,19 @@ describe("ActivityBlockComponent", () => {
       expect(element.querySelector("pre")?.textContent).toBe("Body line one\nBody line two");
     });
 
+    it("draws each step of a thought within its frame", () => {
+      const fixture = create([thought("Drawn without waiting for the next render")]);
+      const seen: string[] = [];
+
+      for (let frame = 0; frame < 300; frame++) {
+        vi.advanceTimersToNextFrame();
+        seen.push(titles(fixture)[0]!);
+      }
+
+      expect(new Set(seen).size).toBeGreaterThan(10);
+      expect(seen.at(-1)).toBe("Drawn without waiting for the next render");
+    });
+
     it("does not animate steps that are not thoughts", () => {
       const fixture = create([new ActivityEntry(detail(0, DetailKind.Command, "> npm test"), null)]);
 

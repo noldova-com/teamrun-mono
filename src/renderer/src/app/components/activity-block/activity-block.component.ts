@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ChangeDetectionStrategy, Component, DestroyRef, type OnInit, type WritableSignal, effect, inject, input, signal } from "@angular/core";
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, type OnInit, type WritableSignal, effect, inject, input, signal } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 
@@ -30,6 +30,7 @@ import { MotionPreference } from "../../services/motion-preference.service";
 })
 export class ActivityBlockComponent implements OnInit {
   private readonly motion: MotionPreference = inject(MotionPreference);
+  private readonly changeDetector: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly reveals: Map<number, TextReveal> = new Map();
   private readonly texts: Map<number, GraphemeText> = new Map();
   private readonly frame: WritableSignal<number> = signal(0);
@@ -119,7 +120,7 @@ export class ActivityBlockComponent implements OnInit {
       this.texts.set(detail.sequence, text);
       let reveal = this.reveals.get(detail.sequence);
       if (Object.isUndefined(reveal)) {
-        reveal = new TextReveal(streaming && !this.initial.has(detail.sequence) ? 0 : text.count, () => this.frame.update(t => t + 1));
+        reveal = new TextReveal(streaming && !this.initial.has(detail.sequence) ? 0 : text.count, () => this.advance());
         this.reveals.set(detail.sequence, reveal);
       }
       reveal.follow(text.count, !streaming, motionAllowed && (streaming || reveal.count < text.count));
@@ -131,6 +132,11 @@ export class ActivityBlockComponent implements OnInit {
         this.texts.delete(sequence);
       }
     this.frame.update(t => t + 1);
+  }
+
+  private advance(): void {
+    this.frame.update(t => t + 1);
+    this.changeDetector.detectChanges();
   }
 
   private static toggled(current: ReadonlySet<number>, sequence: number): ReadonlySet<number> {

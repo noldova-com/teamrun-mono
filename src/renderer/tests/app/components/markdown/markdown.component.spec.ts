@@ -196,6 +196,20 @@ describe("MarkdownComponent", () => {
       expect(root.querySelectorAll("table td")).toHaveLength(2);
     });
 
+    it("draws each step of the reveal within its frame, including blocks it reaches", () => {
+      const fixture = create("First paragraph.\n\nSecond paragraph.");
+      const root = fixture.nativeElement as HTMLElement;
+      const seen: string[] = [];
+
+      for (let frame = 0; frame < 300; frame++) {
+        vi.advanceTimersToNextFrame();
+        seen.push(visible(root));
+      }
+
+      expect(seen.at(-1)).toBe("First paragraph.Second paragraph.");
+      expect(seen.find(t => t.length > "First paragraph.".length)).toMatch(/^First paragraph\.S/);
+    });
+
     it("waits at the start of an unfinished construct until it closes", () => {
       const fixture = create("Hello **bo");
       const root = fixture.nativeElement as HTMLElement;

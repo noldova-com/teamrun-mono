@@ -221,6 +221,54 @@ describe("MessageListComponent", () => {
     }
   });
 
+  it("stops observing the cards that leave the window before its measurement returns", async () => {
+    const stub = { measure: (_entries: readonly ResizeObserverEntry[]): void => { } };
+    const observed = new Set<Element>();
+    class ResizeObserverStub {
+      public constructor(callback: (entries: readonly ResizeObserverEntry[]) => void) { stub.measure = callback; }
+      public observe(element: Element): void { observed.add(element); }
+      public unobserve(element: Element): void { observed.delete(element); }
+      public disconnect(): void { observed.clear(); }
+    }
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
+    try {
+      const many = Array.from({ length: 60 }, (_, i) => new Message(`n${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
+        [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
+      const bridge = SampleData.createBridge().answer(MethodName.MessageList, () => many.map(t => t.toJson())).answer(MethodName.ApprovalList, () => []);
+      TestBed.configureTestingModule({ imports: [MessageListComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+      const store = TestBed.inject(ChatStore);
+      const fixture = TestBed.createComponent(MessageListComponent);
+      const element = fixture.nativeElement as HTMLElement;
+      const scroller = element.querySelector<HTMLElement>("div")!;
+      let top = 0;
+      Object.defineProperty(scroller, "scrollTop", { get: () => top, set: (value: number) => { top = value; }, configurable: true });
+      metrics(scroller, 7200, 300);
+      fixture.detectChanges();
+      await store.initialize();
+      await store.selectConversation("c1");
+      await fixture.whenStable();
+      fixture.detectChanges();
+      await new Promise(resolve => queueMicrotask(() => resolve(undefined)));
+      fixture.detectChanges();
+      fixture.detectChanges();
+      const before = Array.from(element.querySelectorAll("[data-message-id]"));
+      expect(before.length).toBeGreaterThan(2);
+      expect(before.every(t => observed.has(t))).toBe(true);
+
+      metrics(scroller, 8580, 300);
+      stub.measure([{
+        target: element.querySelector("[data-message-id='n59']")!, borderBoxSize: [{ blockSize: 1500, inlineSize: 500 }], contentRect: { height: 1500 }
+      } as unknown as ResizeObserverEntry]);
+
+      expect(before.filter(t => !t.isConnected).length).toBeGreaterThan(0);
+      expect(Array.from(observed).filter(t => !t.isConnected)).toEqual([]);
+      fixture.detectChanges();
+      expect(Array.from(element.querySelectorAll("[data-message-id]")).every(t => observed.has(t))).toBe(true);
+    } finally {
+      delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+    }
+  });
+
   it("reports where the reader is and goes back there when the tab returns", async () => {
     const many = Array.from({ length: 60 }, (_, i) => new Message(`n${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
       [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
