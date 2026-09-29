@@ -15,7 +15,6 @@ import type { ServiceResponseInfo } from "@noldova/teamrun-foundation-services";
 import type {
   Event,
   IRequestDispatcher,
-  Project,
   ProtocolVersion,
   Request,
   Response,
@@ -1557,7 +1556,7 @@ export declare class Resources {
    */
   public static readonly terminalProjectNotFound: string;
   /**
-   * Message for opening a terminal in a project whose folder is missing.
+   * Message for opening a terminal whose folder, the project's or the home folder, is missing.
    */
   public static readonly terminalFolderMissing: string;
   /**
@@ -2731,7 +2730,8 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
    * Starts a shell in a new terminal.
    * @param id The terminal id.
    * @param owner The connection the terminal belongs to.
-   * @param project The project whose folder the shell starts in.
+   * @param projectId The id of the project whose folder the shell starts in, or `null` when it starts in the home folder.
+   * @param folder The folder the shell starts in.
    * @param shell The shell.
    * @param environment The shell's environment.
    * @param size The terminal's size.
@@ -2743,7 +2743,8 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
   public static start(
     id: string,
     owner: ITerminalOwner,
-    project: Project,
+    projectId: string | null,
+    folder: string,
     shell: Shell,
     environment: ShellEnvironment,
     size: TerminalSize,
@@ -2832,12 +2833,14 @@ export declare class TerminalHost {
   /**
    * Initializes the host.
    * @param projects Finds the project a terminal opens in.
+   * @param home The person's home folder, where a terminal without a project opens.
    * @param directory The folder for the stored lines.
    * @param shells Finds the shell a new terminal starts.
    * @param environment Builds each shell's environment.
    * @param settings The platform's terminal settings.
    */
-  public constructor(projects: IProjectsService, directory: string, shells: IShellLocator, environment: TerminalEnvironment, settings: TerminalSettings);
+  public constructor(projects: IProjectsService, home: string, directory: string, shells: IShellLocator, environment: TerminalEnvironment,
+    settings: TerminalSettings);
 
   /**
    * Empties the folder for stored lines, removing what a runtime that did not stop cleanly left behind.

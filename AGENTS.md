@@ -23,7 +23,7 @@ Several agents can work at once, each in its own lane: a Git worktree beside the
 - Start each issue with `git fetch --prune origin` and `git switch -c rr/<purpose> origin/main`.
 - After your PR merges, confirm that the squash commit matches your branch and check the `main` pipeline run for that merge. Then run `git switch --detach origin/main` and delete the merged branch.
 - Repository-wide Git settings, adding or removing worktrees, and Git maintenance such as `gc`, `prune` or `worktree repair` require the user's approval, because they affect every lane.
-- Run `npm run desktop` with `TEAMRUN_DATA_DIR` set to `~/.noldova/teamrun-dev-<lane>`.
+- Keep your development data apart from every other lane: `npm run desktop` uses `~/.noldova/teamrun-dev-<lane>` by default, as [CONTRIBUTING.md](.github/CONTRIBUTING.md#run-the-desktop-and-ui-checks) describes. Never point `TEAMRUN_DATA_DIR` at another lane's folder or the main checkout's.
 - Run the full UI suite only when no other lane is running it.
 
 ## Documents

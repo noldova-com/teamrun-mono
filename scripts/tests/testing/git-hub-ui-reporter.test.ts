@@ -133,6 +133,35 @@ class GitHubUiReporterTests {
       assert.match(summary, /&#91;truncated&#93;/);
       assert.ok(!summary.includes("\u001b"));
     });
+
+    test("names the steps still running when a worker crashes or a test times out", () => {
+      using fixture = new UiReporterFixture();
+      fixture.run(`
+        test('passes', async () => { await test.step('finished step', async () => {}); });
+        test('fails', async () => { await test.step('failing step', async () => { throw new Error('failure'); }); });
+        test('crashes', async () => {
+          await test.step('open terminal', async () => {});
+          await test.step('close terminal', async () => {
+            await test.step('click close', async () => { process.kill(process.pid, 'SIGKILL'); });
+          });
+        });
+        test('times out', async () => { await test.step('waits forever', () => new Promise(() => {})); });
+      `);
+      assert.equal(fixture.status, 1);
+      assert.match(fixture.summary, /worker process exited unexpectedly/);
+      const steps = fixture.summary.split("Steps still running when failed tests ended")[1] ?? "";
+      assert.match(steps, /- fixture\.spec\.cjs › crashes › close terminal › click close \(started \d+\.\d\d s into the test\)/);
+      assert.match(steps, /- fixture\.spec\.cjs › times out › waits forever \(started \d+\.\d\d s into the test\)/);
+      assert.doesNotMatch(steps, /open terminal|failing step|finished step|passes/);
+    });
+
+    test("bounds the unfinished steps it lists", () => {
+      using fixture = new UiReporterFixture();
+      fixture.run("test('waits in parallel', () => Promise.all(Array.from({ length: 11 }, (_, index) => test.step('wait ' + index, () => new Promise(() => {})))));");
+      assert.equal(fixture.status, 1);
+      assert.equal(fixture.summary.match(/^- fixture\.spec\.cjs › waits in parallel › wait \d+ /gm)?.length, 10);
+      assert.match(fixture.summary, /Showing 10 of 11 unfinished steps/);
+    });
   }
 }
 

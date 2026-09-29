@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { release } from "node:os";
 
 import type { JsonValue } from "@noldova/teamrun-foundation-json";
@@ -79,6 +79,25 @@ export class TerminalHostTests {
   }
 
   @TestMethod
+  public async opensATerminalWithoutAProjectInTheHomeFolder(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const host = TerminalHostTests.createHost(directory);
+    const owner = new RecordingTerminalOwner();
+    try {
+      const opened = TerminalState.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalOpen,
+        new TerminalOpenParams(null, new TerminalSize(120, 5)).toJson()));
+      await Wait.until(() => owner.output.includes("ready"));
+      await TerminalHostTests.succeed(host, owner, MethodName.TerminalInput, new TerminalInputParams(opened.id, "cwd\r").toJson());
+      await Wait.until(() => owner.output.toLowerCase().includes("home-folder"));
+
+      Assert.isNull(opened.projectId);
+    }
+    finally {
+      await host.shutdown();
+    }
+  }
+
+  @TestMethod
   public async keepsEachTerminalToItsOwnConnection(): Promise<void> {
     using directory = new TemporaryDirectory();
     const host = TerminalHostTests.createHost(directory);
@@ -109,12 +128,15 @@ export class TerminalHostTests {
     const unknown = await host.dispatch(owner, new Request("a", MethodName.TerminalOpen, new TerminalOpenParams("nope", new TerminalSize(80, 24)).toJson()));
     const missing = await host.dispatch(owner, new Request("b", MethodName.TerminalOpen, new TerminalOpenParams("gone", new TerminalSize(80, 24)).toJson()));
     const invalid = await host.dispatch(owner, new Request("c", MethodName.TerminalOpen, { projectId: "project-1", size: { columns: 0, rows: 5 } }));
+    rmSync(directory.resolve("home-folder"), { recursive: true });
+    const homeless = await host.dispatch(owner, new Request("f", MethodName.TerminalOpen, new TerminalOpenParams(null, new TerminalSize(80, 24)).toJson()));
     const method = await host.dispatch(owner, new Request("d", "TerminalExplode", null));
     const absent = await host.dispatch(owner, new Request("e", MethodName.TerminalScreen, new TerminalIdParams("absent").toJson()));
 
     Assert.areEqual(ErrorCode.NotFound, unknown.info?.name);
     Assert.areEqual(ErrorCode.NotFound, missing.info?.name);
     Assert.areEqual(ErrorCode.InvalidParams, invalid.info?.name);
+    Assert.areEqual(ErrorCode.NotFound, homeless.info?.name);
     Assert.areEqual(ErrorCode.UnknownMethod, method.info?.name);
     Assert.areEqual(ErrorCode.NotFound, absent.info?.name);
     Assert.isTrue(host.handles(MethodName.TerminalLines));
@@ -176,12 +198,14 @@ export class TerminalHostTests {
 
   private static createHost(directory: TemporaryDirectory): TerminalHost {
     mkdirSync(directory.resolve("project"), { recursive: true });
+    mkdirSync(directory.resolve("home-folder"), { recursive: true });
     const projects = new FixtureProjects([
       new Project("project-1", "Project", directory.resolve("project"), "2026-09-28T00:00:00.000Z"),
       new Project("gone", "Gone", directory.resolve("gone"), "2026-09-28T00:00:00.000Z")
     ]);
     const environment = new TerminalEnvironment(process.platform, process.env, null, "en-US");
-    const host = new TerminalHost(projects, directory.resolve("terminals"), new FixtureShell(), environment, TerminalSettings.forPlatform(process.platform, release()));
+    const host = new TerminalHost(projects, directory.resolve("home-folder"), directory.resolve("terminals"), new FixtureShell(), environment,
+      TerminalSettings.forPlatform(process.platform, release()));
     host.prepare();
     return host;
   }

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/teamrun-foundation-core";
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
 import { JsonReader, type JsonObject } from "@noldova/teamrun-foundation-json";
 
@@ -13,11 +14,12 @@ import { Resources } from "../../resources.js";
 import { TerminalSize } from "../terminal-size.js";
 
 export class TerminalOpenParams {
-  public readonly projectId: string;
+  public readonly projectId: string | null;
   public readonly size: TerminalSize;
 
-  public constructor(projectId: string, size: TerminalSize) {
-    ArgumentException.throwIfNullOrWhitespace(projectId, Resources.projectIdField);
+  public constructor(projectId: string | null, size: TerminalSize) {
+    if (!Object.isNull(projectId))
+      ArgumentException.throwIfNullOrWhitespace(projectId, Resources.projectIdField);
 
     this.projectId = projectId;
     this.size = size;
@@ -26,7 +28,7 @@ export class TerminalOpenParams {
   public static fromJson(value: unknown, path?: string): TerminalOpenParams {
     const reader = JsonReader.fromValue(value, path);
     const size = reader.readObject(Resources.sizeField);
-    return new TerminalOpenParams(reader.readNonBlankString(Resources.projectIdField), TerminalSize.fromJson(size.toJson(), size.path));
+    return new TerminalOpenParams(reader.readNullableString(Resources.projectIdField), TerminalSize.fromJson(size.toJson(), size.path));
   }
 
   public toJson(): JsonObject {

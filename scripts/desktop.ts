@@ -19,7 +19,8 @@ export default class Desktop {
   private static readonly RENDERER: string = "_build/renderer/browser/index.html";
   private static readonly PREPARE_OPTION: string = "--prepare-only";
   private static readonly DATA_DIRECTORY_VARIABLE: string = "TEAMRUN_DATA_DIR";
-  private static readonly DATA_DIRECTORY_SEGMENTS: readonly string[] = [".noldova", "teamrun-dev"];
+  private static readonly DATA_DIRECTORY_PARENT: string = ".noldova";
+  private static readonly DATA_DIRECTORY_PREFIX: string = "teamrun-dev-";
 
   public async runAsync(): Promise<void> {
     await BuildEvidence.requireCurrent();
@@ -30,7 +31,8 @@ export default class Desktop {
 
     const environment = { ...process.env };
     delete environment["ELECTRON_RUN_AS_NODE"];
-    environment[Desktop.DATA_DIRECTORY_VARIABLE] ??= path.join(homedir(), ...Desktop.DATA_DIRECTORY_SEGMENTS);
+    environment[Desktop.DATA_DIRECTORY_VARIABLE] ??=
+      path.join(homedir(), Desktop.DATA_DIRECTORY_PARENT, `${Desktop.DATA_DIRECTORY_PREFIX}${path.basename(process.cwd())}`);
     const child = spawn(executable, [path.resolve(Desktop.MAIN), ...process.argv.slice(2)], { cwd: process.cwd(), env: environment, stdio: "inherit" });
     await new Promise<void>((resolve, reject) => {
       child.once("error", reject);

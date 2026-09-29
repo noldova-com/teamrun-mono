@@ -6,9 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { homedir } from "node:os";
+
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DesktopFixture } from "./fixtures/desktop.fixture.ts";
+import { FixtureProvider } from "./fixtures/fixture-provider.fixture.ts";
 
 let desktop: DesktopFixture;
 
@@ -40,6 +43,33 @@ async function dragTab(page: Page, panel: string, over: Locator, target: () => L
   await expect(page.locator(".tr-drop-preview")).toBeVisible();
   await page.mouse.up();
   await expect(page.locator(".tr-dock-guide")).toHaveCount(0);
+}
+
+async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thought: string[] }> {
+  const sampling = page.evaluate(() => new Promise<{ answer: string[]; thought: string[] }>(resolve => {
+    const answer: string[] = [];
+    const thought: string[] = [];
+    let started = false;
+    let quiet = 0;
+    const sample = (): void => {
+      const card = Array.from(document.querySelectorAll<HTMLElement>("tr-message-card")).at(-1);
+      const active = document.querySelector(".tr-reply-status") !== null;
+      started ||= active;
+      if (started) {
+        answer.push(card?.querySelector<HTMLElement>("tr-markdown")?.innerText ?? "");
+        thought.push(card?.querySelector<HTMLElement>("tr-activity-block li button span")?.innerText ?? "");
+      }
+      quiet = started && !active ? quiet + 1 : 0;
+      if (quiet > 90)
+        resolve({ answer, thought });
+      else
+        requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }));
+  await page.locator("tr-composer textarea").fill("Stream slowly");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  return sampling;
 }
 
 test("captures the full renderer viewport when the native window starts smaller", async () => {
@@ -163,7 +193,7 @@ test("arranges panels in every region by dragging and from the tab menu, and res
   await expect(page.locator("tr-tab-group:not([data-side])")).toHaveCount(0);
 });
 
-test("opens a terminal in the default shell, runs a command, hides and shows it, finds it again after a reload, and closes it", async () => {
+test("opens the default shell with disposable history, preserves output through hiding and reload, restarts, and closes it", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).click();
   await page.keyboard.press("Control+Shift+Backquote");
@@ -194,6 +224,17 @@ test("opens a terminal in the default shell, runs a command, hides and shows it,
   await page.keyboard.type("echo teamrun-after-reload");
   await page.keyboard.press("Enter");
   await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-after-reload[\s\S]*teamrun-after-reload/);
+  await desktop.expectShellHistory("echo teamrun-terminal-check", "echo teamrun-after-reload");
+
+  await page.keyboard.type("exit");
+  await page.keyboard.press("Enter");
+  await terminal.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(terminal.getByRole("button", { name: "Restart", exact: true })).toHaveCount(0);
+  await terminal.locator(".xterm-screen").click();
+  await page.keyboard.type("echo teamrun-after-restart");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-after-restart[\s\S]*teamrun-after-restart/);
+  await desktop.expectShellHistory("echo teamrun-terminal-check", "echo teamrun-after-reload", "echo teamrun-after-restart");
 
   await page.locator("tr-tab-group[data-side='Bottom'] .tr-tab[data-panel^='Terminal:'] .tr-tab-close").click();
   await expect(page.locator(".tr-tab[data-panel^='Terminal:']")).toHaveCount(0);
@@ -240,6 +281,23 @@ test("retains terminal output after a narrow resize, widening and a window reloa
   await desktop.scrollTerminalToStart();
   await expect(terminal.locator(".xterm-rows")).toContainText(repeated);
   await desktop.capture("terminal-after-resize-reload");
+});
+
+test("opens a terminal in the home folder when no project is selected", async () => {
+  const page = desktop.page;
+  const project = page.locator("tr-sidebar div").filter({ has: page.getByRole("button", { name: "project", exact: true }) }).last();
+  await project.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Forget project" }).click();
+  await page.getByRole("button", { name: "Forget", exact: true }).click();
+  await expect(page.locator("tr-sidebar").getByText("Open a folder to start.")).toBeVisible();
+
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await page.keyboard.type("pwd");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(homedir(), { timeout: 60_000 });
+  await expect(terminal.locator(".xterm-rows")).not.toContainText("teamrun-ui-");
 });
 
 test("quits when a window with a pending state save is destroyed", async () => {
@@ -298,3 +356,53 @@ test("keeps Settings reachable at enlarged zoom and presents provider and teamma
   await expect(page.getByRole("button", { name: "Add teammate", exact: true })).toBeInViewport();
   await desktop.capture("settings-at-200-percent");
 });
+
+test("reveals a streamed reply in small steps and never shows Markdown symbols", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const { answer, thought } = await sampleStreamedReply(page);
+  const symbols = ["**", "`", "](", "|", "```"];
+
+  expect(new Set(answer).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedAnswer).length * 2);
+  expect(new Set(thought).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedThought).length * 2);
+  expect(answer.filter(t => symbols.some(u => t.includes(u)))).toEqual([]);
+  expect(answer.every((t, index) => index === 0 || t.trimEnd().startsWith(answer[index - 1]!.trimEnd()))).toBe(true);
+  expect(answer.at(-1)).toContain("Here is bold text, some inline code and a link.");
+  expect(answer.at(-1)).toContain("let x = 1;");
+  expect(answer.at(-1)).toContain("All done, with a last sentence that takes a moment.");
+  expect(thought.filter(t => t.length > 0).at(-1)).toBe(FixtureProvider.streamedThought);
+  await expect(page.locator("tr-message-card").last().locator("[aria-live]")).toHaveCount(0);
+  await desktop.capture("streamed-reply");
+});
+
+test("shows a streamed reply as it arrives when reduced motion is preferred", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const { answer, thought } = await sampleStreamedReply(page);
+
+  expect(new Set(answer).size).toBeLessThanOrEqual(FixtureProvider.batches(FixtureProvider.streamedAnswer).length + 3);
+  expect(new Set(thought).size).toBeLessThanOrEqual(FixtureProvider.batches(FixtureProvider.streamedThought).length + 3);
+  expect(answer.filter(t => ["**", "`", "](", "|", "```"].some(u => t.includes(u)))).toEqual([]);
+  expect(answer.at(-1)).toContain("All done, with a last sentence that takes a moment.");
+});
+
+for (const motion of ["no-preference", "reduce"] as const)
+  test(`grows replies in a long conversation without renderer errors (${motion})`, async () => {
+    const page = desktop.page;
+    await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+    await page.emulateMedia({ reducedMotion: motion });
+    for (let index = 0; index < 30; index++) {
+      await page.locator("tr-composer textarea").fill(`Message ${index}`);
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(page.locator("tr-composer textarea")).toHaveValue("");
+      await expect(page.locator("tr-message-card").last()).toContainText("Fixture reply completed.");
+      await expect(page.locator(".tr-reply-status")).toHaveCount(0);
+    }
+    await page.locator("tr-composer textarea").fill("Stream slowly");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(page.locator("tr-message-list")).toContainText("All done, with a last sentence that takes a moment.", { timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
+    await expect(page.locator("tr-composer textarea")).toBeEnabled();
+  });

@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { _electron, type CDPSession, type ElectronApplication, expect, type Page, type TestInfo } from "@playwright/test";
+import { _electron, type CDPSession, type ElectronApplication, expect, type Page, test, type TestInfo } from "@playwright/test";
 import { ProviderRegistry } from "@noldova/teamrun-core";
 import { Resources } from "@noldova/teamrun-desktop";
 import { ConversationCreateParams, MethodName, Project, ProjectOpenParams, Request, Response, TerminalState } from "@noldova/teamrun-protocol";
@@ -21,6 +21,7 @@ import { ProcessInspector, ProcessProbe, ProcessRegistry, RuntimeClient, Runtime
 import DevelopmentBinary from "../../../../../scripts/desktop/development-binary.ts";
 import type { ITeamRunBridge } from "../../../../renderer/src/app/interfaces/i-teamrun-bridge.ts";
 import { FixtureProvider } from "./fixture-provider.fixture.ts";
+import { IsolatedShellLocator } from "./isolated-shell-locator.fixture.ts";
 
 export class DesktopFixture {
   private static readonly VIEWPORT_WIDTH: number = 1920;
@@ -36,6 +37,7 @@ export class DesktopFixture {
   private readonly logs: WriteStream[] = [];
   private directory: string | null = null;
   private runtime: RuntimeService | null = null;
+  private shells: IsolatedShellLocator | null = null;
   private application: ElectronApplication | null = null;
   private window: Page | null = null;
   private captureSession: CDPSession | null = null;
@@ -62,7 +64,8 @@ export class DesktopFixture {
     const processes = new ProcessRegistry(settings.processesPath, process.pid, new ProcessProbe(), ProcessInspector.fromPlatform(process.platform));
     const providers = new ProviderRegistry();
     providers.register(this.provider);
-    this.runtime = new RuntimeService(settings, providers, processes);
+    this.shells = new IsolatedShellLocator(path.join(this.directory, "shell's profile $literal"));
+    this.runtime = new RuntimeService(settings, providers, processes, null, this.shells);
     await this.runtime.start();
     const lock = this.runtime.lock;
     if (!lock)
@@ -198,14 +201,20 @@ export class DesktopFixture {
     await this.application.evaluate(({ BrowserWindow }, zoom) => BrowserWindow.getAllWindows()[0]?.webContents.setZoomFactor(zoom), factor);
   }
 
+  public async expectShellHistory(...commands: readonly string[]): Promise<void> {
+    if (!this.shells)
+      throw new Error("The fixture shells are not available.");
+    await this.shells.expectHistory(...commands);
+  }
+
   public async dispose(): Promise<void> {
     try {
       if (this.info.status !== this.info.expectedStatus && this.window && !this.window.isClosed())
         await this.capture("failure").catch(error => this.errors.push(String(error)));
-      await this.closeWindow();
+      await test.step("Close the TeamRun window", () => this.closeWindow());
     }
     finally {
-      await this.runtime?.stop("UI fixture finished");
+      await test.step("Stop the runtime", async () => await this.runtime?.stop("UI fixture finished"));
       for (const log of this.logs)
         await new Promise<void>(resolve => log.end(resolve));
       if (this.directory)
@@ -320,8 +329,11 @@ export class DesktopFixture {
     try {
       if (this.tracing && this.window && !this.window.isClosed()) {
         const trace = this.info.outputPath(`desktop-${this.launches}.zip`);
-        await this.window.context().tracing.stop({ path: trace });
-        await this.info.attach(`trace-${this.launches}`, { path: trace, contentType: "application/zip" });
+        const window = this.window;
+        await test.step("Save the trace", async () => {
+          await window.context().tracing.stop({ path: trace });
+          await this.info.attach(`trace-${this.launches}`, { path: trace, contentType: "application/zip" });
+        });
       }
     }
     catch (error) {

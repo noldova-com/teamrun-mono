@@ -7,7 +7,7 @@
  */
 
 import { existsSync, rmSync } from "node:fs";
-import { release } from "node:os";
+import { homedir, release } from "node:os";
 
 import { Guid } from "@noldova/teamrun-foundation-core";
 import {
@@ -155,7 +155,7 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
     this.engine = engine;
     engine.reconcile();
     const dispatcher = new RequestDispatcher(providers, accounts, projects, conversations, messages, approvals, engine, teammates, events);
-    const terminals = new TerminalHost(projects, this.settings.terminalsPath, this.shells,
+    const terminals = new TerminalHost(projects, homedir(), this.settings.terminalsPath, this.shells,
       TerminalEnvironment.forPlatform(process.platform, process.env, Intl.DateTimeFormat().resolvedOptions().locale),
       TerminalSettings.forPlatform(process.platform, release()));
     terminals.prepare();

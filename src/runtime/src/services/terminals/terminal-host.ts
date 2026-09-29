@@ -16,7 +16,6 @@ import { type IProjectsService, RequestDispatcher } from "@noldova/teamrun-core"
 import {
   ErrorCode,
   MethodName,
-  type Project,
   type Request,
   Response,
   TerminalAcknowledgeParams,
@@ -43,14 +42,17 @@ export class TerminalHost {
   private readonly terminals: Map<string, HostedTerminal> = new Map();
   private readonly work: Set<Promise<void>> = new Set();
   private readonly projects: IProjectsService;
+  private readonly home: string;
   private readonly directory: string;
   private readonly shells: IShellLocator;
   private readonly environment: TerminalEnvironment;
   private readonly settings: TerminalSettings;
   private stopped: boolean = false;
 
-  public constructor(projects: IProjectsService, directory: string, shells: IShellLocator, environment: TerminalEnvironment, settings: TerminalSettings) {
+  public constructor(projects: IProjectsService, home: string, directory: string, shells: IShellLocator, environment: TerminalEnvironment,
+    settings: TerminalSettings) {
     this.projects = projects;
+    this.home = home;
     this.directory = directory;
     this.shells = shells;
     this.environment = environment;
@@ -130,23 +132,28 @@ export class TerminalHost {
   }
 
   private async open(owner: ITerminalOwner, params: TerminalOpenParams): Promise<HostedTerminal> {
-    const project = this.projects.find(params.projectId);
-    if (Object.isNull(project))
-      throw new ServiceException(ErrorCode.NotFound, Resources.terminalProjectNotFound, [params.projectId]);
-    if (statSync(project.rootPath, { throwIfNoEntry: false })?.isDirectory() !== true)
-      throw new ServiceException(ErrorCode.NotFound, Resources.terminalFolderMissing, [params.projectId]);
+    const folder = Object.isNull(params.projectId) ? this.home : this.projectFolder(params.projectId);
+    if (statSync(folder, { throwIfNoEntry: false })?.isDirectory() !== true)
+      throw new ServiceException(ErrorCode.NotFound, Resources.terminalFolderMissing, [folder]);
 
-    const opening = this.start(owner, project, params.size);
+    const opening = this.start(owner, params.projectId, folder, params.size);
     this.track(opening.then(() => undefined));
     return opening;
   }
 
-  private async start(owner: ITerminalOwner, project: Project, size: TerminalSize): Promise<HostedTerminal> {
+  private projectFolder(projectId: string): string {
+    const project = this.projects.find(projectId);
+    if (Object.isNull(project))
+      throw new ServiceException(ErrorCode.NotFound, Resources.terminalProjectNotFound, [projectId]);
+    return project.rootPath;
+  }
+
+  private async start(owner: ITerminalOwner, projectId: string | null, folder: string, size: TerminalSize): Promise<HostedTerminal> {
     if (this.stopped)
       throw new ServiceException(ErrorCode.Unavailable, Resources.terminalsStopped);
     const environment = await this.environment.create();
     const id = Guid.createVersion7().toString();
-    const terminal = HostedTerminal.start(id, owner, project, this.shells.findDefault(environment), environment, size,
+    const terminal = HostedTerminal.start(id, owner, projectId, folder, this.shells.findDefault(environment), environment, size,
       join(this.directory, `${id}${Resources.terminalHistoryExtension}`), this.settings);
     if (this.stopped || owner.isClosed) {
       await terminal.close();

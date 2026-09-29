@@ -4860,9 +4860,9 @@ export declare class TerminalState {
    */
   public readonly id: string;
   /**
-   * The id of the `Project` whose folder the shell started in.
+   * The id of the `Project` whose folder the shell started in, or `null` when it started in the person's home folder.
    */
-  public readonly projectId: string;
+  public readonly projectId: string | null;
   /**
    * The shell's display name, such as `PowerShell` or `zsh`.
    */
@@ -4898,7 +4898,8 @@ export declare class TerminalState {
   /**
    * Initializes the state.
    * @param id The terminal id; must not be blank.
-   * @param projectId The id of the `Project` whose folder the shell started in; must not be blank.
+   * @param projectId The id of the `Project` whose folder the shell started in, or `null` for the home folder; a given id
+   * must not be blank.
    * @param shell The shell's display name; must not be blank.
    * @param conptyBuild The Windows build that runs the shell, a positive integer, or `null` outside Windows.
    * @param size The terminal's size.
@@ -4912,7 +4913,7 @@ export declare class TerminalState {
    */
   public constructor(
     id: string,
-    projectId: string,
+    projectId: string | null,
     shell: string,
     conptyBuild: number | null,
     size: TerminalSize,
@@ -4923,8 +4924,8 @@ export declare class TerminalState {
 
   /**
    * Reads the state from untrusted JSON.
-   * @param value The untrusted value, expected to carry `id`, `projectId`, `shell`, the nullable `conptyBuild`, `size`,
-   * the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
+   * @param value The untrusted value, expected to carry `id`, the nullable `projectId`, `shell`, the nullable
+   * `conptyBuild`, `size`, the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The state.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
@@ -5047,9 +5048,9 @@ export declare class TerminalLine {
  */
 export declare class TerminalOpenParams {
   /**
-   * The id of the `Project` whose folder the shell starts in.
+   * The id of the `Project` whose folder the shell starts in, or `null` to start it in the person's home folder.
    */
-  public readonly projectId: string;
+  public readonly projectId: string | null;
   /**
    * The terminal's starting size.
    */
@@ -5057,15 +5058,15 @@ export declare class TerminalOpenParams {
 
   /**
    * Initializes the parameters.
-   * @param projectId The `Project` id; must not be blank.
+   * @param projectId The `Project` id, or `null` for the home folder; a given id must not be blank.
    * @param size The terminal's starting size.
    * @throws ArgumentException when `projectId` is blank.
    */
-  public constructor(projectId: string, size: TerminalSize);
+  public constructor(projectId: string | null, size: TerminalSize);
 
   /**
    * Reads the parameters from untrusted JSON.
-   * @param value The untrusted value, expected to carry `projectId` and `size`.
+   * @param value The untrusted value, expected to carry the nullable `projectId` and `size`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The parameters.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.

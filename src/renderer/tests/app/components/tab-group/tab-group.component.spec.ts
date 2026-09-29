@@ -154,7 +154,7 @@ describe("TabGroupComponent", () => {
     expect(tabs().map(t => t.dataset["panel"])).toEqual(["Activity", "Terminal:terminal-1"]);
   });
 
-  it("offers a new terminal in a group that holds terminals once a project is selected", async () => {
+  it("offers a new terminal in a group that holds terminals, also without a selected project", async () => {
     MemoryStorage.install(window);
     const terminalWindow = TerminalWindow.install();
     onTestFinished(() => terminalWindow.restore());
@@ -178,9 +178,7 @@ describe("TabGroupComponent", () => {
     expect(button()).toBeNull();
     layout.openPanel(new Panel(PanelKind.Terminal, "t1"));
     render(new Panel(PanelKind.Terminal, "t1"));
-    expect(button()?.disabled).toBe(true);
-    await TestBed.inject(ChatStore).initialize();
-    fixture.detectChanges();
+    expect(button()?.disabled).toBe(false);
     button()!.click();
     await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9"]));
   });

@@ -57,6 +57,14 @@ export class TerminalStateTests {
   }
 
   @TestMethod
+  public hasNoProjectInTheHomeFolder(): void {
+    const value = TerminalState.fromJson({ ...TerminalStateTests.json, projectId: null });
+
+    Assert.isNull(value.projectId);
+    Assert.isNull(value.toJson()["projectId"]);
+  }
+
+  @TestMethod
   public rejectsInvalidArguments(): void {
     const size = new TerminalSize(80, 24);
     const stored = new TerminalLineRange(0, 0);

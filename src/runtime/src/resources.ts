@@ -273,7 +273,7 @@ export class Resources {
   public static readonly terminalNotFound: string = "The terminal does not exist.";
   public static readonly terminalShellNotRunning: string = "The terminal's shell is not running. Restart the terminal to use it again.";
   public static readonly terminalProjectNotFound: string = "The project does not exist.";
-  public static readonly terminalFolderMissing: string = "The project's folder does not exist.";
+  public static readonly terminalFolderMissing: string = "The terminal's folder does not exist.";
   public static readonly terminalsStopped: string = "TeamRun is closing its terminals, so no terminal can start now.";
   public static readonly storedLinesFailed: string = "The terminal's stored lines could not be written.";
   public static readonly storedLinesDamaged: string = "The terminal's stored lines are damaged.";
