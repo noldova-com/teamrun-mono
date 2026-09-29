@@ -208,7 +208,7 @@ test("opens a terminal in the home folder when no project is selected", async ()
   await project.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Forget project" }).click();
   await page.getByRole("button", { name: "Forget", exact: true }).click();
-  await expect(page.getByRole("button", { name: "project", exact: true })).toHaveCount(0);
+  await expect(page.locator("tr-sidebar").getByText("Open a folder to start.")).toBeVisible();
 
   await page.keyboard.press("Control+Shift+Backquote");
   const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
@@ -216,6 +216,7 @@ test("opens a terminal in the home folder when no project is selected", async ()
   await page.keyboard.type("pwd");
   await page.keyboard.press("Enter");
   await expect(terminal.locator(".xterm-rows")).toContainText(homedir(), { timeout: 60_000 });
+  await expect(terminal.locator(".xterm-rows")).not.toContainText("teamrun-ui-");
 });
 
 test("quits when a window with a pending state save is destroyed", async () => {
