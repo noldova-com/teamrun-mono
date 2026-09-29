@@ -130,6 +130,9 @@ export class TerminalSession {
   }
 
   public fitToHost(): void {
+    const host = this.terminal.element?.parentElement;
+    if (Object.isNullOrUndefined(host) || host.clientWidth === 0 || host.clientHeight === 0)
+      return;
     const proposed = this.fit.proposeDimensions();
     if (Object.isUndefined(proposed) || !Number.isFinite(proposed.cols) || !Number.isFinite(proposed.rows))
       return;
