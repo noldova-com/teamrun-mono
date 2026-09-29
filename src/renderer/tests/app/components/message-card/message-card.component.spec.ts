@@ -90,6 +90,37 @@ describe("MessageCardComponent", () => {
     expect(element.textContent).toContain("I am checking the project.");
   });
 
+  it("shows a reply waiting for its turn without a timer, and times it from the moment it starts", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    try {
+      vi.setSystemTime(Date.parse(SampleData.timestamp) + 3_000);
+      TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+      const fixture = TestBed.createComponent(MessageCardComponent);
+      const pending = SampleData.withStatus(SampleData.reply, MessageStatus.Pending);
+      fixture.componentRef.setInput("message", pending);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+      const status = (): string => element.querySelector(".tr-reply-status")?.textContent ?? "";
+
+      expect(status()).toContain("Waiting for its turn");
+      expect(status()).not.toContain("Working for");
+      expect(element.querySelector("header")?.textContent).toContain("Pending");
+      vi.advanceTimersByTime(5_000);
+      fixture.detectChanges();
+      expect(status()).toContain("Waiting for its turn");
+
+      fixture.componentRef.setInput("message", SampleData.withStatus(pending, MessageStatus.Running));
+      fixture.detectChanges();
+      expect(status()).toContain("Working for 8s");
+      vi.advanceTimersByTime(2_000);
+      fixture.detectChanges();
+      expect(status()).toContain("Working for 10s");
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps completion timing for a reply with no tool activity, without an empty activity toggle", () => {
     TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
     const fixture = TestBed.createComponent(MessageCardComponent);

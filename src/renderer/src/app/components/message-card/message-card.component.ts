@@ -76,6 +76,7 @@ export class MessageCardComponent {
   private readonly dialog: MatDialog = inject(MatDialog);
   private readonly drafts: DraftService = inject(DraftService);
   private readonly now: WritableSignal<number> = signal(Date.now());
+  private readonly isTimed: Signal<boolean> = computed(() => this.isActive() && !this.formatter.isWaitingForTurn(this.message()));
   private readonly localControls = new MessageControlState();
   private readonly readyImages = signal<ReadonlySet<string | number>>(new Set());
   protected readonly state = computed(() => this.controls() ?? this.localControls);
@@ -115,8 +116,9 @@ export class MessageCardComponent {
         window.clearTimeout(this.copiedTimer);
     });
     effect(onCleanup => {
-      if (!this.isActive())
+      if (!this.isTimed())
         return;
+      this.now.set(Date.now());
       const timer = setInterval(() => this.now.set(Date.now()), Resources.clockIntervalMilliseconds);
       onCleanup(() => clearInterval(timer));
     });

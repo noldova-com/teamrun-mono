@@ -104,6 +104,10 @@ export class Formatter {
     return message.status === MessageStatus.Pending || message.status === MessageStatus.Running || message.status === MessageStatus.AwaitingApproval;
   }
 
+  public isWaitingForTurn(message: Message): boolean {
+    return message.status === MessageStatus.Pending;
+  }
+
   public isAnswer(detail: MessageDetail): boolean {
     return detail.kind === DetailKind.Text || detail.kind === DetailKind.Error;
   }
@@ -239,6 +243,8 @@ export class Formatter {
   }
 
   public activityLabel(message: Message, now: number): string {
+    if (this.isWaitingForTurn(message))
+      return Resources.waitingForTurnLabel;
     const duration = this.duration(message, now);
     return this.isActive(message) ? Resources.formatWorkingFor(duration) : Resources.formatWorkedFor(duration);
   }
