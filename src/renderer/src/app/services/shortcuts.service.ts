@@ -149,8 +149,6 @@ export class ShortcutsService {
       case ShortcutAction.ToggleTerminal:
         return this.terminals.toggle() || this.perform(ShortcutAction.FocusComposer);
       case ShortcutAction.NewTerminal:
-        if (!this.terminals.canOpen())
-          return false;
         void this.terminals.open();
         return true;
       case ShortcutAction.CloseDocument:

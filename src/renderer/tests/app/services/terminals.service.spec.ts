@@ -98,22 +98,22 @@ describe("TerminalsService", () => {
     expect(terminals.sessionOf(explorer)).toBeNull();
   });
 
-  it("opens nothing without a selected project and reports a terminal that cannot open", async () => {
+  it("opens a terminal in the home folder without a selected project and reports a terminal that cannot open", async () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const terminals = TestBed.inject(TerminalsService);
+    onTestFinished(() => terminals.stop());
 
-    expect(terminals.canOpen()).toBe(false);
     await terminals.open();
-    expect(requests(MethodName.TerminalOpen)).toEqual([]);
+    expect(terminals.sessions().size).toBe(1);
 
     await TestBed.inject(ChatStore).initialize();
-    bridge.fail(MethodName.TerminalOpen, ErrorCode.NotFound, "The project's folder does not exist.");
-    expect(terminals.canOpen()).toBe(true);
+    bridge.fail(MethodName.TerminalOpen, ErrorCode.NotFound, "The terminal's folder does not exist.");
     await terminals.open();
-    expect(terminals.error()).toBe("The project's folder does not exist.");
+    expect(requests(MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t).projectId)).toEqual([null, SampleData.project.id]);
+    expect(terminals.error()).toBe("The terminal's folder does not exist.");
     terminals.dismissError();
     expect(terminals.error()).toBeNull();
-    expect(terminals.sessions().size).toBe(0);
+    expect(terminals.sessions().size).toBe(1);
   });
 
   it("gives each terminal its own events and ends a terminal whose tab closes", async () => {

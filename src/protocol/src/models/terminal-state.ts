@@ -16,7 +16,7 @@ import { TerminalSize } from "./terminal-size.js";
 
 export class TerminalState {
   public readonly id: string;
-  public readonly projectId: string;
+  public readonly projectId: string | null;
   public readonly shell: string;
   public readonly conptyBuild: number | null;
   public readonly size: TerminalSize;
@@ -27,7 +27,7 @@ export class TerminalState {
 
   public constructor(
     id: string,
-    projectId: string,
+    projectId: string | null,
     shell: string,
     conptyBuild: number | null,
     size: TerminalSize,
@@ -36,7 +36,8 @@ export class TerminalState {
     sequence: number,
     stored: TerminalLineRange) {
     ArgumentException.throwIfNullOrWhitespace(id, Resources.idField);
-    ArgumentException.throwIfNullOrWhitespace(projectId, Resources.projectIdField);
+    if (!Object.isNull(projectId))
+      ArgumentException.throwIfNullOrWhitespace(projectId, Resources.projectIdField);
     ArgumentException.throwIfNullOrWhitespace(shell, Resources.shellField);
     if (!Object.isNull(conptyBuild) && (!Number.isInteger(conptyBuild) || conptyBuild < 1))
       throw new ArgumentOutOfRangeException(Resources.conptyBuildField, conptyBuild);
@@ -64,7 +65,7 @@ export class TerminalState {
     const stored = reader.readObject(Resources.storedField);
     return new TerminalState(
       reader.readNonBlankString(Resources.idField),
-      reader.readNonBlankString(Resources.projectIdField),
+      reader.readNullableString(Resources.projectIdField),
       reader.readNonBlankString(Resources.shellField),
       reader.readNullableInteger(Resources.conptyBuildField),
       TerminalSize.fromJson(size.toJson(), size.path),

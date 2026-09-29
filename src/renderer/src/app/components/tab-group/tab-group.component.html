@@ -32,7 +32,7 @@ LICENSE file in the root directory of this source tree.
     <div class="tr-tabs-actions">
       @if (holdsTerminals()) {
         <button mat-icon-button class="tr-small-icon-button tr-terminal-new" [matTooltip]="resources.newTerminalLabel"
-          [attr.aria-label]="resources.newTerminalLabel" [disabled]="!terminals.canOpen()" (click)="terminals.open(group().id)">
+          [attr.aria-label]="resources.newTerminalLabel" (click)="terminals.open(group().id)">
           <mat-icon>{{ resources.icons["add"] }}</mat-icon>
         </button>
       }

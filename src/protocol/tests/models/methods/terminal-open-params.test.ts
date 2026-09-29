@@ -26,6 +26,15 @@ export class TerminalOpenParamsTests {
   }
 
   @TestMethod
+  public opensInTheHomeFolderWithoutAProject(): void {
+    const json = { projectId: null, size: { columns: 80, rows: 24 } };
+    const value = TerminalOpenParams.fromJson(json);
+
+    Assert.isNull(value.projectId);
+    Assert.areEqual(JSON.stringify(json), JSON.stringify(value.toJson()));
+  }
+
+  @TestMethod
   public rejectsInvalidArguments(): void {
     Assert.areEqual("projectId", Assert.throws(() => new TerminalOpenParams(" ", new TerminalSize(80, 24)), ArgumentException).parameterName);
   }

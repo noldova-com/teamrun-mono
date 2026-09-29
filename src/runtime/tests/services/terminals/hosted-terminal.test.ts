@@ -11,7 +11,7 @@ import { release } from "node:os";
 
 import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { ErrorCode, Project, TerminalSize } from "@noldova/teamrun-protocol";
+import { ErrorCode, TerminalSize } from "@noldova/teamrun-protocol";
 import { HostedTerminal, PseudoTerminal, type ShellEnvironment, TerminalSettings } from "@noldova/teamrun-runtime";
 
 import { FakePty } from "../../fixtures/fake-pty.fixture.js";
@@ -284,8 +284,7 @@ export class HostedTerminalTests {
   }
 
   private static start(owner: RecordingTerminalOwner, directory: TemporaryDirectory, environment: ShellEnvironment, settings: TerminalSettings): HostedTerminal {
-    const project = new Project("project-1", "Fixture", directory.path, new Date().toISOString());
-    return HostedTerminal.start("terminal-1", owner, project, FixtureShell.create(), environment, new TerminalSize(200, 5),
+    return HostedTerminal.start("terminal-1", owner, "project-1", directory.path, FixtureShell.create(), environment, new TerminalSize(200, 5),
       directory.resolve("terminal.jsonl"), settings);
   }
 

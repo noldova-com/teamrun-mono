@@ -12,7 +12,6 @@ import {
   ErrorCode,
   Event,
   EventName,
-  type Project,
   type TerminalLinePage,
   TerminalOutputPayload,
   TerminalScreen,
@@ -31,7 +30,8 @@ import { TerminalEmulator } from "./terminal-emulator.js";
 import { TerminalHistory } from "./terminal-history.js";
 
 export class HostedTerminal implements IPseudoTerminalListener {
-  private readonly project: Project;
+  private readonly projectId: string | null;
+  private readonly folder: string;
   private readonly shell: Shell;
   private readonly settings: TerminalSettings;
   private readonly history: TerminalHistory;
@@ -51,10 +51,12 @@ export class HostedTerminal implements IPseudoTerminalListener {
   public readonly id: string;
   public readonly owner: ITerminalOwner;
 
-  private constructor(id: string, owner: ITerminalOwner, project: Project, shell: Shell, size: TerminalSize, historyPath: string, settings: TerminalSettings) {
+  private constructor(id: string, owner: ITerminalOwner, projectId: string | null, folder: string, shell: Shell, size: TerminalSize,
+    historyPath: string, settings: TerminalSettings) {
     this.id = id;
     this.owner = owner;
-    this.project = project;
+    this.projectId = projectId;
+    this.folder = folder;
     this.shell = shell;
     this.settings = settings;
     this.history = new TerminalHistory(historyPath, () => this.updateFlow());
@@ -65,19 +67,20 @@ export class HostedTerminal implements IPseudoTerminalListener {
   public static start(
     id: string,
     owner: ITerminalOwner,
-    project: Project,
+    projectId: string | null,
+    folder: string,
     shell: Shell,
     environment: ShellEnvironment,
     size: TerminalSize,
     historyPath: string,
     settings: TerminalSettings): HostedTerminal {
-    const terminal = new HostedTerminal(id, owner, project, shell, size, historyPath, settings);
+    const terminal = new HostedTerminal(id, owner, projectId, folder, shell, size, historyPath, settings);
     terminal.pty = terminal.launch(environment);
     return terminal;
   }
 
   public get state(): TerminalState {
-    return new TerminalState(this.id, this.project.id, this.shell.name, this.settings.windowsBuild, this.emulator.size, this.exitCode, this.restartCount,
+    return new TerminalState(this.id, this.projectId, this.shell.name, this.settings.windowsBuild, this.emulator.size, this.exitCode, this.restartCount,
       this.sequence, this.history.stored);
   }
 
@@ -156,7 +159,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
   }
 
   private launch(environment: ShellEnvironment): PseudoTerminal {
-    return PseudoTerminal.start(this.shell, this.project.rootPath, environment, this.size, this, this.settings.forceSignal, this.settings.endMilliseconds);
+    return PseudoTerminal.start(this.shell, this.folder, environment, this.size, this, this.settings.forceSignal, this.settings.endMilliseconds);
   }
 
   private async startAgain(environment: ShellEnvironment): Promise<void> {

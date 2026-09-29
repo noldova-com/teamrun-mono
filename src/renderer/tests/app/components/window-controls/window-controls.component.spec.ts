@@ -83,7 +83,7 @@ describe("WindowControlsComponent", () => {
     expect(label()).toBe("Update 0.0.5 ready to install");
   });
 
-  it("lists each panel that opens once with its shortcut, then New terminal, which needs a selected project", async () => {
+  it("lists each panel that opens once with its shortcut, then New terminal, available also without a selected project", async () => {
     MemoryStorage.install(window);
     TestBed.configureTestingModule({ imports: [WindowControlsComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
     TestBed.inject(LayoutService).openPanel(new Panel(PanelKind.Terminal, "terminal-1"));
@@ -102,6 +102,6 @@ describe("WindowControlsComponent", () => {
       ["Activity", shortcuts.keysOf(ShortcutAction.ToggleActivity)],
       ["New terminal", shortcuts.keysOf(ShortcutAction.NewTerminal)]
     ]);
-    expect(items[3]?.disabled).toBe(true);
+    expect(items[3]?.disabled).toBe(false);
   });
 });
