@@ -45,7 +45,7 @@ export class MessageListComponent {
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private ledger: HeightLedger = new HeightLedger([], new Map(), Resources.messageHeightEstimate);
   private observer: ResizeObserver | null = null;
-  private readonly observed: Set<Element> = new Set();
+  private readonly observed: Set<HTMLElement> = new Set();
   private lastTop: number = 0;
   private lastGap: number = 0;
   private conversationId: string | null = null;
@@ -103,7 +103,7 @@ export class MessageListComponent {
   private observeCards(): void {
     if (Object.isNull(this.observer))
       return;
-    const cards = new Set(this.content().nativeElement.querySelectorAll(Resources.messageCardSelector));
+    const cards = new Set(this.content().nativeElement.querySelectorAll<HTMLElement>(Resources.messageCardSelector));
     for (const element of this.observed)
       if (!cards.has(element)) {
         this.observer.unobserve(element);
@@ -177,15 +177,25 @@ export class MessageListComponent {
     }
     const changed = this.updateRange(Math.max(0, this.ledger.total - element.clientHeight - this.lastGap));
     if (changed)
-      this.changeDetector.detectChanges();
+      this.renderWindow();
     this.keepDistance();
   }
 
   private moveTo(desired: number): void {
     if (this.updateRange(desired))
-      this.changeDetector.detectChanges();
+      this.renderWindow();
     if (desired !== this.scroller().nativeElement.scrollTop)
       this.setScrollTop(desired);
+  }
+
+  private renderWindow(): void {
+    const staying = new Set(this.shown().map(t => t.id));
+    for (const element of this.observed)
+      if (!staying.has(element.dataset[Resources.messageIdDataKey] ?? String.empty)) {
+        this.observer?.unobserve(element);
+        this.observed.delete(element);
+      }
+    this.changeDetector.detectChanges();
   }
 
   private keepDistance(): void {

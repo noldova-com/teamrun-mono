@@ -326,3 +326,21 @@ test("shows a streamed reply as it arrives when reduced motion is preferred", as
   expect(answer.filter(t => ["**", "`", "](", "|", "```"].some(u => t.includes(u)))).toEqual([]);
   expect(answer.at(-1)).toContain("All done, with a last sentence that takes a moment.");
 });
+
+for (const motion of ["no-preference", "reduce"] as const)
+  test(`grows replies in a long conversation without renderer errors (${motion})`, async () => {
+    const page = desktop.page;
+    await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
+    await page.emulateMedia({ reducedMotion: motion });
+    for (let index = 0; index < 30; index++) {
+      await page.locator("tr-composer textarea").fill(`Message ${index}`);
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(page.locator("tr-message-list")).toContainText("Fixture reply completed.");
+      await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
+    }
+    await page.locator("tr-composer textarea").fill("Stream slowly");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(page.locator("tr-message-list")).toContainText("All done, with a last sentence that takes a moment.", { timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
+    await expect(page.locator("tr-composer textarea")).toBeEnabled();
+  });

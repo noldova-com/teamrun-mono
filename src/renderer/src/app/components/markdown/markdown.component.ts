@@ -7,7 +7,8 @@
  */
 
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, type Signal, type WritableSignal, afterRenderEffect, computed, inject, input, output, signal, viewChildren
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, type Signal, type WritableSignal, afterRenderEffect, computed, inject,
+  input, output, signal, viewChildren
 } from "@angular/core";
 
 import "@noldova/teamrun-foundation-core";
@@ -30,6 +31,7 @@ import { MotionPreference } from "../../services/motion-preference.service";
 export class MarkdownComponent {
   private readonly element: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly motion: MotionPreference = inject(MotionPreference);
+  private readonly changeDetector: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly wrapped: Set<number> = new Set();
   private readonly wrappers = viewChildren<ElementRef<HTMLElement>>("block");
   private readonly shown: WritableSignal<number> = signal(Number.POSITIVE_INFINITY);
@@ -105,6 +107,7 @@ export class MarkdownComponent {
 
   private advance(count: number): void {
     this.setLimit(count);
+    this.changeDetector.detectChanges();
     this.applyReveal();
   }
 
