@@ -163,7 +163,7 @@ test("arranges panels in every region by dragging and from the tab menu, and res
   await expect(page.locator("tr-tab-group:not([data-side])")).toHaveCount(0);
 });
 
-test("opens a terminal in the default shell, runs a command, hides and shows it, finds it again after a reload, and closes it", async () => {
+test("opens the default shell with disposable history, preserves output through hiding and reload, restarts, and closes it", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).click();
   await page.keyboard.press("Control+Shift+Backquote");
@@ -194,6 +194,17 @@ test("opens a terminal in the default shell, runs a command, hides and shows it,
   await page.keyboard.type("echo teamrun-after-reload");
   await page.keyboard.press("Enter");
   await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-after-reload[\s\S]*teamrun-after-reload/);
+  await desktop.expectShellHistory("echo teamrun-terminal-check", "echo teamrun-after-reload");
+
+  await page.keyboard.type("exit");
+  await page.keyboard.press("Enter");
+  await terminal.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(terminal.getByRole("button", { name: "Restart", exact: true })).toHaveCount(0);
+  await terminal.locator(".xterm-screen").click();
+  await page.keyboard.type("echo teamrun-after-restart");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-after-restart[\s\S]*teamrun-after-restart/);
+  await desktop.expectShellHistory("echo teamrun-terminal-check", "echo teamrun-after-reload", "echo teamrun-after-restart");
 
   await page.locator("tr-tab-group[data-side='Bottom'] .tr-tab[data-panel^='Terminal:'] .tr-tab-close").click();
   await expect(page.locator(".tr-tab[data-panel^='Terminal:']")).toHaveCount(0);

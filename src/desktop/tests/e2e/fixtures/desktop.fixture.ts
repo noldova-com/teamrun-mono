@@ -20,6 +20,7 @@ import { ProcessInspector, ProcessProbe, ProcessRegistry, RuntimeClient, Runtime
 
 import DevelopmentBinary from "../../../../../scripts/desktop/development-binary.ts";
 import { FixtureProvider } from "./fixture-provider.fixture.ts";
+import { IsolatedShellLocator } from "./isolated-shell-locator.fixture.ts";
 
 export class DesktopFixture {
   private static readonly VIEWPORT_WIDTH: number = 1920;
@@ -35,6 +36,7 @@ export class DesktopFixture {
   private readonly logs: WriteStream[] = [];
   private directory: string | null = null;
   private runtime: RuntimeService | null = null;
+  private shells: IsolatedShellLocator | null = null;
   private application: ElectronApplication | null = null;
   private window: Page | null = null;
   private captureSession: CDPSession | null = null;
@@ -61,7 +63,8 @@ export class DesktopFixture {
     const processes = new ProcessRegistry(settings.processesPath, process.pid, new ProcessProbe(), ProcessInspector.fromPlatform(process.platform));
     const providers = new ProviderRegistry();
     providers.register(this.provider);
-    this.runtime = new RuntimeService(settings, providers, processes);
+    this.shells = new IsolatedShellLocator(path.join(this.directory, "shell's profile $literal"));
+    this.runtime = new RuntimeService(settings, providers, processes, null, this.shells);
     await this.runtime.start();
     const lock = this.runtime.lock;
     if (!lock)
@@ -149,6 +152,12 @@ export class DesktopFixture {
     if (!this.application)
       throw new Error("The fixture application is not running.");
     await this.application.evaluate(({ BrowserWindow }, zoom) => BrowserWindow.getAllWindows()[0]?.webContents.setZoomFactor(zoom), factor);
+  }
+
+  public async expectShellHistory(...commands: readonly string[]): Promise<void> {
+    if (!this.shells)
+      throw new Error("The fixture shells are not available.");
+    await this.shells.expectHistory(...commands);
   }
 
   public async dispose(): Promise<void> {
