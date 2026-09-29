@@ -157,9 +157,20 @@ Use the [PR template](PULL_REQUEST_TEMPLATE.md). Fill `## Summary` with what cha
 
 Keep the change small enough to review coherently. Include before/after screenshots for visual changes when useful, using disposable data. Commit messages describe the concrete change.
 
-AI-assisted contributions are welcome. Explain material AI involvement and how you reviewed and verified the result. The contributor remains responsible for correctness, security and licensing; no authorship label is required. Keep discussion constructive and address findings on their merits.
-
 An authorized human reviews and merges changes after the applicable requirements are met. A passing check does not authorize a release or establish that behavior outside the check's scope works.
+
+### AI-assisted changes
+
+Explain material AI involvement and how you reviewed and verified the result. The contributor remains responsible for correctness, security and licensing. Keep discussion constructive and address findings on their merits.
+
+Credit each AI agent that contributed to the changes included in a commit, using its verified GitHub co-author identity. Include all contributing agents. For example:
+
+```text
+Co-authored-by: Claude <noreply@anthropic.com>
+Co-authored-by: Codex <noreply@openai.com>
+```
+
+Keep the human contributor as the primary author. Preserve all applicable co-author trailers when squashing commits; do not credit an agent merely because it created the commit or opened the PR.
 
 ## Verification
 
