@@ -15,24 +15,25 @@ import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.j
 @TestClass
 export class TerminalEmulatorTests {
   @TestMethod
-  public async storesEveryLineThatLeavesTheScreenInOrder(): Promise<void> {
+  public async storesOlderLinesInOrderAndKeepsRecentRowsForReload(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     let text = "";
-    for (let index = 1; index <= 600; index++)
+    for (let index = 1; index <= 2600; index++)
       text += `line ${index}\r\n`;
 
     await TerminalEmulatorTests.write(emulator, text);
     const first = await history.read(0, 500);
-    const second = await history.read(500, 500);
+    const second = await history.read(1500, 500);
     const screen = emulator.screen();
 
-    Assert.areEqual(596, history.stored.end);
+    Assert.areEqual(1596, history.stored.end);
     Assert.areEqual("line 1,line 500", `${first.lines[0]?.text},${first.lines[499]?.text}`);
-    Assert.areEqual("line 501,line 596", `${second.lines[0]?.text},${second.lines[95]?.text}`);
-    Assert.isTrue(screen.includes("line 600"));
-    Assert.isFalse(screen.includes("line 596"));
+    Assert.areEqual("line 1501,line 1596", `${second.lines[0]?.text},${second.lines[95]?.text}`);
+    Assert.isTrue(screen.includes("line 1597"));
+    Assert.isTrue(screen.includes("line 2600"));
+    Assert.isFalse(screen.includes("line 1596"));
     await history.close();
   }
 
@@ -42,15 +43,18 @@ export class TerminalEmulatorTests {
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
 
-    for (const [clearing, expected] of [["\u001b[3J", "c,d,e,f"], ["\u001b[?3J", "c,d,e,f"], ["\u001bc", "e,f"]]) {
-      await TerminalEmulatorTests.write(emulator, "a\r\nb\r\nc\r\nd\r\n");
+    for (const clearing of ["\u001b[3J", "\u001b[?3J", "\u001bc"]) {
+      await TerminalEmulatorTests.write(emulator, "old-row\r\n".repeat(1200) + "clear-a\r\nclear-b\r\nclear-c\r\nclear-d\r\n");
       Assert.isTrue(history.stored.end > history.stored.start);
-      await TerminalEmulatorTests.write(emulator, `${clearing}e\r\nf\r\ng\r\nh\r\n`);
+      await TerminalEmulatorTests.write(emulator, `${clearing}clear-e\r\nclear-f\r\nclear-g\r\nclear-h\r\n`);
       const page = await history.read(0, 10);
-      Assert.areEqual(expected, page.lines.map(t => t.text).join(","));
+      Assert.areEqual(0, page.lines.length);
+      Assert.isFalse(emulator.screen().includes("old-row"));
+      Assert.areEqual(clearing !== "\u001bc", emulator.screen().includes("clear-c"));
+      Assert.isTrue(emulator.screen().includes("clear-e"));
     }
     await TerminalEmulatorTests.write(emulator, "\u001b[2J\u001b[1J\u001b[4J");
-    Assert.areEqual(2, (await history.read(0, 10)).lines.length);
+    Assert.areEqual(0, (await history.read(0, 10)).lines.length);
     await history.close();
   }
 
@@ -73,7 +77,7 @@ export class TerminalEmulatorTests {
   }
 
   @TestMethod
-  public async storesTheLinesAResizePushesOffAndNeverBringsThemBack(): Promise<void> {
+  public async keepsRecentRowsWhenTheScreenShrinksAndGrows(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
@@ -86,10 +90,11 @@ export class TerminalEmulatorTests {
     emulator.resize(new TerminalSize(20, 6));
     const grown = await history.read(0, 10);
 
-    Assert.areEqual("a1,a2", shrunk.lines.map(t => t.text).join(","));
-    Assert.areEqual("a1,a2", grown.lines.map(t => t.text).join(","));
+    Assert.areEqual(0, shrunk.lines.length);
+    Assert.areEqual(0, grown.lines.length);
     Assert.areEqual("20x6", `${emulator.size.columns}x${emulator.size.rows}`);
-    Assert.isTrue(emulator.screen().includes("a3"));
+    Assert.isTrue(emulator.screen().includes("a1"));
+    Assert.isTrue(emulator.screen().includes("a5"));
     await history.close();
   }
 
@@ -104,6 +109,19 @@ export class TerminalEmulatorTests {
     const page = await history.read(0, 10);
 
     Assert.areEqual("x,y,z", page.lines.map(t => t.text).join(","));
+    await history.close();
+  }
+
+  @TestMethod
+  public async storesTheInitialBlankCursorRowBeforeTheFirstWrite(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
+
+    emulator.storeScreen();
+
+    Assert.areEqual(1, history.stored.end);
+    Assert.areEqual("", (await history.read(0, 1)).lines[0]?.text);
     await history.close();
   }
 
@@ -147,10 +165,114 @@ export class TerminalEmulatorTests {
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 26200, () => undefined);
     await TerminalEmulatorTests.write(emulator, "PS C:\\project> ");
 
-    emulator.resize(new TerminalSize(8, 5));
+    emulator.resize(new TerminalSize(2, 5));
     emulator.resize(new TerminalSize(20, 5));
 
     Assert.isTrue(emulator.screen().includes("PS C:\\project>"));
+    await history.close();
+  }
+
+  @TestMethod
+  public async restoresTheSameOutputAfterNarrowingWideningAndReloading(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    for (const windowsBuild of [null, 26200]) {
+      const history = new TerminalHistory(directory.resolve(`before-${windowsBuild}.jsonl`), () => undefined);
+      const restoredHistory = new TerminalHistory(directory.resolve(`after-${windowsBuild}.jsonl`), () => undefined);
+      using emulator = new TerminalEmulator(new TerminalSize(80, 5), history, windowsBuild, () => undefined);
+      using restored = new TerminalEmulator(new TerminalSize(80, 5), restoredHistory, windowsBuild, () => undefined);
+      await TerminalEmulatorTests.write(emulator, "\u001b[31mred-output-with-a-long-line\u001b[0m\r\nwide-界-🙂-output\r\n");
+      const before = emulator.screen();
+
+      emulator.resize(new TerminalSize(2, 5));
+      emulator.resize(new TerminalSize(80, 5));
+      await TerminalEmulatorTests.write(restored, emulator.screen());
+
+      Assert.areEqual(before, restored.screen());
+      Assert.areEqual(0, history.stored.end);
+      Assert.areEqual(0, restoredHistory.stored.end);
+      await history.close();
+      await restoredHistory.close();
+    }
+  }
+
+  @TestMethod
+  public async keepsRetainedRowsWhenTheNarrowSnapshotIsReloadedBeforeWidening(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("before.jsonl"), () => undefined);
+    const restoredHistory = new TerminalHistory(directory.resolve("after.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(80, 5), history, 26200, () => undefined);
+    using restored = new TerminalEmulator(new TerminalSize(2, 5), restoredHistory, 26200, () => undefined);
+    const prompt = "PS C:\\fixture-project-with-a-long-name> ";
+    await TerminalEmulatorTests.write(emulator, prompt);
+
+    emulator.resize(new TerminalSize(2, 5));
+    await TerminalEmulatorTests.write(restored, emulator.screen());
+    restored.resize(new TerminalSize(80, 5));
+
+    Assert.isTrue(restored.screen().includes(prompt.trim()));
+    Assert.areEqual(0, history.stored.end);
+    Assert.areEqual(0, restoredHistory.stored.end);
+    await history.close();
+    await restoredHistory.close();
+  }
+
+  @TestMethod
+  public async storesEveryRetainedAndVisibleRowOnceWhenTheShellRestarts(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
+    const expected = Array.from({ length: 1100 }, (_t, index) => `row-${index}`);
+    await TerminalEmulatorTests.write(emulator, expected.join("\r\n") + "\r\n");
+    emulator.storeScreen();
+
+    const rows = [];
+    for (let start = 0; start < history.stored.end; start += 500)
+      rows.push(...(await history.read(start, 500)).lines.map(t => t.text));
+
+    Assert.areEqual(1101, rows.length);
+    Assert.areEqual(expected.join(",") + ",", rows.join(","));
+    await history.close();
+  }
+
+  @TestMethod
+  public async storesResizeOverflowWithoutLosingOrRepeatingRows(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
+    const lines = Array.from({ length: 500 }, (_t, index) => `line-${String(index).padStart(3, "0")}`);
+    await TerminalEmulatorTests.write(emulator, lines.join("\r\n") + "\r\n");
+
+    emulator.resize(new TerminalSize(2, 5));
+    Assert.isTrue(history.stored.end > 0);
+    emulator.resize(new TerminalSize(20, 5));
+    emulator.storeScreen();
+    let text = "";
+    for (let start = 0; start < history.stored.end; start += 500)
+      for (const line of (await history.read(start, 500)).lines)
+        text += (line.wrapped ? "" : "\n") + line.text;
+
+    Assert.areEqual("\n" + lines.join("\n") + "\n", text);
+    await history.close();
+  }
+
+  @TestMethod
+  public async resumesCapturingAfterAnAlternateScreenWithAFullRetainedBuffer(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
+    const expected = Array.from({ length: 1100 }, (_t, index) => `normal-${index}`);
+    await TerminalEmulatorTests.write(emulator, expected.join("\r\n") + "\r\n");
+    const stored = history.stored.end;
+
+    await TerminalEmulatorTests.write(emulator, "\u001b[?1049h" + "alternate\r\n".repeat(20) + "\u001b[3J");
+    Assert.areEqual(stored, history.stored.end);
+    await TerminalEmulatorTests.write(emulator, "\u001b[?1049lafter-alternate\r\n");
+    emulator.storeScreen();
+    const rows = [];
+    for (let start = 0; start < history.stored.end; start += 500)
+      rows.push(...(await history.read(start, 500)).lines.map(t => t.text));
+
+    Assert.areEqual([...expected, "after-alternate", ""].join(","), rows.join(","));
     await history.close();
   }
 

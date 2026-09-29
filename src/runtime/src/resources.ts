@@ -192,8 +192,7 @@ export class Resources {
   public static readonly terminalHistoryBlockLines: number = 64;
   public static readonly terminalHistoryReadBytes: number = 64 * 1024;
   public static readonly lineFeedByte: number = 0x0a;
-  public static readonly terminalCaptureScrollback: number = 512;
-  public static readonly terminalCompactionLines: number = 256;
+  public static readonly terminalCaptureScrollback: number = 1000;
   public static readonly terminalEndMilliseconds: number = 2_000;
   public static readonly terminalHighWatermark: number = 1024 * 1024;
   public static readonly terminalLowWatermark: number = 256 * 1024;

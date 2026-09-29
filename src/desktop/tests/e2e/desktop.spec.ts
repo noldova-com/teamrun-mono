@@ -200,6 +200,50 @@ test("opens a terminal in the default shell, runs a command, hides and shows it,
   await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
 });
 
+test("retains terminal output after a narrow resize, widening and a window reload", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await page.keyboard.type("echo teamrun-resize-retains-this-output");
+  await page.keyboard.press("Enter");
+  const repeated = /teamrun-resize-retains-this-output[\s\S]*teamrun-resize-retains-this-output/;
+  await expect(terminal.locator(".xterm-rows")).toContainText(repeated, { timeout: 60_000 });
+  const host = terminal.locator(".tr-terminal-screen");
+  const original = await host.boundingBox();
+  if (!original)
+    throw new Error("The terminal host is not drawn.");
+
+  await terminal.locator(".tr-terminal-screen").evaluate(element => {
+    element.style.width = "1px";
+    element.style.height = "1px";
+    element.style.flex = "none";
+  });
+  await expect.poll(async () => {
+    const size = (await desktop.terminalState()).size;
+    return `${size.columns}x${size.rows}`;
+  }).toBe("2x1");
+  await terminal.locator(".tr-terminal-screen").evaluate(element => {
+    element.style.removeProperty("width");
+    element.style.removeProperty("height");
+    element.style.removeProperty("flex");
+  });
+  await expect.poll(async () => (await host.boundingBox())?.width).toBe(original.width);
+  await expect.poll(async () => (await host.boundingBox())?.height).toBe(original.height);
+  await expect.poll(async () => (await desktop.terminalState()).size.columns).toBeGreaterThan("echo teamrun-resize-retains-this-output".length);
+  await terminal.locator(".xterm").hover();
+  await page.mouse.wheel(0, -10_000);
+  await expect(terminal.locator(".xterm-rows")).toContainText(repeated);
+
+  await page.reload();
+  await expect(terminal.locator(".xterm-rows")).toContainText(/\S/);
+  await terminal.locator(".xterm").hover();
+  await page.mouse.wheel(0, -10_000);
+  await expect(terminal.locator(".xterm-rows")).toContainText(repeated);
+  await desktop.capture("terminal-after-resize-reload");
+});
+
 test("quits when a window with a pending state save is destroyed", async () => {
   expect(await desktop.destroyWindow()).toBe(0);
 });

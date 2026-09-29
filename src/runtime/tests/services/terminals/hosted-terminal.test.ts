@@ -26,7 +26,7 @@ export class HostedTerminalTests {
   private static readonly FLOOD_LINE: string = "0123456789".repeat(10);
 
   @TestMethod
-  public async sendsTheOutputInOrderAndStoresWhatLeavesTheScreen(): Promise<void> {
+  public async sendsTheOutputInOrderAndStoresWhatLeavesTheRetainedBuffer(): Promise<void> {
     using directory = new TemporaryDirectory();
     const owner = new RecordingTerminalOwner();
     const environment = FixtureShell.environment();
@@ -37,7 +37,7 @@ export class HostedTerminalTests {
       await Wait.until(() => owner.output.includes("ready"));
 
       terminal.input("env TEAMRUN_FIXTURE\r");
-      terminal.input("lines 30\r");
+      terminal.input("lines 1300\r");
       await HostedTerminalTests.waitForStored(terminal, "line 25");
       const texts = (await terminal.lines(0, 500)).lines.map(t => t.text);
 
@@ -61,7 +61,7 @@ export class HostedTerminalTests {
       await Wait.until(() => owner.output.includes("ready"));
 
       terminal.input("cwd\r");
-      terminal.input("lines 12\r");
+      terminal.input("lines 1300\r");
       await HostedTerminalTests.waitForStored(terminal, "line 5");
       const line = (await terminal.lines(0, 500)).lines.find(t => t.text.startsWith("cwd "));
 
@@ -224,8 +224,8 @@ export class HostedTerminalTests {
 
       terminal.input("flood 400\r");
       await HostedTerminalTests.acknowledgeUntil(terminal, owner, "flooded");
-      terminal.input("lines 10\r");
-      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "line 10");
+      terminal.input("lines 1100\r");
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "line 1100");
       await HostedTerminalTests.waitForStored(terminal, "line 4");
       const texts = (await terminal.lines(0, 500)).lines.map(t => t.text);
 
@@ -269,7 +269,7 @@ export class HostedTerminalTests {
     const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings());
     const foreign = new PseudoTerminal(new FakePty(1), new RecordingPseudoTerminalListener(), undefined, 10);
     await Wait.until(() => owner.output.includes("ready"));
-    terminal.input("lines 20\r");
+    terminal.input("lines 1300\r");
     await HostedTerminalTests.waitForStored(terminal, "line 10");
 
     terminal.onData(foreign, "foreign");
@@ -295,8 +295,11 @@ export class HostedTerminalTests {
 
   private static acknowledgeUntil(terminal: HostedTerminal, owner: RecordingTerminalOwner, text: string): Promise<void> {
     return Wait.until(() => {
-      terminal.acknowledge(owner.output.length);
-      return owner.output.includes(text);
+      const output = owner.output;
+      terminal.acknowledge(output.length);
+      return output.includes(text);
+    }).catch(error => {
+      throw new Error(`The terminal did not reach fixture marker "${text}" (${owner.output.length} characters received).`, { cause: error });
     });
   }
 

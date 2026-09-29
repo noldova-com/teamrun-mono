@@ -7,9 +7,9 @@
  */
 
 import "@noldova/teamrun-foundation-core";
-import { TerminalSize } from "@noldova/teamrun-protocol";
+import { type TerminalLine, TerminalSize } from "@noldova/teamrun-protocol";
 import serialize, { type SerializeAddon } from "@xterm/addon-serialize";
-import headless, { type Terminal } from "@xterm/headless";
+import headless, { type IMarker, type Terminal } from "@xterm/headless";
 
 import { Resources } from "../../resources.js";
 import type { TerminalHistory } from "./terminal-history.js";
@@ -21,7 +21,8 @@ export class TerminalEmulator implements Disposable {
   private readonly history: TerminalHistory;
   private readonly reader: TerminalLineReader;
   private readonly answer: (data: string) => void;
-  private captured: number = 0;
+  private oldest: TerminalLine | null = null;
+  private oldestMarker: IMarker | null = null;
   private pending: number = 0;
 
   public constructor(size: TerminalSize, history: TerminalHistory, windowsBuild: number | null, answer: (data: string) => void) {
@@ -64,16 +65,20 @@ export class TerminalEmulator implements Disposable {
   }
 
   public resize(size: TerminalSize): void {
-    const columns = this.terminal.cols;
-    this.compact();
-    this.terminal.options.scrollback = this.terminal.rows * Math.ceil(columns / size.columns);
+    this.releaseOldest();
+    const buffer = this.terminal.buffer.normal;
+    this.terminal.options.scrollback = Math.max(Resources.terminalCaptureScrollback,
+      buffer.length * Math.ceil(this.terminal.cols / size.columns));
     this.terminal.resize(size.columns, size.rows);
+    const excess = buffer.baseY - Resources.terminalCaptureScrollback;
+    for (let y = 0; y < excess; y++)
+      this.store(y);
+    this.terminal.options.scrollback = Resources.terminalCaptureScrollback;
     this.capture();
-    this.compact();
   }
 
   public screen(): string {
-    return this.serializer.serialize({ scrollback: 0 });
+    return this.serializer.serialize();
   }
 
   public storeScreen(): void {
@@ -82,21 +87,26 @@ export class TerminalEmulator implements Disposable {
     for (let y = buffer.cursorY + 1; y < this.terminal.rows; y++)
       if (!String.isNullOrWhitespace(buffer.getLine(buffer.baseY + y)?.translateToString(true)))
         last = y;
-    for (let y = 0; y <= last; y++)
-      this.store(buffer.baseY + y);
+    for (let y = 0; y <= buffer.baseY + last; y++)
+      this.store(y);
   }
 
   public [Symbol.dispose](): void {
+    this.releaseOldest();
     this.terminal.dispose();
   }
 
   private capture(): void {
+    if (this.oldestMarker?.isDisposed === true && !Object.isNull(this.oldest))
+      this.history.append(this.oldest);
+    this.releaseOldest();
     const buffer = this.terminal.buffer.normal;
-    for (let y = this.captured; y < buffer.baseY; y++)
-      this.store(y);
-    this.captured = buffer.baseY;
-    if (this.captured >= Resources.terminalCompactionLines)
-      this.compact();
+    if (buffer.baseY === Resources.terminalCaptureScrollback) {
+      this.oldestMarker = this.terminal.registerMarker(-buffer.baseY - buffer.cursorY) ?? null;
+      const line = buffer.getLine(0);
+      if (!Object.isNull(this.oldestMarker) && !Object.isUndefined(line))
+        this.oldest = this.reader.read(line, buffer.getLine(1)?.isWrapped === true);
+    }
   }
 
   private store(y: number): void {
@@ -106,10 +116,10 @@ export class TerminalEmulator implements Disposable {
       this.history.append(this.reader.read(line, buffer.getLine(y + 1)?.isWrapped === true));
   }
 
-  private compact(): void {
-    this.terminal.options.scrollback = 0;
-    this.terminal.options.scrollback = Resources.terminalCaptureScrollback;
-    this.captured = this.terminal.buffer.normal.baseY;
+  private releaseOldest(): void {
+    this.oldestMarker?.dispose();
+    this.oldestMarker = null;
+    this.oldest = null;
   }
 
   private eraseSaved(params: readonly (number | number[])[]): boolean {
@@ -119,8 +129,8 @@ export class TerminalEmulator implements Disposable {
   }
 
   private forgetStored(): boolean {
+    this.releaseOldest();
     this.history.clear();
-    this.captured = 0;
     return false;
   }
 

@@ -204,7 +204,7 @@ export class RuntimeServiceTests {
     const project = Project.fromJson((await owner.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
 
     const opened = TerminalState.fromJson((await owner.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
-    await owner.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
+    await owner.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 1300\r").toJson());
     await Wait.until(() => desktop.names.includes(EventName.TerminalOutput) && existsSync(join(settings.terminalsPath, `${opened.id}.jsonl`)));
     const refused = await other.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "exit 0\r").toJson());
     const listed = await other.call(MethodName.TerminalList, null);
@@ -226,7 +226,7 @@ export class RuntimeServiceTests {
     mkdirSync(host.directory.resolve("repo"));
     const project = Project.fromJson((await client.call(MethodName.ProjectOpen, { rootPath: host.directory.resolve("repo") })).payload);
     const opened = TerminalState.fromJson((await client.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, new TerminalSize(80, 5)).toJson())).payload);
-    await client.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
+    await client.call(MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 1300\r").toJson());
     await Wait.until(() => existsSync(join(service.settings.terminalsPath, `${opened.id}.jsonl`)));
 
     await service.stop("test");
