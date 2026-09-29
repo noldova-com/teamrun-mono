@@ -6,14 +6,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, type Signal, afterRenderEffect, computed, inject, input, output } from "@angular/core";
+import {
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, type Signal, type WritableSignal, afterRenderEffect, computed, inject, input, output, signal, viewChildren
+} from "@angular/core";
 
 import "@noldova/teamrun-foundation-core";
-import hljs from "highlight.js/lib/common";
-import { Marked, Renderer, type Tokens } from "marked";
-import { MentionResolver, type TeammateMention } from "@noldova/teamrun-protocol";
+import type { TeammateMention } from "@noldova/teamrun-protocol";
 
+import type { MarkdownBlock } from "../../models/markdown-block";
+import { MarkdownBlocks } from "../../models/markdown-blocks";
+import { MarkdownTail } from "../../models/markdown-tail";
+import { RenderedText } from "../../models/rendered-text";
+import { TextReveal } from "../../models/text-reveal";
 import { Resources } from "../../resources";
+import { MotionPreference } from "../../services/motion-preference.service";
 
 @Component({
   selector: "tr-markdown",
@@ -22,30 +28,41 @@ import { Resources } from "../../resources";
   templateUrl: "./markdown.component.html"
 })
 export class MarkdownComponent {
-  private static readonly marked: Marked = new Marked({ gfm: true, breaks: true, renderer: MarkdownComponent.createRenderer() });
   private readonly element: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly motion: MotionPreference = inject(MotionPreference);
   private readonly wrapped: Set<number> = new Set();
+  private readonly wrappers = viewChildren<ElementRef<HTMLElement>>("block");
+  private readonly shown: WritableSignal<number> = signal(Number.POSITIVE_INFINITY);
+  private readonly appliedHtml: string[] = [];
+  private readonly appliedCount: number[] = [];
+  private reveal: TextReveal | null = null;
+  private limit: number = Number.POSITIVE_INFINITY;
 
   public readonly text = input.required<string>();
   public readonly mentions = input<readonly TeammateMention[]>([]);
   public readonly unavailableMentions = input<readonly string[]>([]);
   public readonly wrapChoices = input<Set<number> | null>(null);
+  public readonly streaming = input(false);
+  public readonly entering = input(false);
   public readonly wrapChanged = output<void>();
 
-  protected readonly html: Signal<string> = computed(() => {
-    const marked = this.mentions().length === 0 ? MarkdownComponent.marked
-      : new Marked({ gfm: true, breaks: true, renderer: MarkdownComponent.createRenderer(this.mentions(), this.unavailableMentions()) });
-    return marked.parse(this.text(), { async: false });
-  });
+  private readonly document: Signal<MarkdownBlocks> = computed(() => new MarkdownBlocks(this.mentions(), this.unavailableMentions()));
+  private readonly settled: Signal<string> = computed(() => this.streaming() ? new MarkdownTail(this.text()).settled : this.text());
+  private readonly blocks: Signal<readonly MarkdownBlock[]> = computed(() => this.document().render(this.settled()));
+  protected readonly visibleBlocks: Signal<readonly MarkdownBlock[]> = computed(() => MarkdownComponent.visible(this.blocks(), this.shown()),
+    { equal: (a, b) => a.length === b.length && a.every((t, index) => t === b[index]) });
   private readonly copied: Map<Element, number> = new Map();
 
   public constructor() {
+    afterRenderEffect(() => this.follow(this.blocks(), this.streaming(), !this.motion.reduced()));
     afterRenderEffect(() => {
-      this.text();
+      this.visibleBlocks();
+      this.applyReveal();
       const wrapped = this.wrapChoices() ?? this.wrapped;
       this.element.querySelectorAll<HTMLElement>(Resources.wrapButtonSelector).forEach((button, index) => this.applyWrapping(button, wrapped.has(index)));
     });
     inject(DestroyRef).onDestroy(() => {
+      this.reveal?.dispose();
       for (const timer of this.copied.values())
         window.clearTimeout(timer);
     });
@@ -78,6 +95,55 @@ export class MarkdownComponent {
     this.showCopied(button);
   }
 
+  private follow(blocks: readonly MarkdownBlock[], streaming: boolean, motionAllowed: boolean): void {
+    const available = blocks.reduce((sum, t) => sum + t.count, 0);
+    this.reveal ??= new TextReveal(streaming && this.entering() ? 0 : available, count => this.advance(count));
+    const animate = motionAllowed && (streaming || this.reveal.count < available);
+    this.reveal.follow(available, !streaming, animate);
+    this.setLimit(animate ? this.reveal.count : Number.POSITIVE_INFINITY);
+  }
+
+  private advance(count: number): void {
+    this.setLimit(count);
+    this.applyReveal();
+  }
+
+  private setLimit(limit: number): void {
+    this.limit = limit;
+    this.shown.set(limit);
+  }
+
+  private applyReveal(): void {
+    const blocks = this.visibleBlocks();
+    const wrappers = this.wrappers();
+    this.appliedHtml.length = blocks.length;
+    this.appliedCount.length = blocks.length;
+    let offset = 0;
+    blocks.forEach((block, index) => {
+      const wrapper = wrappers[index]?.nativeElement;
+      if (!Object.isUndefined(wrapper))
+        this.applyBlock(wrapper, block, index, this.limit - offset);
+      offset += block.count;
+    });
+  }
+
+  private applyBlock(wrapper: HTMLElement, block: MarkdownBlock, index: number, remaining: number): void {
+    if (this.appliedHtml[index] !== block.html) {
+      this.appliedHtml[index] = block.html;
+      this.appliedCount[index] = block.count;
+    }
+    const wanted = Math.min(Math.max(remaining, 0), block.count);
+    if (this.appliedCount[index] === wanted)
+      return;
+
+    this.appliedCount[index] = wanted;
+    const text = new RenderedText(wrapper);
+    if (wanted >= block.count)
+      text.showAll();
+    else
+      text.show(wanted);
+  }
+
   private applyWrapping(button: HTMLElement, wrapped: boolean): void {
     const pre = button.closest(Resources.codeBlockSelector)?.querySelector(Resources.codeSelector)?.parentElement;
     pre?.classList.toggle(Resources.wrappedClass, wrapped);
@@ -102,33 +168,16 @@ export class MarkdownComponent {
     }, Resources.copiedDuration));
   }
 
-  private static createRenderer(mentions: readonly TeammateMention[] = [], unavailable: readonly string[] = []): Renderer {
-    const renderer = new Renderer();
-    const plainText = renderer.text;
-    renderer.text = function(token): string {
-      if ("tokens" in token && token.tokens)
-        return plainText.call(this, token);
-      const spans = MentionResolver.find(token.text, mentions);
-      const parts: string[] = [];
-      let offset = 0;
-      for (const span of spans) {
-        parts.push(plainText.call(this, { ...token, text: token.text.slice(offset, span.start) }));
-        const label = plainText.call(this, { ...token, text: token.text.slice(span.start, span.end) });
-        parts.push(Resources.formatMentionHtml(label, unavailable.includes(span.mention.teammateId)));
-        offset = span.end;
-      }
-      parts.push(plainText.call(this, { ...token, text: token.text.slice(offset) }));
-      return parts.join(String.empty);
-    };
-    const plain = renderer.code.bind(renderer);
-    renderer.code = (token: Tokens.Code): string => {
-      const lang = token.lang ?? String.empty;
-      const language = String.isNullOrWhitespace(lang) ? Resources.codeLabel : lang.split(Resources.space)[0] ?? Resources.codeLabel;
-      const known = hljs.getLanguage(language);
-      const inner = Object.isUndefined(known) ? plain(token) : Resources.formatHighlightedCode(language, hljs.highlight(token.text, { language }).value);
-      return Resources.formatCodeBlock(language, inner);
-    };
+  private static visible(blocks: readonly MarkdownBlock[], shown: number): readonly MarkdownBlock[] {
+    let offset = 0;
+    let visible = 0;
+    for (const block of blocks) {
+      if (offset > shown || (offset === shown && block.count > 0))
+        break;
+      visible++;
+      offset += block.count;
+    }
 
-    return renderer;
+    return blocks.slice(0, visible);
   }
 }

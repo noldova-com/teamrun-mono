@@ -7,7 +7,7 @@
  */
 
 import { NgTemplateOutlet } from "@angular/common";
-import { ChangeDetectionStrategy, Component, DestroyRef, type Signal, type WritableSignal, computed, effect, inject, input, signal, untracked } from "@angular/core";
+import { ChangeDetectionStrategy, Component, DestroyRef, type OnInit, type Signal, type WritableSignal, computed, effect, inject, input, signal, untracked } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatDialog } from "@angular/material/dialog";
 import { MatIconModule } from "@angular/material/icon";
@@ -46,7 +46,7 @@ import { TeammateAvatarComponent } from "../teammate-avatar/teammate-avatar.comp
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./message-card.component.html"
 })
-export class MessageCardComponent {
+export class MessageCardComponent implements OnInit {
   protected readonly authorUnavailable = computed(() => {
     const id = this.message().teammateId;
     return !Object.isNull(id) && this.store.isTeammateUnavailable(id);
@@ -79,6 +79,7 @@ export class MessageCardComponent {
   private readonly isTimed: Signal<boolean> = computed(() => this.isActive() && !this.formatter.isWaitingForTurn(this.message()));
   private readonly localControls = new MessageControlState();
   private readonly readyImages = signal<ReadonlySet<string | number>>(new Set());
+  private initialKeys: ReadonlySet<number> = new Set();
   protected readonly state = computed(() => this.controls() ?? this.localControls);
   protected readonly copied: WritableSignal<boolean> = signal(false);
   private copiedTimer: number | null = null;
@@ -122,6 +123,14 @@ export class MessageCardComponent {
       const timer = setInterval(() => this.now.set(Date.now()), Resources.clockIntervalMilliseconds);
       onCleanup(() => clearInterval(timer));
     });
+  }
+
+  public ngOnInit(): void {
+    this.initialKeys = new Set(this.segments().map(t => t.key));
+  }
+
+  protected isEntering(segment: ReplySegment): boolean {
+    return !this.initialKeys.has(segment.key);
   }
 
   protected rewind(): void {

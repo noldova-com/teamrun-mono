@@ -1466,11 +1466,11 @@ tr-settings-page {
   line-height: 1.6;
   overflow-wrap: anywhere;
 
-  > div > :first-child {
+  > div > div:first-child > :first-child {
     margin-top: 0;
   }
 
-  > div > :last-child {
+  > div > div:last-child > :last-child {
     margin-bottom: 0;
   }
 

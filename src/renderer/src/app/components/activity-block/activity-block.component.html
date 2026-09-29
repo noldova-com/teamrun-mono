@@ -14,7 +14,7 @@ LICENSE file in the root directory of this source tree.
         [attr.aria-expanded]="isOpen(entry)">
         <mat-icon class="tr-nav-icon mt-[3px] shrink-0">{{ formatter.detailIcon(entry.detail) }}</mat-icon>
         <span class="min-w-0 flex-1" [class.truncate]="!isOpen(entry)" [class.tr-wrap]="isOpen(entry)"
-          [class.tr-mono]="entry.detail.kind === commandKind">{{ formatter.title(entry.detail, rootPath()) }}</span>
+          [class.tr-mono]="entry.detail.kind === commandKind">{{ formatter.title(shown(entry), rootPath()) }}</span>
       </button>
       @if (isOpen(entry)) {
         @if (bodyOf(entry); as body) {
