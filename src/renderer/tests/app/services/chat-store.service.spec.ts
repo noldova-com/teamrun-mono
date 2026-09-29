@@ -105,7 +105,7 @@ describe("ChatStore", () => {
   it("keeps a conversation busy across queued replies and follows their terminal updates", async () => {
     const first = SampleData.withStatus(SampleData.reply, MessageStatus.Pending);
     const second = new Message("second", "c1", 3, MessageAuthor.Provider, SampleData.userMessage.id,
-      MessageStatus.Pending, [], first.provenance, SampleData.timestamp, null, [], "bob", "Bob");
+      MessageStatus.Pending, [], first.provenance, SampleData.timestamp, null, null, [], "bob", "Bob");
     bridge.answer(MethodName.MessageListOpen, () => [first.toJson(), second.toJson()]);
     await store.initialize();
     await store.selectConversation("c1");
@@ -126,7 +126,7 @@ describe("ChatStore", () => {
 
   it("preserves the message window during local and peer catalog changes", async () => {
     const older = SampleData.userMessage;
-    const newest = new Message("newest", "c1", 100, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp, SampleData.timestamp);
+    const newest = new Message("newest", "c1", 100, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp, null, SampleData.timestamp);
     bridge.answer(MethodName.MessagePage, payload => (payload as { beforeSequence: number | null }).beforeSequence === null
       ? new MessagePage([newest], true, false).toJson() : new MessagePage([older], false, true).toJson());
     bridge.answer(MethodName.MessageList, () => [older.toJson(), newest.toJson()]);
@@ -355,7 +355,7 @@ describe("ChatStore", () => {
     expect(store.isWorking("c1")).toBe(true);
     expect(store.isWorking("c2")).toBe(false);
 
-    const elsewhere = new Message("m9", "c2", 1, MessageAuthor.Provider, "m8", MessageStatus.Running, [], SampleData.provenance, SampleData.timestamp, null);
+    const elsewhere = new Message("m9", "c2", 1, MessageAuthor.Provider, "m8", MessageStatus.Running, [], SampleData.provenance, SampleData.timestamp, SampleData.timestamp, null);
     store.apply(new Event(EventName.MessageCreated, elsewhere.toJson()));
     expect(store.isWorking("c2")).toBe(true);
     store.apply(new Event(EventName.MessageUpdated, elsewhere.withStatus(MessageStatus.Completed, SampleData.timestamp).toJson()));
@@ -452,7 +452,7 @@ describe("ChatStore", () => {
 
     store.apply(new Event(EventName.MessageUpdated, SampleData.withStatus(SampleData.reply, MessageStatus.Completed).toJson()));
     bridge.emit(new Event(EventName.MessageCreated, SampleData.withStatus(SampleData.reply, MessageStatus.Failed).toJson()));
-    store.apply(new Event(EventName.MessageCreated, new Message("m9", "c9", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp, SampleData.timestamp).toJson()));
+    store.apply(new Event(EventName.MessageCreated, new Message("m9", "c9", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp, null, SampleData.timestamp).toJson()));
     store.apply(new Event(EventName.DetailAppended, new DetailEventPayload("m2", SampleData.detail(0, DetailKind.Text, "done")).toJson()));
     store.apply(new Event(EventName.DetailUpdated, new DetailEventPayload("m2", SampleData.detail(0, DetailKind.Text, "done!")).toJson()));
     store.apply(new Event(EventName.DetailAppended, new DetailEventPayload("missing", SampleData.detail(0, DetailKind.Text, "lost")).toJson()));
@@ -498,7 +498,7 @@ describe("ChatStore", () => {
 
   it("pages the selected conversation: earlier and later pages, the newest page, and a search hit's surroundings", async () => {
     const all = Array.from({ length: 5 }, (_, i) => new Message(`m${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
-      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, SampleData.timestamp));
+      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
     bridge.answer(MethodName.MessagePage, payload => {
       const cursors = payload as { beforeSequence: number | null; afterSequence: number | null };
       const slice = cursors.beforeSequence !== null ? all.filter(t => t.sequence < cursors.beforeSequence!).slice(-2)
@@ -530,7 +530,7 @@ describe("ChatStore", () => {
     expect(ids()).toEqual(["m0", "m1", "m2", "m3"]);
     expect(store.hasLaterMessages()).toBe(true);
     expect(store.focusMessageId()).toBe("m1");
-    const late = new Message("m9", "c1", 9, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp,
+    const late = new Message("m9", "c1", 9, MessageAuthor.User, null, MessageStatus.Completed, [], null, SampleData.timestamp, null,
       SampleData.timestamp);
     store.apply(new Event(EventName.MessageCreated, late.toJson()));
     expect(ids()).toEqual(["m0", "m1", "m2", "m3"]);
@@ -555,7 +555,7 @@ describe("ChatStore", () => {
 
   it("remembers where the reader was in a conversation and brings the window back around it", async () => {
     const all = Array.from({ length: 5 }, (_, i) => new Message(`m${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
-      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, SampleData.timestamp));
+      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
     const second = new Conversation("c2", "p1", "Second", SampleData.timestamp, SampleData.timestamp);
     bridge.answer(MethodName.ConversationList, () => [SampleData.conversation.toJson(), second.toJson()]);
     bridge.answer(MethodName.MessagePage, payload => {

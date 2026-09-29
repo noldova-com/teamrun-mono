@@ -62,10 +62,10 @@ export class TeammatesServiceTests {
     Assert.isNull(host.conversations.findMember(member)?.nativeSessionId);
     const provenance = new Provenance(first.id, new RequestedSettings("fake", null, null),
       new ObservedSettings(null, null, null, null, null), null, false);
-    const user = new Message("user", conversation.id, 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t",
+    const user = new Message("user", conversation.id, 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t",
       [], null, null, [new TeammateMention(teammate.id, "Alice")]);
     const reply = new Message("reply", conversation.id, 1, MessageAuthor.Provider, user.id, MessageStatus.Completed, [],
-      provenance, "t", "t", [], teammate.id, "Alice");
+      provenance, "t", "t", "t", [], teammate.id, "Alice");
     host.messages.insert(user);
     host.messages.insert(reply);
     host.teammates.delete(new TeammateIdParams(teammate.id));

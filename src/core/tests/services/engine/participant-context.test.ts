@@ -56,12 +56,12 @@ export class ParticipantContextTests {
 
   private static user(conversationId: string, sequence: number, text: string): Message {
     return new Message(`u${sequence}`, conversationId, sequence, MessageAuthor.User, null, MessageStatus.Completed,
-      [new MessageDetail(0, DetailKind.Text, text, null, "t")], null, "t", "t");
+      [new MessageDetail(0, DetailKind.Text, text, null, "t")], null, "t", null, "t");
   }
 
   private static reply(conversationId: string, sequence: number, sentId: string): Message {
     return new Message(`r${sequence}`, conversationId, sequence, MessageAuthor.Provider, sentId, MessageStatus.Pending, [],
       new Provenance(null, new RequestedSettings("fake", null, null), new ObservedSettings(null, null, null, null, null), null, false),
-      "t", null, [], "alice", "Alice");
+      "t", null, null, [], "alice", "Alice");
   }
 }

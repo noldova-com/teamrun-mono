@@ -43,7 +43,7 @@ export class ReplyFollowerTests {
     follower.handleEvent(new Event(EventName.ApprovalCreated, approval.toJson()));
     await Promise.resolve();
     follower.handleEvent(new Event(EventName.ApprovalCreated, approval.toJson()));
-    const ended = new Message("reply", "c", 1, MessageAuthor.User, null, MessageStatus.Cancelled, [], null, "t", "t");
+    const ended = new Message("reply", "c", 1, MessageAuthor.User, null, MessageStatus.Cancelled, [], null, "t", null, "t");
     follower.handleEvent(new Event(EventName.MessageUpdated, ended.toJson()));
     follower.handleEvent(new Event(EventName.ApprovalCreated, approval.toJson()));
     Assert.areEqual(MessageStatus.Cancelled, (await pending).reply.status);
@@ -64,9 +64,9 @@ export class ReplyFollowerTests {
     const follower = new ReplyFollower(session, console, DecisionPolicy.Deny, true);
     const now = "2026-09-10T00:00:00.000Z";
     const detail = new MessageDetail(0, DetailKind.Text, "early", null, now);
-    const other = new Message("m-other", "c", 1, MessageAuthor.User, null, MessageStatus.Completed, [], null, now, now);
-    const reply = new Message("m-1", "c", 2, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, now, now);
-    const running = new Message("m-1", "c", 2, MessageAuthor.User, null, MessageStatus.Running, [], null, now, null);
+    const other = new Message("m-other", "c", 1, MessageAuthor.User, null, MessageStatus.Completed, [], null, now, null, now);
+    const reply = new Message("m-1", "c", 2, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, now, null, now);
+    const running = new Message("m-1", "c", 2, MessageAuthor.User, null, MessageStatus.Running, [], null, now, null, null);
 
     follower.handleEvent(new Event(EventName.DetailAppended, new DetailEventPayload("m-1", detail).toJson()));
     follower.handleEvent(new Event(EventName.DetailAppended, new DetailEventPayload("m-other", detail).toJson()));

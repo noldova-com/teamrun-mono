@@ -56,7 +56,7 @@ export class ApprovalsServiceTests {
   }
 
   private static message(conversationId: string, id: string): Message {
-    return new Message(id, conversationId, 0, MessageAuthor.User, null, MessageStatus.Completed, [new MessageDetail(0, DetailKind.Text, "Hi", null, "t")], null, "t", "t");
+    return new Message(id, conversationId, 0, MessageAuthor.User, null, MessageStatus.Completed, [new MessageDetail(0, DetailKind.Text, "Hi", null, "t")], null, "t", null, "t");
   }
 
   private static approval(id: string, messageId: string): Approval {

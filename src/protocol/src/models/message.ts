@@ -20,6 +20,7 @@ import { TeammateMention } from "./teammate-mention.js";
 
 export class Message {
   private static readonly OPEN_STATUSES: readonly MessageStatus[] = [MessageStatus.Pending, MessageStatus.Running, MessageStatus.AwaitingApproval];
+  private static readonly STARTED_STATUSES: readonly MessageStatus[] = [MessageStatus.Running, MessageStatus.AwaitingApproval];
 
   public readonly id: string;
   public readonly conversationId: string;
@@ -30,6 +31,7 @@ export class Message {
   public readonly details: readonly MessageDetail[];
   public readonly provenance: Provenance | null;
   public readonly createdAt: string;
+  public readonly startedAt: string | null;
   public readonly endedAt: string | null;
   public readonly attachments: readonly MessageAttachment[];
   public readonly teammateId: string | null;
@@ -46,6 +48,7 @@ export class Message {
     details: readonly MessageDetail[],
     provenance: Provenance | null,
     createdAt: string,
+    startedAt: string | null,
     endedAt: string | null,
     attachments: readonly MessageAttachment[] = [],
     teammateId: string | null = null,
@@ -61,6 +64,12 @@ export class Message {
       throw new ArgumentException(Resources.provenanceMismatch, Resources.provenanceField);
     if (Message.OPEN_STATUSES.includes(status) !== Object.isNull(endedAt))
       throw new ArgumentException(Resources.messageEndMismatch, Resources.endedAtField);
+    if (Object.isNull(startedAt)
+      ? author === MessageAuthor.Provider && Message.STARTED_STATUSES.includes(status)
+      : author !== MessageAuthor.Provider || status === MessageStatus.Pending)
+      throw new ArgumentException(Resources.messageStartMismatch, Resources.startedAtField);
+    if (!Object.isNull(startedAt))
+      ArgumentException.throwIfNullOrWhitespace(startedAt, Resources.startedAtField);
     ArgumentException.throwIfNullOrWhitespace(createdAt, Resources.createdAtField);
     if (Object.isNull(teammateId) !== Object.isNull(teammateName) || (author !== MessageAuthor.Provider && !Object.isNull(teammateId)))
       throw new ArgumentException(Resources.invalidTeammateAuthor, Resources.teammateIdField);
@@ -80,6 +89,7 @@ export class Message {
     this.details = [...details];
     this.provenance = provenance;
     this.createdAt = createdAt;
+    this.startedAt = startedAt;
     this.endedAt = endedAt;
     this.attachments = [...attachments];
     this.teammateId = teammateId;
@@ -99,6 +109,7 @@ export class Message {
       reader.readObjectArray(Resources.detailsField).map(t => MessageDetail.fromJson(t.toJson(), t.path)),
       Message.provenanceFromJson(reader),
       reader.readNonBlankString(Resources.createdAtField),
+      Message.startFromJson(reader),
       reader.readNullableString(Resources.endedAtField),
       reader.hasField(Resources.attachmentsField)
         ? reader.readObjectArray(Resources.attachmentsField).map(t => MessageAttachment.fromJson(t.toJson(), t.path)) : [],
@@ -118,6 +129,7 @@ export class Message {
       [Resources.detailsField]: this.details.map(t => t.toJson()),
       [Resources.provenanceField]: Object.isNull(this.provenance) ? null : this.provenance.toJson(),
       [Resources.createdAtField]: this.createdAt,
+      [Resources.startedAtField]: this.startedAt,
       [Resources.endedAtField]: this.endedAt,
       ...(Object.isNull(this.teammateId) ? {} : { [Resources.teammateIdField]: this.teammateId, [Resources.teammateNameField]: this.teammateName }),
       ...(this.mentions.length === 0 ? {} : { [Resources.mentionsField]: this.mentions.map(t => t.toJson()) }),
@@ -125,14 +137,19 @@ export class Message {
     };
   }
 
+  public withStart(startedAt: string): Message {
+    return new Message(this.id, this.conversationId, this.sequence, this.author, this.inReplyTo, MessageStatus.Running, this.details, this.provenance,
+      this.createdAt, startedAt, null, this.attachments, this.teammateId, this.teammateName, this.mentions);
+  }
+
   public withStatus(status: MessageStatus, endedAt: string | null): Message {
     return new Message(this.id, this.conversationId, this.sequence, this.author, this.inReplyTo, status, this.details, this.provenance, this.createdAt,
-      endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
+      this.startedAt, endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
   }
 
   public withDetails(details: readonly MessageDetail[]): Message {
     return new Message(this.id, this.conversationId, this.sequence, this.author, this.inReplyTo, this.status, details, this.provenance, this.createdAt,
-      this.endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
+      this.startedAt, this.endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
   }
 
   public withDetail(detail: MessageDetail): Message {
@@ -142,11 +159,19 @@ export class Message {
 
   public withProvenance(provenance: Provenance): Message {
     return new Message(this.id, this.conversationId, this.sequence, this.author, this.inReplyTo, this.status, this.details, provenance, this.createdAt,
-      this.endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
+      this.startedAt, this.endedAt, this.attachments, this.teammateId, this.teammateName, this.mentions);
   }
 
   private static provenanceFromJson(reader: JsonReader): Provenance | null {
     const provenance = reader.readNullableObject(Resources.provenanceField);
     return Object.isNull(provenance) ? null : Provenance.fromJson(provenance.toJson(), provenance.path);
+  }
+
+  private static startFromJson(reader: JsonReader): string | null {
+    if (reader.hasField(Resources.startedAtField))
+      return reader.readNullableString(Resources.startedAtField);
+    const isStartedReply = reader.readOneOf(Resources.authorField, Object.values(MessageAuthor)) === MessageAuthor.Provider
+      && reader.readOneOf(Resources.statusField, Object.values(MessageStatus)) !== MessageStatus.Pending;
+    return isStartedReply ? reader.readNonBlankString(Resources.createdAtField) : null;
   }
 }

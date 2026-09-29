@@ -26,7 +26,7 @@ export class ReplyRunTests {
     const requested = new RequestedSettings("fake", null, null);
     const provenance = new Provenance(null, requested, new ObservedSettings(null, null, null, null, null), null, false);
     const reply = new Message("named-reply", conversation.id, 0, MessageAuthor.Provider, null, MessageStatus.Pending,
-      [], provenance, "t", null, [], "alice", "Alice");
+      [], provenance, "t", null, null, [], "alice", "Alice");
     host.messages.insert(reply);
     host.adapter.streamedTexts = ["part", "complete"];
     const run = new ReplyRun(reply, provenance, new ActiveRun(reply.id), host.messages, host.approvals, host.events, host.directory.path);

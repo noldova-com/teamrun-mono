@@ -19,7 +19,7 @@ import { ChatStore } from "../../../src/app/services/chat-store.service";
 
 describe("ChatStore history retention", () => {
   const message = (sequence: number): Message => new Message(`m${sequence}`, "c1", sequence, MessageAuthor.User, null,
-    MessageStatus.Completed, [], null, SampleData.timestamp, SampleData.timestamp);
+    MessageStatus.Completed, [], null, SampleData.timestamp, null, SampleData.timestamp);
   let all: Message[];
   let bridge: ReturnType<typeof SampleData.createBridge>;
   let store: ChatStore;

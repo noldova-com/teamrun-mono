@@ -15,7 +15,7 @@ import { Message, MessageAuthor, MessagePage, MessageStatus } from "@noldova/tea
 export class MessagePageTests {
   @TestMethod
   public roundTripsThroughJson(): void {
-    const message = new Message("msg-1", "conv-1", 3, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t1", "t1");
+    const message = new Message("msg-1", "conv-1", 3, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t1", null, "t1");
     const page = new MessagePage([message], true, false);
 
     const read = MessagePage.fromJson(JSON.parse(JSON.stringify(page.toJson())));

@@ -22,6 +22,7 @@ export class MessageSendResultTests {
     details: [],
     provenance: null,
     createdAt: "t",
+    startedAt: null,
     endedAt: "t"
   };
   private static readonly replyMessage: object = {
@@ -34,7 +35,7 @@ export class MessageSendResultTests {
       resumedNativeSession: false,
       nativeTurnId: null
     },
-    createdAt: "t", endedAt: null
+    createdAt: "t", startedAt: null, endedAt: null
   };
   private static readonly json: object = { sent: MessageSendResultTests.userMessage, replies: [MessageSendResultTests.replyMessage] };
 

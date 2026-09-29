@@ -18,13 +18,13 @@ export class MessageTests {
   @TestMethod
   public retainsHistoricalAuthorsAndResolvedMentionsAcrossCopies(): void {
     const mentions = [new TeammateMention("alice", "Alice")];
-    const user = new Message("u", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t", [], null, null, mentions);
+    const user = new Message("u", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t", [], null, null, mentions);
     mentions.push(new TeammateMention("bob", "Bob"));
     Assert.areEqual(1, user.mentions.length);
     const restored = Message.fromJson(user.toJson());
     Assert.areEqual("Alice", restored.mentions[0]?.name);
     const reply = new Message("r", "c", 1, MessageAuthor.Provider, "u", MessageStatus.Pending, [], MessageTests.provenance,
-      "t", null, [], "alice", "Alice");
+      "t", null, null, [], "alice", "Alice");
     for (const copy of [reply.withStatus(MessageStatus.Completed, "end"), reply.withDetails([]), reply.withDetail(MessageTests.text),
       reply.withProvenance(MessageTests.provenance), Message.fromJson(reply.toJson())]) {
       Assert.areEqual("alice", copy.teammateId);
@@ -44,7 +44,7 @@ export class MessageTests {
   @TestMethod
   public replacesItsDetails(): void {
     const original = new Message("msg-1", "conv-1", 2, MessageAuthor.User, null, MessageStatus.Completed,
-      [new MessageDetail(0, DetailKind.Text, "Hi", null, "t1")], null, "t1", "t1");
+      [new MessageDetail(0, DetailKind.Text, "Hi", null, "t1")], null, "t1", null, "t1");
 
     const replaced = original.withDetails([]);
 
@@ -75,12 +75,13 @@ export class MessageTests {
       nativeTurnId: null
     },
     createdAt: "2026-09-08T09:00:01Z",
+    startedAt: "2026-09-08T09:00:02Z",
     endedAt: "2026-09-08T09:00:09Z"
   };
 
   @TestMethod
   public holdsTheUsersMessage(): void {
-    const message = new Message("msg-1", "conv-1", 0, MessageAuthor.User, null, MessageStatus.Completed, [MessageTests.text], null, "t", "t");
+    const message = new Message("msg-1", "conv-1", 0, MessageAuthor.User, null, MessageStatus.Completed, [MessageTests.text], null, "t", null, "t");
 
     Assert.areEqual(MessageAuthor.User, message.author);
     Assert.isNull(message.inReplyTo);
@@ -102,7 +103,7 @@ export class MessageTests {
   @TestMethod
   public keepsItsOwnCopyOfTheDetails(): void {
     const details = [MessageTests.text];
-    const message = new Message("msg-1", "conv-1", 0, MessageAuthor.User, null, MessageStatus.Completed, details, null, "t", "t");
+    const message = new Message("msg-1", "conv-1", 0, MessageAuthor.User, null, MessageStatus.Completed, details, null, "t", null, "t");
     details.push(MessageTests.text);
 
     Assert.areEqual(1, message.details.length);
@@ -111,7 +112,7 @@ export class MessageTests {
   @TestMethod
   public rejectsBlankRequiredText(): void {
     const create = (id: string, conversationId: string, inReplyTo: string | null, createdAt: string): Message =>
-      new Message(id, conversationId, 0, MessageAuthor.User, inReplyTo, MessageStatus.Completed, [], null, createdAt, createdAt);
+      new Message(id, conversationId, 0, MessageAuthor.User, inReplyTo, MessageStatus.Completed, [], null, createdAt, null, createdAt);
 
     Assert.throws(() => create(String.empty, "conv", null, "t"), ArgumentException);
     Assert.throws(() => create("msg", String.empty, null, "t"), ArgumentException);
@@ -121,8 +122,8 @@ export class MessageTests {
 
   @TestMethod
   public rejectsNegativeOrFractionalSequences(): void {
-    Assert.throws(() => new Message("msg", "conv", -1, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t"), ArgumentOutOfRangeException);
-    Assert.throws(() => new Message("msg", "conv", 1.5, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t"), ArgumentOutOfRangeException);
+    Assert.throws(() => new Message("msg", "conv", -1, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t"), ArgumentOutOfRangeException);
+    Assert.throws(() => new Message("msg", "conv", 1.5, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t"), ArgumentOutOfRangeException);
   }
 
   @TestMethod
@@ -131,7 +132,7 @@ export class MessageTests {
 
     Assert.areEqual("provenance", missing.parameterName);
     Assert.throws(
-      () => new Message("msg", "conv", 0, MessageAuthor.TeamRun, null, MessageStatus.Completed, [], MessageTests.provenance, "t", "t"), ArgumentException);
+      () => new Message("msg", "conv", 0, MessageAuthor.TeamRun, null, MessageStatus.Completed, [], MessageTests.provenance, "t", null, "t"), ArgumentException);
   }
 
   @TestMethod
@@ -142,6 +143,35 @@ export class MessageTests {
     Assert.throws(() => MessageTests.createReply(MessageStatus.AwaitingApproval, [], MessageTests.provenance, "t2"), ArgumentException);
     Assert.throws(() => MessageTests.createReply(MessageStatus.Failed, [], MessageTests.provenance, null), ArgumentException);
     Assert.doesNotThrow(() => MessageTests.createReply(MessageStatus.Interrupted, [], MessageTests.provenance, "t2"));
+  }
+
+  @TestMethod
+  public tiesTheStartTimeToARunningReply(): void {
+    const reply = (status: MessageStatus, startedAt: string | null, endedAt: string | null): Message =>
+      new Message("r", "c", 1, MessageAuthor.Provider, "u", status, [], MessageTests.provenance, "t", startedAt, endedAt);
+
+    const waitingWithStart = Assert.throws(() => reply(MessageStatus.Pending, "t1", null), ArgumentException);
+    const runningWithoutStart = Assert.throws(() => reply(MessageStatus.Running, null, null), ArgumentException);
+
+    Assert.areEqual("startedAt", waitingWithStart.parameterName);
+    Assert.areEqual("startedAt", runningWithoutStart.parameterName);
+    Assert.throws(() => reply(MessageStatus.AwaitingApproval, null, null), ArgumentException);
+    Assert.throws(() => reply(MessageStatus.Running, " ", null), ArgumentException);
+    Assert.throws(() => new Message("u", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t", "t"), ArgumentException);
+    Assert.isNull(reply(MessageStatus.Cancelled, null, "t2").startedAt);
+    Assert.areEqual("t1", reply(MessageStatus.AwaitingApproval, "t1", null).startedAt);
+  }
+
+  @TestMethod
+  public readsRepliesStoredBeforeStartTimesFromTheirCreation(): void {
+    const stored = Object.fromEntries(Object.entries(MessageTests.json).filter(([key]) => key !== "startedAt"));
+
+    Assert.areEqual("2026-09-08T09:00:01Z", Message.fromJson(stored).startedAt);
+    Assert.areEqual("2026-09-08T09:00:01Z", Message.fromJson({ ...stored, status: "Running", endedAt: null }).startedAt);
+    Assert.isNull(Message.fromJson({ ...stored, status: "Pending", endedAt: null }).startedAt);
+    Assert.isNull(Message.fromJson({ ...stored, author: "User", inReplyTo: null, provenance: null }).startedAt);
+    Assert.isNull(Message.fromJson({ ...MessageTests.json, status: "Cancelled", startedAt: null }).startedAt);
+    Assert.areEqual("2026-09-08T09:00:01Z", Message.fromJson(stored).toJson()["startedAt"]);
   }
 
   @TestMethod
@@ -159,7 +189,7 @@ export class MessageTests {
 
   @TestMethod
   public readsAMessageWithoutProvenance(): void {
-    const json = { ...MessageTests.json, author: "TeamRun", provenance: null };
+    const json = { ...MessageTests.json, author: "TeamRun", provenance: null, startedAt: null };
     const message = Message.fromJson(json);
 
     Assert.areEqual(MessageAuthor.TeamRun, message.author);
@@ -182,7 +212,8 @@ export class MessageTests {
   }
 
   private static createReply(status: MessageStatus, details: readonly MessageDetail[], provenance: Provenance | null, endedAt: string | null): Message {
-    return new Message("msg-2", "conv-1", 1, MessageAuthor.Provider, "msg-1", status, details, provenance, "t", endedAt);
+    return new Message("msg-2", "conv-1", 1, MessageAuthor.Provider, "msg-1", status, details, provenance, "t", status === MessageStatus.Pending ? null : "t",
+      endedAt);
   }
 
   @TestMethod
@@ -191,18 +222,23 @@ export class MessageTests {
     const detail = new MessageDetail(0, DetailKind.Reasoning, "Thinking", null, "t");
     const observed = new ObservedSettings("codex", "gpt-5-codex", "medium", "0.50.0", null);
 
-    const running = reply.withStatus(MessageStatus.Running, null);
+    const running = reply.withStart("t1");
     const detailed = running.withDetail(detail);
     const traced = detailed.withProvenance(MessageTests.provenance.withObserved(observed));
     const ended = traced.withStatus(MessageStatus.Completed, "t2");
 
     Assert.areEqual(MessageStatus.Pending, reply.status);
+    Assert.isNull(reply.startedAt);
     Assert.areEqual(0, reply.details.length);
     Assert.areEqual(MessageStatus.Running, running.status);
+    Assert.areEqual("t1", running.startedAt);
+    Assert.isNull(running.endedAt);
     Assert.areEqual("Thinking", detailed.details[0]?.text);
     Assert.areEqual("gpt-5-codex", traced.provenance?.observed.model);
+    Assert.areEqual("t1", ended.startedAt);
     Assert.areEqual("t2", ended.endedAt);
     Assert.areEqual(reply.id, ended.id);
     Assert.throws(() => reply.withStatus(MessageStatus.Completed, null), ArgumentException);
+    Assert.throws(() => reply.withStatus(MessageStatus.Running, null), ArgumentException);
   }
 }

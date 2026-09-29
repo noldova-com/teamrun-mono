@@ -19,7 +19,7 @@ export class MessageAttachmentTests {
     Assert.isFalse(new MessageAttachment("data.csv", "text/csv", 0, "/data.csv").isImage);
     const provenance = new Provenance(null, new RequestedSettings("codex", null, null), new ObservedSettings(null, null, null, null, null), null, false);
     const detail = new MessageDetail(0, DetailKind.Text, "text", null, "now");
-    const message = new Message("message", "conversation", 0, MessageAuthor.Provider, null, MessageStatus.Completed, [], provenance, "now", "now", [image]);
+    const message = new Message("message", "conversation", 0, MessageAuthor.Provider, null, MessageStatus.Completed, [], provenance, "now", "now", "now", [image]);
     for (const updated of [message, message.withStatus(MessageStatus.Completed, "later"), message.withDetails([detail]),
       message.withDetail(detail), message.withProvenance(provenance), Message.fromJson(message.toJson())])
       Assert.areEqual(JSON.stringify(image.toJson()), JSON.stringify(updated.attachments[0]?.toJson()));

@@ -47,12 +47,12 @@ export class SampleData {
   public static readonly otherProject: Project = new Project("p2", "other", "D:\\other", SampleData.timestamp);
   public static readonly conversation: Conversation = new Conversation("c1", "p1", "First", SampleData.timestamp, SampleData.timestamp);
   public static readonly userMessage: Message =
-    new Message("m1", "c1", 0, MessageAuthor.User, null, MessageStatus.Completed, [SampleData.detail(0, DetailKind.Text, "hello")], null, SampleData.timestamp,
+    new Message("m1", "c1", 0, MessageAuthor.User, null, MessageStatus.Completed, [SampleData.detail(0, DetailKind.Text, "hello")], null, SampleData.timestamp, null,
       SampleData.timestamp);
   public static readonly provenance: Provenance =
     new Provenance("a1", new RequestedSettings("codex", "gpt-5", "high"), new ObservedSettings("codex", "gpt-5", null, "1.0", null), "s1", false);
   public static readonly reply: Message =
-    new Message("m2", "c1", 1, MessageAuthor.Provider, "m1", MessageStatus.Running, [], SampleData.provenance, SampleData.timestamp, null);
+    new Message("m2", "c1", 1, MessageAuthor.Provider, "m1", MessageStatus.Running, [], SampleData.provenance, SampleData.timestamp, SampleData.timestamp, null);
   public static readonly approval: Approval = new Approval(
     "ap1",
     "m2",
@@ -100,7 +100,8 @@ export class SampleData {
   public static withStatus(message: Message, status: MessageStatus, details: readonly MessageDetail[] = message.details): Message {
     const active = status === MessageStatus.Pending || status === MessageStatus.Running || status === MessageStatus.AwaitingApproval;
     const endedAt = active ? null : SampleData.timestamp;
+    const startedAt = message.author !== MessageAuthor.Provider || status === MessageStatus.Pending ? null : message.startedAt ?? message.createdAt;
     return new Message(message.id, message.conversationId, message.sequence, message.author, message.inReplyTo, status, details, message.provenance,
-      message.createdAt, endedAt);
+      message.createdAt, startedAt, endedAt);
   }
 }

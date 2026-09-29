@@ -52,7 +52,7 @@ export class EntityFormatterTests {
     const unchecked = new ProviderAccount("a-3", "codex", "Lab", "D:/r", AuthStatus.Unknown, null, null, null, null, now);
     const project = new Project("p-1", "repo", "D:/repo", now);
     const conversation = new Conversation("c-1", "p-1", "Chat", now, now);
-    const message = new Message("m-1", "c-1", 1, MessageAuthor.User, null, MessageStatus.Completed, [new MessageDetail(0, DetailKind.Text, "hi", null, now)], null, now, now);
+    const message = new Message("m-1", "c-1", 1, MessageAuthor.User, null, MessageStatus.Completed, [new MessageDetail(0, DetailKind.Text, "hi", null, now)], null, now, null, now);
     const pending = new Approval("ap-1", "m-1", ApprovalKind.Command, "Bash", "Run ls", null, [new ApprovalOption("allow", "Allow", ApprovalOutcome.Approved)], ApprovalStatus.Pending, null, now, null);
     const decided = new Approval("ap-2", "m-1", ApprovalKind.Command, "Bash", "Run ls", null, [new ApprovalOption("allow", "Allow", ApprovalOutcome.Approved)], ApprovalStatus.Approved, "allow", now, now);
 

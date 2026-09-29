@@ -142,6 +142,7 @@ export class Resources {
   public static readonly nativeSessionIdField: string = "nativeSessionId";
   public static readonly resumedNativeSessionField: string = "resumedNativeSession";
   public static readonly nativeTurnIdField: string = "nativeTurnId";
+  public static readonly startedAtField: string = "startedAt";
   public static readonly endedAtField: string = "endedAt";
   public static readonly summaryField: string = "summary";
   public static readonly decidedAtField: string = "decidedAt";
@@ -213,6 +214,7 @@ export class Resources {
 
   public static readonly provenanceMismatch: string = "A provider's message carries its provenance and no other message does.";
   public static readonly messageEndMismatch: string = "A pending, running, or awaiting message has no end time; an ended one has it.";
+  public static readonly messageStartMismatch: string = "Only a provider's reply has a start time: none while it waits, one while it runs or awaits approval.";
   public static readonly resumedWithoutSession: string = "A turn that resumed a native session names that session.";
   public static readonly approvalDecisionMismatch: string = "A pending approval has no decision time and a decided approval has one.";
   public static readonly approvalWithoutOptions: string = "An approval offers at least one option, each with a distinct id.";

@@ -28,7 +28,8 @@ describe("MessageCardComponent", () => {
     const original = SampleData.withStatus(SampleData.reply, MessageStatus.Completed);
     const fixture = TestBed.createComponent(MessageCardComponent);
     fixture.componentRef.setInput("message", new Message(original.id, original.conversationId, original.sequence, original.author,
-      original.inReplyTo, original.status, original.details, original.provenance, original.createdAt, original.endedAt, [], "alice", "OldName"));
+      original.inReplyTo, original.status, original.details, original.provenance, original.createdAt, original.startedAt, original.endedAt, [],
+      "alice", "OldName"));
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector("header")?.textContent).toContain("OldName");

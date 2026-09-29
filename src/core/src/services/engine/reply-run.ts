@@ -74,7 +74,7 @@ export class ReplyRun implements ITurnListener {
 
   public async execute(adapter: IProviderAdapter, request: TurnRequest): Promise<void> {
     try {
-      this.update(this.message.withStatus(MessageStatus.Running, null));
+      this.update(this.message.withStart(ReplyRun.now()));
       const tree = await WorkingTree.capture(request.workingDirectory);
       if (!Object.isNull(tree))
         await tree.snapshot(this.message.id);
