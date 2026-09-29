@@ -445,10 +445,11 @@ export class Resources {
   public static readonly defaultTerminalColumns: number = 80;
   public static readonly defaultTerminalRows: number = 24;
   public static readonly terminalScrollback: number = 1000;
+  public static readonly terminalLineHeight: number = 1.3;
   public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly deviceAttributesFinal: string = "c";
-  public static readonly transparentColor: string = "#00000000";
+  public static readonly transparentBackgrounds: readonly string[] = ["", "transparent", "rgba(0, 0, 0, 0)"];
   public static readonly terminalRestartReset: string = "\u001b[?1047l\u001b[!p\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?2004l\r";
   public static readonly terminalLineFeed: string = "\n";
   public static readonly terminalHome: string = "\u001b[H";
@@ -948,6 +949,7 @@ export class Resources {
   public static readonly lightThemeType: string = "light";
   public static readonly themeColorPattern: RegExp = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
   public static readonly titleBarBackground: ThemeToken = new ThemeToken("--tr-title-bar", "titleBar.activeBackground", "sideBar.background");
+  public static readonly panelBackground: ThemeToken = new ThemeToken("--tr-panel", "editor.background");
   public static readonly titleBarForeground: ThemeToken = new ThemeToken("--tr-title-bar-text", "titleBar.activeForeground", "foreground");
   public static readonly terminalShortcutActions: readonly ShortcutAction[] = [ShortcutAction.ToggleTerminal, ShortcutAction.NewTerminal];
 
@@ -1004,7 +1006,7 @@ export class Resources {
     Resources.titleBarBackground,
     Resources.titleBarForeground,
     new ThemeToken("--tr-window", "sideBar.background"),
-    new ThemeToken("--tr-panel", "editor.background"),
+    Resources.panelBackground,
     new ThemeToken("--tr-raised", "teamrun.raisedBackground", "editorWidget.background"),
     new ThemeToken("--tr-text", "foreground"),
     new ThemeToken("--tr-text-muted", "teamrun.mutedForeground", "descriptionForeground"),

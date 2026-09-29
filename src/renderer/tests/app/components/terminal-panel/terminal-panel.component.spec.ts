@@ -112,6 +112,19 @@ describe("TerminalPanelComponent", () => {
     expect(screen.firstElementChild).toBe(first);
   });
 
+  it("draws its terminal opaque, in the color of the surface it sits on", async () => {
+    await prepare("win32");
+    const fixture = TestBed.createComponent(TerminalPanelComponent);
+    (fixture.nativeElement as HTMLElement).parentElement!.style.backgroundColor = "rgb(24, 24, 24)";
+    fixture.componentRef.setInput("panel", new Panel(PanelKind.Terminal, "t1"));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const drawn = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(".xterm-scrollable-element")!;
+
+    expect(drawn.style.backgroundColor).toBe("rgb(24, 24, 24)");
+  });
+
   it("draws its terminal, shows how its shell ended, restarts it and counts as the last used when focused", async () => {
     const terminals = await prepare("win32");
     const layout = TestBed.inject(LayoutService);

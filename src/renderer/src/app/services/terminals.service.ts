@@ -7,7 +7,7 @@
  */
 
 import { DOCUMENT } from "@angular/common";
-import { Injectable, type Signal, type WritableSignal, computed, effect, inject, signal, untracked } from "@angular/core";
+import { Injectable, type Signal, type WritableSignal, afterRenderEffect, computed, effect, inject, signal, untracked } from "@angular/core";
 import type { ITerminalOptions, ITheme } from "@xterm/xterm";
 
 import "@noldova/teamrun-foundation-core";
@@ -57,7 +57,7 @@ export class TerminalsService {
   public readonly canOpen: Signal<boolean> = computed(() => !Object.isNull(this.store.selectedProject()));
 
   public constructor() {
-    effect(() => {
+    afterRenderEffect(() => {
       const fontFamily = this.preferences.codeFontStack();
       const fontSize = this.preferences.codeTextSize();
       const palette = this.palette();
@@ -188,12 +188,12 @@ export class TerminalsService {
   }
 
   private async create(state: TerminalState): Promise<TerminalSession> {
-    const [xterm, fit] = await Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit")]);
+    const [xterm, fit, webgl] = await Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit"), import("@xterm/addon-webgl")]);
     const fontFamily = this.preferences.codeFontStack();
     const fontSize = this.preferences.codeTextSize();
     await this.document.fonts.load(Resources.formatFontLoad(fontSize, fontFamily));
-    const options: ITerminalOptions = { allowTransparency: true, fontFamily, fontSize, scrollback: Resources.terminalScrollback, theme: this.palette() };
-    return new TerminalSession(state, new xterm.Terminal(options), new fit.FitAddon(), this.bridge);
+    const options: ITerminalOptions = { fontFamily, fontSize, lineHeight: Resources.terminalLineHeight, scrollback: Resources.terminalScrollback, theme: this.palette() };
+    return new TerminalSession(state, new xterm.Terminal(options), new fit.FitAddon(), new webgl.WebglAddon(), this.bridge);
   }
 
   private place(panel: Panel, groupId: number | null): void {
@@ -263,7 +263,10 @@ export class TerminalsService {
   }
 
   private static paletteOf(theme: Theme): ITheme {
-    const palette: ITheme = { background: Resources.transparentColor };
+    const palette: ITheme = {};
+    const background = Resources.panelBackground.resolve(theme);
+    if (!Object.isNull(background))
+      palette.background = background;
     for (const color of Object.values(TerminalColor)) {
       const value = Resources.terminalColorTokens[color].resolve(theme);
       if (!Object.isNull(value))
