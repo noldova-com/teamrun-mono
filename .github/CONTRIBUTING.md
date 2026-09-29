@@ -27,12 +27,15 @@ You can submit an issue without choosing labels. Maintainers classify reports an
 - `needs triage` marks a report awaiting assessment; remove it after that assessment.
 - `needs information` marks missing details and stays until the required information is supplied.
 - `good first issue` identifies clearly scoped work suitable for newcomers, with enough guidance to get started.
+- `in progress` marks a claimed issue; see [Before making a change](#before-making-a-change).
 
 The [labels page](https://github.com/noldova-com/teamrun/labels) describes each label's meaning.
 
 ## Before making a change
 
 Create or reuse a relevant issue in this repository for every change, including documentation, small fixes, dependencies and agent-assisted work. Discuss substantial product or architecture changes in the issue before implementing them. Agree on a bounded scope and observable acceptance criteria; split larger work into linked issues when needed.
+
+Before you start on an issue, check that it has no `in progress` label and no open PR. Claim it by adding the label and a comment saying where the work happens, such as a branch or an agent's lane; claim a sub-issue rather than its parent. Then read the comments again: if someone claimed the issue before you, delete your comment and leave the label in place. Remove the label when your work on the issue ends, whether its PR merges or you stop. Contributors who cannot set labels claim an issue with the comment alone.
 
 Follow the [coding standards](../docs/CODING-STANDARDS.md), the [UI standards](../docs/UI-STANDARDS.md) for visual and interaction changes, and the [architecture](../docs/ARCHITECTURE.md) for changes to component or data boundaries. Update the owning document when a requirement changes instead of adding a competing rule elsewhere.
 

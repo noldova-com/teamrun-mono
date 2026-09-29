@@ -19,8 +19,9 @@ TeamRun is Noldova's desktop application for working with coding agents. Noldova
 Several agents can work at once, each in its own lane: a Git worktree beside the main checkout, named `<agent>_<number>` (for example `claude_1` or `codex_1`). The main checkout stays on `main`.
 
 - Work only in your own lane. Other lanes and the main checkout are read-only: do not change their files, branches or Git state.
+- Claim each issue before starting it, as [CONTRIBUTING.md](.github/CONTRIBUTING.md#before-making-a-change) describes, with a comment naming your lane and branch.
 - Start each issue with `git fetch --prune origin` and `git switch -c rr/<purpose> origin/main`.
-- After your PR merges, confirm that the squash commit matches your branch and check the `main` pipeline run for that merge. Then run `git switch --detach origin/main` and delete the merged branch.
+- After your PR merges, confirm that the squash commit matches your branch and check the `main` pipeline run for that merge. Then run `git switch --detach origin/main`, delete the merged branch and remove the issue's `in progress` label.
 - Repository-wide Git settings, adding or removing worktrees, and Git maintenance such as `gc`, `prune` or `worktree repair` require the user's approval, because they affect every lane.
 - Run `npm run desktop` with `TEAMRUN_DATA_DIR` set to `~/.noldova/teamrun-dev-<lane>`.
 - Run the full UI suite only when no other lane is running it.
