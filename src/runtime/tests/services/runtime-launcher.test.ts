@@ -172,13 +172,17 @@ export class RuntimeLauncherTests {
   public async reportsAProcessCreationFailureInsteadOfAnUnhandledError(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["x".repeat(200_000)], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["invalid\0argument"], process.env,
       RuntimeLauncherTests.timings);
 
-    const error = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), LaunchException);
+    const error = await Assert.throwsAsync(async () => {
+      const client = await launcher.attach("test", new RecordingClientListener());
+      client.close();
+      await Wait.until(() => launcher.readLiveLock() === null);
+    }, LaunchException);
 
     Assert.isFalse(error.message.includes("did not publish its endpoint in time"), error.message);
-    Assert.isInstanceOf(error.cause, Error);
+    Assert.isTrue(error.cause instanceof TypeError && "code" in error.cause && error.cause.code === "ERR_INVALID_ARG_VALUE");
     Assert.isNull(launcher.readLiveLock());
   }
 
