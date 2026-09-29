@@ -8,7 +8,7 @@
 
 import { type Server, type Socket, createServer } from "node:net";
 
-import { Endpoint } from "@noldova/teamrun-runtime";
+import { Endpoint, LineBuffer } from "@noldova/teamrun-runtime";
 
 export class RawServer implements AsyncDisposable {
   public readonly received: string[] = [];
@@ -51,7 +51,8 @@ export class RawServer implements AsyncDisposable {
   private accept(socket: Socket): void {
     this.sockets.push(socket);
     socket.setEncoding("utf8");
-    socket.on("data", (chunk: string) => this.received.push(...chunk.split("\n").filter(t => t.length > 0)));
+    const lines = new LineBuffer();
+    socket.on("data", (chunk: string) => this.received.push(...lines.append(chunk)));
     socket.on("error", () => socket.destroy());
     if (this.resetOnConnect) {
       socket.resetAndDestroy();

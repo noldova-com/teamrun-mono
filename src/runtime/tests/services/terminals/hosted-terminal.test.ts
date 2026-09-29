@@ -39,6 +39,7 @@ export class HostedTerminalTests {
       terminal.input("env TEAMRUN_FIXTURE\r");
       terminal.input("lines 1300\r");
       await HostedTerminalTests.waitForStored(terminal, "line 25");
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "line 1300");
       const texts = (await terminal.lines(0, 500)).lines.map(t => t.text);
 
       Assert.isTrue(texts.includes("env TEAMRUN_FIXTURE=present"));
