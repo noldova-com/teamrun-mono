@@ -237,7 +237,7 @@ export class DesktopFixture {
     await expect(this.window.getByRole("button", { name: "Conversation A", exact: true })).toBeVisible();
   }
 
-  public async closeFromPage(): Promise<number | null> {
+  public async destroyWindow(): Promise<number | null> {
     if (!this.application || !this.window)
       throw new Error("The fixture window is not running.");
     const application = this.application;
@@ -245,7 +245,13 @@ export class DesktopFixture {
     this.application = null;
     await this.stopTracing();
     const exited = new Promise<number | null>(resolve => child.once("exit", code => resolve(code)));
-    await this.window.evaluate(() => { setTimeout(() => window.close()); });
+    await application.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (!window)
+        throw new Error("The fixture window is missing.");
+      window.setContentSize(1000, 700);
+      setImmediate(() => window.destroy());
+    });
     this.window = null;
     this.captureSession = null;
     let expired = false;

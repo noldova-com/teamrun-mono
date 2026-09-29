@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Exception } from "@noldova/teamrun-foundation-exceptions";
+import { Exception, type ExceptionOptions } from "@noldova/teamrun-foundation-exceptions";
 
 import { Resources } from "../resources.js";
 
 export class LaunchException extends Exception {
-  public constructor(reason: string) {
-    super(Resources.formatLaunchFailed(reason));
+  public constructor(reason: string, options?: ExceptionOptions) {
+    super(Resources.formatLaunchFailed(reason), options);
   }
 }

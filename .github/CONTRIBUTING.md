@@ -81,6 +81,8 @@ Development launches prepare a TeamRun-branded copy of Electron in `_build/elect
 
 `npm run desktop -- --prepare-only` prepares the binary without opening a window. On Linux hosts that require the setuid sandbox, apply the Electron sandbox ownership/mode setup to `_build/electron-dev/chrome-sandbox` after preparing it, as the workflows do; do not disable the sandbox.
 
+Linux runtime startup requires `/bin/bash` and `/proc`, including when launching from source. See the [runtime launch boundary](../docs/ARCHITECTURE.md#4-runtime-ownership-and-local-protocol).
+
 Development launches keep their data in `~/.noldova/teamrun-dev`, apart from the installed TeamRun's `~/.noldova/teamrun`. To use another folder, set `TEAMRUN_DATA_DIR` before launching:
 
 ```bash

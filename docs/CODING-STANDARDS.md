@@ -218,6 +218,8 @@ Standalone repository automation is TypeScript: build, test, packaging, generati
 
 GitHub-native configuration uses YAML under `.github`. Files in `.github/workflows` may contain inline workflow scripts and invoke toolchain commands or existing npm entry points. Inline scripts follow the same security, failure-handling and verification requirements; pass untrusted event data through environment variables or API responses, never interpolate it into executable script text. Actions are pinned to full commit SHAs with their release versions recorded.
 
+Linux runtime startup and AppImage restart may use fixed Bash programs to close inherited descriptors before executing the destination process. Keep these programs with their launch owner; pass paths and arguments as positional parameters, never as interpolated shell code. Runtime startup disables Bash startup files and inherited shell options. This exception does not permit general shell-based subprocess execution or standalone shell scripts.
+
 Shells: on Windows, explicitly use Git for Windows Bash (plain `bash.exe` launches WSL; enter WSL only through `wsl.exe` for Linux-native work). On Linux and macOS use Bash from PATH. Do not substitute PowerShell, `cmd.exe`, or batch for repository operations, and never encode machine-specific paths in workflows.
 
 ## 12. License header

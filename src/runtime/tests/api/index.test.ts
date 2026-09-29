@@ -16,8 +16,8 @@ export class RuntimeApiTests {
     const expected = [
       "ClientSession", "ConnectionException", "Endpoint", "EndpointKind", "IdleMonitor", "InvalidOperationException", "LaunchException", "LineBuffer",
       "LockFile", "PendingCall", "ProcessInspector", "ProcessProbe", "ProcessRegistry", "ProviderRegistryFactory", "Resources",
-      "RuntimeAlreadyRunningException", "RuntimeBuildMismatchException", "RuntimeClient", "RuntimeEntry", "RuntimeLauncher", "RuntimeLock", "RuntimeServer",
-      "RuntimeService", "RuntimeSettings", "RuntimeTimings", "TokenGenerator", "TrackedProcess"
+      "RuntimeAlreadyRunningException", "RuntimeBuildMismatchException", "RuntimeClient", "RuntimeEntry", "RuntimeLaunchCommand", "RuntimeLauncher",
+      "RuntimeLock", "RuntimeServer", "RuntimeService", "RuntimeSettings", "RuntimeTimings", "TokenGenerator", "TrackedProcess"
     ];
 
     expected.push("InstallationRole", "InstallationUpdatePhase", "InstallationMember", "InstallationUpdate", "InstallationRegistry");
