@@ -54,7 +54,6 @@ export class TerminalsService {
 
   public readonly sessions: Signal<ReadonlyMap<string, TerminalSession>> = this.sessionsSignal.asReadonly();
   public readonly error: Signal<string | null> = this.errorSignal.asReadonly();
-  public readonly canOpen: Signal<boolean> = computed(() => !Object.isNull(this.store.selectedProject()));
 
   public constructor() {
     afterRenderEffect(() => {
@@ -91,12 +90,9 @@ export class TerminalsService {
   }
 
   public async open(groupId: number | null = null): Promise<void> {
-    const project = this.store.selectedProject();
-    if (Object.isNull(project))
-      return;
-
+    const projectId = this.store.selectedProject()?.id ?? null;
     await this.perform(async () => {
-      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(project.id, this.nextSize()).toJson());
+      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, this.nextSize()).toJson());
       const session = await this.attach(TerminalState.fromJson(opened));
       session.requestFocus();
       this.place(new Panel(PanelKind.Terminal, session.id), groupId);

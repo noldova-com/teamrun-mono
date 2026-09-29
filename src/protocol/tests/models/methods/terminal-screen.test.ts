@@ -39,10 +39,10 @@ export class TerminalScreenTests {
 
   @TestMethod
   public rejectsInvalidValuesWithTheirPath(): void {
-    const state = Assert.throws(() => TerminalScreen.fromJson({ state: { ...TerminalScreenTests.state, projectId: " " }, screen: "" }), JsonException);
+    const state = Assert.throws(() => TerminalScreen.fromJson({ state: { ...TerminalScreenTests.state, shell: " " }, screen: "" }), JsonException);
     const screen = Assert.throws(() => TerminalScreen.fromJson({ ...TerminalScreenTests.json, screen: null }), JsonException);
 
-    Assert.areEqual("$.state.projectId", state.path);
+    Assert.areEqual("$.state.shell", state.path);
     Assert.areEqual("$.screen", screen.path);
   }
 }

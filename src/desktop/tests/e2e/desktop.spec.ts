@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { homedir } from "node:os";
+
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DesktopFixture } from "./fixtures/desktop.fixture.ts";
@@ -237,6 +239,23 @@ test("opens the default shell with disposable history, preserves output through 
   await page.locator("tr-tab-group[data-side='Bottom'] .tr-tab[data-panel^='Terminal:'] .tr-tab-close").click();
   await expect(page.locator(".tr-tab[data-panel^='Terminal:']")).toHaveCount(0);
   await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
+});
+
+test("opens a terminal in the home folder when no project is selected", async () => {
+  const page = desktop.page;
+  const project = page.locator("tr-sidebar div").filter({ has: page.getByRole("button", { name: "project", exact: true }) }).last();
+  await project.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Forget project" }).click();
+  await page.getByRole("button", { name: "Forget", exact: true }).click();
+  await expect(page.locator("tr-sidebar").getByText("Open a folder to start.")).toBeVisible();
+
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await page.keyboard.type("pwd");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText(homedir(), { timeout: 60_000 });
+  await expect(terminal.locator(".xterm-rows")).not.toContainText("teamrun-ui-");
 });
 
 test("quits when a window with a pending state save is destroyed", async () => {

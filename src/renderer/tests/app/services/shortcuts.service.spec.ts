@@ -88,8 +88,6 @@ describe("ShortcutsService", () => {
     onTestFinished(() => terminals.stop());
     shortcuts.start();
 
-    expect(press(document, "~", { code: "Backquote", ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
-    await store.initialize();
     expect(press(document, "~", { code: "Backquote", ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(terminals.sessions().size).toBe(1));
 
