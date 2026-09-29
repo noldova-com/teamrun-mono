@@ -143,7 +143,7 @@ Run `npm run test:release` to check release validation, integrity checks and pub
 
 ## Pull requests
 
-Work on a focused branch in your fork, or a repository branch when you have the necessary access. Open the PR against `main`. Contributors do not need access to a maintainer's checkout; maintainers and agents working in a shared checkout follow [AGENTS.md](../AGENTS.md).
+Work on a focused branch in your fork, or a repository branch when you have the necessary access. Open the PR against `main`. Contributors do not need access to a maintainer's checkout; maintainers and agents working in a maintainer's checkout or lane follow [AGENTS.md](../AGENTS.md).
 
 Each PR description includes a standalone line with its actual tracking issue. Use either form when the issue should stay open:
 
