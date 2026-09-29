@@ -39,6 +39,8 @@ Observe pending failures before declaring the run complete. Late errors must not
 
 Tests involving files, repositories, databases or profiles use owned disposable locations. Cleanup touches only resources created for that fixture, preserves failure diagnostics and runs on success, failure and cancellation. Tests do not mutate real conversations, user profiles, project checkouts or the user's clipboard and desktop as incidental fixture setup.
 
+Desktop terminal workflows use the installed default shell with disposable startup configuration and command history, including after terminal restarts. They verify that commands reach the disposable history while continuing to exercise the real shell and its output; personal shell profiles and history files are not test fixtures.
+
 Tests may advance a scoped mock clock to exercise long deadlines while preserving production defaults. Wait for the relevant work to start, check behavior before and at the deadline, and retain real process/socket cleanup checks. Keep a real-time guard against stalled test control and restore timers on success and failure. Global timer mocks require serial execution or process isolation; advancing a clock does not prove elapsed wall time or native-process termination.
 
 Renderer tests install a throwing Angular `ErrorHandler` through the unit-test builder's provider configuration. Unexpected framework errors must fail the run; a test of an expected error asserts it explicitly. Specs that depend on styles, storage, preferences or document focus establish their own initial state and restore it after pending effects and fixtures are destroyed. A passing assertion alongside an unhandled framework error is not a pass.
