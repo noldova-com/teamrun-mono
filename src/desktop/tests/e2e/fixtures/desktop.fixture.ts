@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { _electron, type CDPSession, type ElectronApplication, expect, type Page, type TestInfo } from "@playwright/test";
+import { _electron, type CDPSession, type ElectronApplication, expect, type Page, test, type TestInfo } from "@playwright/test";
 import { ProviderRegistry } from "@noldova/teamrun-core";
 import { Resources } from "@noldova/teamrun-desktop";
 import { ConversationCreateParams, MethodName, Project, ProjectOpenParams } from "@noldova/teamrun-protocol";
@@ -155,10 +155,10 @@ export class DesktopFixture {
     try {
       if (this.info.status !== this.info.expectedStatus && this.window && !this.window.isClosed())
         await this.capture("failure").catch(error => this.errors.push(String(error)));
-      await this.closeWindow();
+      await test.step("Close the TeamRun window", () => this.closeWindow());
     }
     finally {
-      await this.runtime?.stop("UI fixture finished");
+      await test.step("Stop the runtime", async () => await this.runtime?.stop("UI fixture finished"));
       for (const log of this.logs)
         await new Promise<void>(resolve => log.end(resolve));
       if (this.directory)
@@ -273,8 +273,11 @@ export class DesktopFixture {
     try {
       if (this.tracing && this.window && !this.window.isClosed()) {
         const trace = this.info.outputPath(`desktop-${this.launches}.zip`);
-        await this.window.context().tracing.stop({ path: trace });
-        await this.info.attach(`trace-${this.launches}`, { path: trace, contentType: "application/zip" });
+        const window = this.window;
+        await test.step("Save the trace", async () => {
+          await window.context().tracing.stop({ path: trace });
+          await this.info.attach(`trace-${this.launches}`, { path: trace, contentType: "application/zip" });
+        });
       }
     }
     catch (error) {

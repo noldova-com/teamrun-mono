@@ -10,7 +10,7 @@ import { appendFileSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError } from "@playwright/test/reporter";
+import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError, TestStep } from "@playwright/test/reporter";
 
 export default class GitHubUiReporter implements Reporter {
   private static readonly DIRECTORY: string = "_build/ui-results";
@@ -117,7 +117,28 @@ export default class GitHubUiReporter implements Reporter {
         lines.push(`\nShowing ${errors.length} of ${errorCount} errors; see the full UI artifact for the remaining details.`);
       lines.push("\n</details>");
     }
+
+    const unfinished = tests.filter(t => t.outcome() === "unexpected").flatMap(test => test.results.slice(-1).flatMap(result =>
+      GitHubUiReporter.unfinished(result.steps).map(step => {
+        const title = [...test.titlePath().filter(t => t.length > 0), ...step.titlePath()].join(" › ");
+        return `${title} (started ${((step.startTime.getTime() - result.startTime.getTime()) / 1_000).toFixed(2)} s into the test)`;
+      })));
+    if (unfinished.length > 0) {
+      lines.push("\n<details><summary>Steps still running when failed tests ended</summary>\n");
+      for (const step of unfinished.slice(0, GitHubUiReporter.DETAIL_LIMIT))
+        lines.push(`- ${GitHubUiReporter.escape(step)}`);
+      if (unfinished.length > GitHubUiReporter.DETAIL_LIMIT)
+        lines.push(`\nShowing ${GitHubUiReporter.DETAIL_LIMIT} of ${unfinished.length} unfinished steps; see the HTML report in the full UI artifact for the remaining steps.`);
+      lines.push("\n</details>");
+    }
     return lines.join("\n") + "\n";
+  }
+
+  private static unfinished(steps: readonly TestStep[]): TestStep[] {
+    return steps.filter(t => t.duration < 0).flatMap(step => {
+      const inner = GitHubUiReporter.unfinished(step.steps);
+      return inner.length > 0 ? inner : [step];
+    });
   }
 
   private static outcome(test: TestCase): string {
