@@ -14,6 +14,7 @@ export { ConnectionException } from "../exceptions/connection.exception.js";
 export { InvalidOperationException } from "../exceptions/invalid-operation.exception.js";
 export { LaunchException } from "../exceptions/launch.exception.js";
 export { RuntimeAlreadyRunningException } from "../exceptions/runtime-already-running.exception.js";
+export { RuntimeBuildMismatchException } from "../exceptions/runtime-build-mismatch.exception.js";
 export type { IIdleParticipant } from "../interfaces/i-idle-participant.js";
 export type { IPseudoTerminalListener } from "../interfaces/i-pseudo-terminal-listener.js";
 export type { IRuntimeClientListener } from "../interfaces/i-runtime-client-listener.js";

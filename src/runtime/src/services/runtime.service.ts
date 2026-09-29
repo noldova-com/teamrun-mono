@@ -167,7 +167,8 @@ export class RuntimeService implements IServerListener, IIdleParticipant, IEvent
     this.subscriptions = [events.subscribe(server), events.subscribe(this)];
 
     const endpoint = await server.start();
-    const lock = new RuntimeLock(process.pid, endpoint, token, ProtocolVersion.current, this.settings.productVersion, new Date().toISOString());
+    const lock = new RuntimeLock(process.pid, endpoint, token, ProtocolVersion.current, this.settings.productVersion, new Date().toISOString(),
+      Resources.build, process.execPath);
     this.lockFile.acquire(lock);
     this.currentLock = lock;
     if (!Object.isNull(this.member)) {

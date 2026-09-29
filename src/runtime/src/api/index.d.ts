@@ -393,6 +393,25 @@ export declare class RuntimeAlreadyRunningException extends Exception {
 }
 
 /**
+ * A runtime of another build holds the data directory, so a client neither uses it nor starts another.
+ */
+export declare class RuntimeBuildMismatchException extends Exception {
+  /**
+   * The lock of the runtime that holds the data directory.
+   */
+  public readonly lock: RuntimeLock;
+
+  /**
+   * Initializes the exception with a message that names the runtime and how to quit it.
+   * @param lock The lock of the runtime that holds the data directory.
+   * @param dataDirectory The data directory it holds.
+   * @remarks The message names the program the runtime runs from when its lock records one, and when it started, in the local
+   * date and time format.
+   */
+  public constructor(lock: RuntimeLock, dataDirectory: string);
+}
+
+/**
  * Something the idle monitor watches and stops.
  */
 export interface IIdleParticipant {
@@ -591,6 +610,15 @@ export declare class RuntimeLock {
    * When the runtime started, ISO 8601.
    */
   public readonly startedAt: string;
+  /**
+   * The runtime's build, the fingerprint of the inputs it was compiled from; absent in the lock of a runtime from before builds
+   * were recorded.
+   */
+  public readonly build?: string;
+  /**
+   * The program the runtime runs from; absent in the lock of a runtime from before it was recorded.
+   */
+  public readonly executablePath?: string;
 
   /**
    * Initializes the lock.
@@ -600,16 +628,26 @@ export declare class RuntimeLock {
    * @param protocolVersion The protocol version.
    * @param productVersion The product version.
    * @param startedAt When the runtime started.
+   * @param build The runtime's build; omitted only for a runtime from before builds were recorded.
+   * @param executablePath The program the runtime runs from; omitted only for a runtime from before it was recorded.
    * @throws ArgumentOutOfRangeException when the process id is not a positive integer.
-   * @throws ArgumentException when the token, product version, or start time is blank.
+   * @throws ArgumentException when the token, product version, start time, build or program is blank.
    */
-  public constructor(processId: number, endpoint: Endpoint, token: string, protocolVersion: ProtocolVersion, productVersion: string, startedAt: string);
+  public constructor(
+    processId: number,
+    endpoint: Endpoint,
+    token: string,
+    protocolVersion: ProtocolVersion,
+    productVersion: string,
+    startedAt: string,
+    build?: string,
+    executablePath?: string);
 
   /**
    * Reads a lock from JSON.
    * @param value The JSON value.
    * @param path The value's path for error messages.
-   * @returns The lock.
+   * @returns The lock; its build and program are absent when the JSON omits them.
    * @throws JsonException when a field is missing or invalid.
    */
   public static fromJson(value: unknown, path?: string): RuntimeLock;
@@ -1021,6 +1059,18 @@ export declare class Resources {
    * Acquires the exclusive transaction held throughout a runtime's lifetime.
    */
   public static readonly acquireOwnershipStatement: string;
+  /**
+   * Ends the transaction a check of ownership took.
+   */
+  public static readonly releaseOwnershipStatement: string;
+  /**
+   * The field of a SQLite error that holds its result code.
+   */
+  public static readonly sqliteErrorCodeField: "errcode";
+  /**
+   * SQLite's result code when another connection holds a lock the statement needs.
+   */
+  public static readonly sqliteBusyCode: number;
   public static readonly lockFileName: string;
   /**
    * The file in the data directory that records the provider processes started by runtimes.
@@ -1067,6 +1117,14 @@ export declare class Resources {
   public static readonly protocolVersionField: string;
   public static readonly productVersionField: string;
   public static readonly startedAtField: string;
+  /**
+   * The lock field holding the runtime's build.
+   */
+  public static readonly buildField: string;
+  /**
+   * The lock field holding the program the runtime runs from.
+   */
+  public static readonly executablePathField: string;
   public static readonly dataDirectoryArgument: string;
   public static readonly productVersionArgument: string;
   public static readonly idleGraceArgument: string;
@@ -1074,6 +1132,11 @@ export declare class Resources {
   public static readonly noProvidersValue: string;
   public static readonly stopOnInputEndArgument: string;
   public static readonly defaultProductVersion: string;
+  /**
+   * This package's build: the fingerprint of the inputs it was compiled from, which the build stamps.
+   * Builds from the same inputs share it; any change to them gives a new one.
+   */
+  public static readonly build: string;
   public static readonly helloTimeout: number;
   public static readonly callTimeout: number;
   public static readonly launchTimeout: number;
@@ -1117,12 +1180,40 @@ export declare class Resources {
   public static readonly stoppedByInputEnd: string;
 
   /**
-   * Formats a product-version attachment refusal.
-   * @param expected Client product version.
-   * @param actual Running runtime product version.
-   * @returns A safe explanation with recovery guidance.
+   * Formats the refusal when a runtime of another build holds the data directory.
+   * @param dataDirectory The data directory the other runtime holds.
+   * @param runtime Which runtime holds it and when it started, from {@link Resources.formatRuntimeProgram} or {@link Resources.formatRuntimeVersion}.
+   * @returns The explanation, with how to quit that TeamRun and when its runtime stops.
    */
-  public static formatRuntimeProductMismatch(expected: string, actual: string): string;
+  public static formatRuntimeBuildMismatch(dataDirectory: string, runtime: string): string;
+
+  /**
+   * Describes a runtime of another build by the program it runs from.
+   * @param executablePath The program the runtime runs from.
+   * @param productVersion The runtime's product version.
+   * @param date The local date the runtime started.
+   * @param time The local time the runtime started.
+   * @returns One sentence naming the program, the version and the start.
+   */
+  public static formatRuntimeProgram(executablePath: string, productVersion: string, date: string, time: string): string;
+
+  /**
+   * Describes a runtime of another build whose lock records no program.
+   * @param productVersion The runtime's product version.
+   * @param date The local date the runtime started.
+   * @param time The local time the runtime started.
+   * @returns One sentence naming the version and the start.
+   */
+  public static formatRuntimeVersion(productVersion: string, date: string, time: string): string;
+
+  /**
+   * How a refusal shows the date a runtime of another build started.
+   */
+  public static readonly runtimeStartedDateFormat: Intl.DateTimeFormatOptions;
+  /**
+   * How a refusal shows the time a runtime of another build started.
+   */
+  public static readonly runtimeStartedTimeFormat: Intl.DateTimeFormatOptions;
 
   /**
    * The macOS platform name: `darwin`.
@@ -1773,6 +1864,14 @@ export declare class LockFile implements Disposable {
   public readLive(): RuntimeLock | null;
 
   /**
+   * Checks whether a runtime holds the data directory's ownership, which a runtime does for as long as it runs, whatever the
+   * lock file records.
+   * @returns `true` while a runtime holds ownership; `false` when none does, after briefly taking ownership and releasing it.
+   * @throws Error when the ownership database cannot be opened or read.
+   */
+  public isHeld(): boolean;
+
+  /**
    * Writes the lock, replacing a stale one; the write is atomic and the file is private to the
    * user.
    * @param lock The lock.
@@ -1913,14 +2012,24 @@ export declare class RuntimeLauncher {
   public readLiveLock(): RuntimeLock | null;
 
   /**
+   * Checks, without connecting, that no runtime of another build holds the data directory.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   * @remarks A client checks this before it opens a window, so it can explain the refusal instead of failing its first request.
+   * The check never connects, because a connection would restart the other runtime's idle grace period.
+   */
+  public assertSameBuild(): void;
+
+  /**
    * Connects to the live runtime, or starts a detached runtime process and connects once it
-   * publishes its lock. Incompatible discovery metadata is refused before opening a connection.
+   * publishes its lock. A runtime of another build is refused before opening a connection.
    * @param clientName The client's name.
    * @param listener Receives events and the disconnection.
    * @returns The connected client.
    * @throws ConnectionException when the runtime refuses the hello.
-   * @throws LaunchException when no runtime becomes reachable within the launch timeout, or a live runtime's product or protocol version differs.
-   * @remarks A live different version is left running; it is never killed or replaced while its work may be active.
+   * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   * @throws LaunchException when no runtime becomes reachable within the launch timeout.
+   * @remarks A runtime of another build is left running; it is never killed or replaced while its work may be active.
+   * The lock of another build is replaced only when no runtime holds the data directory's ownership.
    */
   public attach(clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient>;
 }

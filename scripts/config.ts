@@ -14,6 +14,7 @@ export default class Config {
   public static readonly PACKAGE_MANIFEST_FILE_NAME: string = "package.json";
   public static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
   public static readonly PROTOCOL_VERSION_PLACEHOLDER: string = "__PROTOCOL_VERSION__";
+  public static readonly BUILD_PLACEHOLDER: string = "__BUILD__";
   public static readonly RESOURCES_FILE_NAME: string = "resources.js";
   private static readonly ROOT_MANIFEST: { version: string; teamrun: { protocolVersion: string } } = JSON.parse(readFileSync(Config.PACKAGE_MANIFEST_FILE_NAME, "utf8"));
   public static readonly VERSION: string = Config.ROOT_MANIFEST.version;

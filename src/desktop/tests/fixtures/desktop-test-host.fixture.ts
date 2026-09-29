@@ -20,6 +20,8 @@ export class DesktopTestHost implements IRuntimeAttacher, AsyncDisposable {
   public readonly clients: RuntimeClient[] = [];
   public attachCount: number = 0;
   public failNextAttach: Error | null = null;
+  public buildCheckCount: number = 0;
+  public buildMismatch: Error | null = null;
   private service: RuntimeService | null = null;
 
   public createSettings(rendererUrl: string | null = null, screenshotPath: string | null = null): DesktopSettings {
@@ -42,6 +44,12 @@ export class DesktopTestHost implements IRuntimeAttacher, AsyncDisposable {
 
     await this.service.stop("test");
     this.service = null;
+  }
+
+  public assertSameBuild(): void {
+    this.buildCheckCount += 1;
+    if (this.buildMismatch !== null)
+      throw this.buildMismatch;
   }
 
   public async attach(clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient> {

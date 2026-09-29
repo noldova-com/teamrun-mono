@@ -11,10 +11,10 @@ import { homedir } from "node:os";
 
 import "@noldova/teamrun-foundation-core";
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
-import { ProtocolVersion } from "@noldova/teamrun-protocol";
 
 import { ConnectionException } from "../exceptions/connection.exception.js";
 import { LaunchException } from "../exceptions/launch.exception.js";
+import { RuntimeBuildMismatchException } from "../exceptions/runtime-build-mismatch.exception.js";
 import type { IRuntimeClientListener } from "../interfaces/i-runtime-client-listener.js";
 import type { RuntimeLock } from "../models/runtime-lock.js";
 import type { RuntimeSettings } from "../models/runtime-settings.js";
@@ -55,6 +55,12 @@ export class RuntimeLauncher {
 
   public readLiveLock(): RuntimeLock | null {
     return this.lockFile.readLive();
+  }
+
+  public assertSameBuild(): void {
+    const running = this.lockFile.readLive();
+    if (!Object.isNull(running) && this.isOtherBuildRunning(running))
+      throw new RuntimeBuildMismatchException(running, this.settings.dataDirectory);
   }
 
   public async attach(clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient> {
@@ -104,16 +110,11 @@ export class RuntimeLauncher {
   }
 
   private async tryConnect(lock: RuntimeLock, clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient | null> {
-    if (!lock.protocolVersion.canServe(ProtocolVersion.current))
-      throw new LaunchException(Resources.formatVersionMismatch(ProtocolVersion.current.toString(), lock.protocolVersion.toString()));
+    if (this.isOtherBuildRunning(lock))
+      throw new RuntimeBuildMismatchException(lock, this.settings.dataDirectory);
 
     try {
-      const client = await RuntimeClient.connect(lock.endpoint, lock.token, clientName, listener, this.timings);
-      if (lock.productVersion !== this.settings.productVersion) {
-        client.close();
-        throw new LaunchException(Resources.formatRuntimeProductMismatch(this.settings.productVersion, lock.productVersion));
-      }
-      return client;
+      return await RuntimeClient.connect(lock.endpoint, lock.token, clientName, listener, this.timings);
     }
     catch (error) {
       if (error instanceof ConnectionException && Object.isNull(error.info))
@@ -121,5 +122,9 @@ export class RuntimeLauncher {
 
       throw error;
     }
+  }
+
+  private isOtherBuildRunning(lock: RuntimeLock): boolean {
+    return lock.build !== Resources.build && this.lockFile.isHeld();
   }
 }

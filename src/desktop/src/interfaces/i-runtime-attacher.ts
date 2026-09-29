@@ -9,5 +9,6 @@
 import type { IRuntimeClientListener, RuntimeClient } from "@noldova/teamrun-runtime";
 
 export interface IRuntimeAttacher {
+  assertSameBuild(): void;
   attach(clientName: string, listener: IRuntimeClientListener): Promise<RuntimeClient>;
 }

@@ -98,6 +98,7 @@ export class DesktopApplication {
 
   private async start(): Promise<void> {
     try {
+      this.connection.assertSameBuild();
       await this.peer?.start();
       this.applyContentSecurityPolicy();
       this.host.attach(this.gateway);

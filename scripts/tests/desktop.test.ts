@@ -22,8 +22,8 @@ class DesktopTests {
       assert.equal(typeof Desktop, "function");
     });
 
-    for (const mode of ["success", "code", "signal", "missing", "prepare"])
-      test(`launcher preserves arguments and reports the child outcome (${mode})`, async t => {
+    for (const mode of ["success", "chosen", "code", "signal", "missing", "prepare"])
+      test(`launcher preserves arguments, keeps development data apart and reports the child outcome (${mode})`, async t => {
         const root = process.cwd();
         const directory = await mkdtemp(path.join(tmpdir(), "teamrun-launcher-test-"));
         t.after(() => rm(directory, { recursive: true, force: true }));
@@ -33,15 +33,22 @@ class DesktopTests {
         await writeFile(path.join(directory, "package.json"), await readFile("package.json"));
         await writeFile(path.join(directory, "node_modules/@noldova/teamrun-desktop/package.json"), '{"type":"commonjs"}');
         await writeFile(path.join(directory, "node_modules/@noldova/teamrun-desktop/main.js"),
-          'const fs = require("node:fs"); fs.writeFileSync("launch.json", JSON.stringify({ args: process.argv.slice(2), asNode: process.env.ELECTRON_RUN_AS_NODE ?? null })); process.exit(process.env.TEAMRUN_LAUNCH_FIXTURE === "code" ? 4 : 0);');
+          'const fs = require("node:fs"); fs.writeFileSync("launch.json", JSON.stringify({ args: process.argv.slice(2), asNode: process.env.ELECTRON_RUN_AS_NODE ?? null, dataDirectory: process.env.TEAMRUN_DATA_DIR ?? null })); process.exit(process.env.TEAMRUN_LAUNCH_FIXTURE === "code" ? 4 : 0);');
+        const environment: NodeJS.ProcessEnv = { ...process.env, TEAMRUN_LAUNCH_FIXTURE: mode, ELECTRON_RUN_AS_NODE: "1", HOME: directory, USERPROFILE: directory };
+        delete environment["TEAMRUN_DATA_DIR"];
+        if (mode === "chosen")
+          environment["TEAMRUN_DATA_DIR"] = path.join(directory, "chosen-data");
         const result = spawnSync(process.execPath, [
           "--experimental-test-module-mocks", "--import", pathToFileURL(path.join(root, "scripts/tests/fixtures/launcher-preload.fixture.ts")).href,
           path.join(root, "scripts/desktop.ts"), ...(mode === "prepare" ? ["--prepare-only"] : ["--fixture-argument", "two words"])
-        ], { cwd: directory, env: { ...process.env, TEAMRUN_LAUNCH_FIXTURE: mode, ELECTRON_RUN_AS_NODE: "1" }, encoding: "utf8", timeout: 10_000 });
+        ], { cwd: directory, env: environment, encoding: "utf8", timeout: 10_000 });
         assert.equal(result.error, undefined);
-        assert.equal(result.status, mode === "success" || mode === "prepare" ? 0 : 1, result.stderr);
+        assert.equal(result.status, mode === "success" || mode === "chosen" || mode === "prepare" ? 0 : 1, result.stderr);
         if (mode === "success")
-          assert.deepEqual(JSON.parse(await readFile(path.join(directory, "launch.json"), "utf8")), { args: ["--fixture-argument", "two words"], asNode: null });
+          assert.deepEqual(JSON.parse(await readFile(path.join(directory, "launch.json"), "utf8")),
+            { args: ["--fixture-argument", "two words"], asNode: null, dataDirectory: path.join(directory, ".noldova", "teamrun-dev") });
+        if (mode === "chosen")
+          assert.equal(JSON.parse(await readFile(path.join(directory, "launch.json"), "utf8")).dataDirectory, path.join(directory, "chosen-data"));
         if (mode === "code") assert.match(result.stderr, /code 4/);
         if (mode === "signal") assert.match(result.stderr, /signal SIGTERM/);
         if (mode === "missing") assert.match(result.stderr, /ENOENT/);

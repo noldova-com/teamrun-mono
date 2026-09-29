@@ -67,6 +67,33 @@ export class LockFileTests {
     Assert.areEqual(process.pid, file.read()?.processId);
   }
 
+  @TestMethod
+  public tellsWhetherARuntimeHoldsOwnershipWithoutKeepingIt(): void {
+    using directory = new TemporaryDirectory();
+    using owner = new LockFile(directory.resolve("runtime.lock"), new ProcessProbe());
+    using observer = new LockFile(owner.path, new ProcessProbe());
+
+    const before = observer.isHeld();
+    owner.claim();
+    const during = observer.isHeld();
+    owner[Symbol.dispose]();
+    const after = observer.isHeld();
+
+    Assert.isFalse(before);
+    Assert.isTrue(during);
+    Assert.isFalse(after);
+    Assert.doesNotThrow(() => observer.claim());
+  }
+
+  @TestMethod
+  public reportsAnOwnershipDatabaseItCannotRead(): void {
+    using directory = new TemporaryDirectory();
+    using file = new LockFile(directory.resolve("runtime.lock"), new ProcessProbe());
+    writeFileSync(`${file.path}.sqlite`, "not a database".repeat(40));
+
+    Assert.areEqual("file is not a database", Assert.throws(() => file.isHeld(), Error).message);
+  }
+
   private static createLock(processId: number): RuntimeLock {
     return new RuntimeLock(processId, Endpoint.tcp(4000), `token-${processId}`, new ProtocolVersion(0, 1), "1.0.0", "2026-09-10T00:00:00.000Z");
   }

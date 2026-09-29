@@ -44,6 +44,22 @@ export class RuntimeConnectionTests {
   }
 
   @TestMethod
+  public checksTheBuildWithoutAttaching(): Promise<void> {
+    return this.run(async host => {
+      const connection = new RuntimeConnection(host, new RecordingForwarder(), "desktop-test");
+
+      connection.assertSameBuild();
+      host.buildMismatch = new Error("another build");
+      const refused = Assert.throws(() => connection.assertSameBuild(), Error);
+
+      Assert.areEqual("another build", refused.message);
+      Assert.areEqual(2, host.buildCheckCount);
+      Assert.areEqual(0, host.attachCount);
+      Assert.isFalse(connection.isConnected);
+    });
+  }
+
+  @TestMethod
   public forwardsEventsAndReattachesAfterADisconnection(): Promise<void> {
     return this.run(async host => {
       await host.startRuntime();

@@ -102,6 +102,8 @@ export class RuntimeServiceTests {
     Assert.areEqual(process.pid, lock.processId);
     Assert.isTrue(lock.protocolVersion.equals(ProtocolVersion.current));
     Assert.areEqual(RuntimeTestHost.PRODUCT_VERSION, lock.productVersion);
+    Assert.isTrue(/^[0-9a-f]{64}$/.test(lock.build ?? ""), lock.build);
+    Assert.areEqual(process.execPath, lock.executablePath);
     Assert.areEqual(conversation.id, sent.sent.conversationId);
     Assert.areEqual(first.names.join(","), second.names.join(","));
     Assert.isTrue(first.names.includes(EventName.MessageCreated));
