@@ -25,6 +25,7 @@ import {
   TerminalOpenParams,
   TerminalResizeParams,
   TerminalScreen,
+  TerminalShell,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -45,7 +46,7 @@ export class TerminalHostTests {
     const owner = new RecordingTerminalOwner();
     try {
       const opened = TerminalState.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalOpen,
-        new TerminalOpenParams("project-1", new TerminalSize(120, 5)).toJson()));
+        new TerminalOpenParams("project-1", null, new TerminalSize(120, 5)).toJson()));
       await Wait.until(() => owner.output.includes("ready"));
       const id = new TerminalIdParams(opened.id).toJson();
 
@@ -79,13 +80,32 @@ export class TerminalHostTests {
   }
 
   @TestMethod
+  public async listsTheShellsAndOpensTheOneAskedFor(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const host = TerminalHostTests.createHost(directory);
+    const owner = new RecordingTerminalOwner();
+    try {
+      const listed = await TerminalHostTests.succeed(host, owner, MethodName.TerminalShells, null);
+      const opened = TerminalState.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalOpen,
+        new TerminalOpenParams("project-1", "fixture-other", new TerminalSize(80, 5)).toJson()));
+      const shells = Array.isArray(listed) ? listed.map(t => TerminalShell.fromJson(t)) : [];
+
+      Assert.areEqual("fixture:true,fixture-other:false", shells.map(t => `${t.id}:${String(t.isDefault)}`).join(","));
+      Assert.areEqual("Other fixture", opened.shell);
+    }
+    finally {
+      await host.shutdown();
+    }
+  }
+
+  @TestMethod
   public async opensATerminalWithoutAProjectInTheHomeFolder(): Promise<void> {
     using directory = new TemporaryDirectory();
     const host = TerminalHostTests.createHost(directory);
     const owner = new RecordingTerminalOwner();
     try {
       const opened = TerminalState.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalOpen,
-        new TerminalOpenParams(null, new TerminalSize(120, 5)).toJson()));
+        new TerminalOpenParams(null, null, new TerminalSize(120, 5)).toJson()));
       await Wait.until(() => owner.output.includes("ready"));
       await TerminalHostTests.succeed(host, owner, MethodName.TerminalInput, new TerminalInputParams(opened.id, "cwd\r").toJson());
       await Wait.until(() => owner.output.toLowerCase().includes("home-folder"));
@@ -105,7 +125,7 @@ export class TerminalHostTests {
     const other = new RecordingTerminalOwner();
     try {
       const opened = TerminalState.fromJson(await TerminalHostTests.succeed(host, owner, MethodName.TerminalOpen,
-        new TerminalOpenParams("project-1", new TerminalSize(80, 24)).toJson()));
+        new TerminalOpenParams("project-1", null, new TerminalSize(80, 24)).toJson()));
 
       const input = await host.dispatch(other, new Request("r", MethodName.TerminalInput, new TerminalInputParams(opened.id, "exit 0\r").toJson()));
       const listed = await TerminalHostTests.succeed(host, other, MethodName.TerminalList, null);
@@ -125,11 +145,13 @@ export class TerminalHostTests {
     const host = TerminalHostTests.createHost(directory);
     const owner = new RecordingTerminalOwner();
 
-    const unknown = await host.dispatch(owner, new Request("a", MethodName.TerminalOpen, new TerminalOpenParams("nope", new TerminalSize(80, 24)).toJson()));
-    const missing = await host.dispatch(owner, new Request("b", MethodName.TerminalOpen, new TerminalOpenParams("gone", new TerminalSize(80, 24)).toJson()));
+    const unknown = await host.dispatch(owner, new Request("a", MethodName.TerminalOpen, new TerminalOpenParams("nope", null, new TerminalSize(80, 24)).toJson()));
+    const missing = await host.dispatch(owner, new Request("b", MethodName.TerminalOpen, new TerminalOpenParams("gone", null, new TerminalSize(80, 24)).toJson()));
     const invalid = await host.dispatch(owner, new Request("c", MethodName.TerminalOpen, { projectId: "project-1", size: { columns: 0, rows: 5 } }));
     rmSync(directory.resolve("home-folder"), { recursive: true });
-    const homeless = await host.dispatch(owner, new Request("f", MethodName.TerminalOpen, new TerminalOpenParams(null, new TerminalSize(80, 24)).toJson()));
+    const homeless = await host.dispatch(owner, new Request("f", MethodName.TerminalOpen, new TerminalOpenParams(null, null, new TerminalSize(80, 24)).toJson()));
+    const shellless = await host.dispatch(owner, new Request("g", MethodName.TerminalOpen,
+      new TerminalOpenParams("project-1", "gone", new TerminalSize(80, 24)).toJson()));
     const method = await host.dispatch(owner, new Request("d", "TerminalExplode", null));
     const absent = await host.dispatch(owner, new Request("e", MethodName.TerminalScreen, new TerminalIdParams("absent").toJson()));
 
@@ -137,8 +159,10 @@ export class TerminalHostTests {
     Assert.areEqual(ErrorCode.NotFound, missing.info?.name);
     Assert.areEqual(ErrorCode.InvalidParams, invalid.info?.name);
     Assert.areEqual(ErrorCode.NotFound, homeless.info?.name);
+    Assert.areEqual(ErrorCode.NotFound, shellless.info?.name);
     Assert.areEqual(ErrorCode.UnknownMethod, method.info?.name);
     Assert.areEqual(ErrorCode.NotFound, absent.info?.name);
+    Assert.isTrue(host.handles(MethodName.TerminalShells));
     Assert.isTrue(host.handles(MethodName.TerminalLines));
     Assert.isTrue(host.handles(MethodName.TerminalAcknowledge));
     Assert.isFalse(host.handles(MethodName.ProjectList));
@@ -151,7 +175,7 @@ export class TerminalHostTests {
     const owner = new RecordingTerminalOwner();
     const other = new RecordingTerminalOwner();
     const open = (by: RecordingTerminalOwner): Promise<JsonValue> =>
-      TerminalHostTests.succeed(host, by, MethodName.TerminalOpen, new TerminalOpenParams("project-1", new TerminalSize(80, 5)).toJson());
+      TerminalHostTests.succeed(host, by, MethodName.TerminalOpen, new TerminalOpenParams("project-1", null, new TerminalSize(80, 5)).toJson());
     await open(owner);
     await open(owner);
     await open(other);
@@ -161,7 +185,7 @@ export class TerminalHostTests {
     const afterClose = await TerminalHostTests.succeed(host, owner, MethodName.TerminalList, null);
     const kept = await TerminalHostTests.succeed(host, other, MethodName.TerminalList, null);
     await host.shutdown();
-    const refused = await host.dispatch(other, new Request("r", MethodName.TerminalOpen, new TerminalOpenParams("project-1", new TerminalSize(80, 5)).toJson()));
+    const refused = await host.dispatch(other, new Request("r", MethodName.TerminalOpen, new TerminalOpenParams("project-1", null, new TerminalSize(80, 5)).toJson()));
 
     Assert.areEqual("[]", JSON.stringify(afterClose));
     Assert.areEqual(1, TerminalHostTests.ids(kept).length);
@@ -175,7 +199,7 @@ export class TerminalHostTests {
     const host = TerminalHostTests.createHost(directory);
     const owner = new RecordingTerminalOwner();
 
-    const opening = host.dispatch(owner, new Request("r", MethodName.TerminalOpen, new TerminalOpenParams("project-1", new TerminalSize(80, 5)).toJson()));
+    const opening = host.dispatch(owner, new Request("r", MethodName.TerminalOpen, new TerminalOpenParams("project-1", null, new TerminalSize(80, 5)).toJson()));
     owner.isClosed = true;
     const response = await opening;
     await host.shutdown();

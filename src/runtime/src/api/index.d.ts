@@ -22,6 +22,7 @@ import type {
   TerminalLinePage,
   TerminalLineRange,
   TerminalScreen,
+  TerminalShellKind,
   TerminalSize,
   TerminalState,
   WireMessage
@@ -1248,6 +1249,10 @@ export declare class Resources {
    */
   public static readonly versionSeparator: string;
   /**
+   * Parameter name reported for a blank shell id.
+   */
+  public static readonly shellIdParameterName: string;
+  /**
    * Parameter name reported for a blank shell name.
    */
   public static readonly shellNameParameterName: string;
@@ -1432,6 +1437,23 @@ export declare class Resources {
    */
   public static readonly loginShellArgument: string;
   /**
+   * The system's list of shells on macOS and Linux: `/etc/shells`.
+   */
+  public static readonly listedShellsPath: string;
+  /**
+   * The encoding of the system's list of shells.
+   */
+  public static readonly listedShellsEncoding: BufferEncoding;
+  /**
+   * Names in the system's list of shells that are not shells to start in a terminal: terminal multiplexers and shells
+   * that refuse sign-in.
+   */
+  public static readonly nonShellNames: readonly string[];
+  /**
+   * The families of shells on macOS and Linux by executable name; other names are `Other`.
+   */
+  public static readonly unixShellKinds: ReadonlyMap<string, TerminalShellKind>;
+  /**
    * The Windows search path variable: `Path`.
    */
   public static readonly pathVariable: string;
@@ -1452,9 +1474,17 @@ export declare class Resources {
    */
   public static readonly programFilesVariable: string;
   /**
+   * The 32-bit program files variable: `ProgramFiles(x86)`.
+   */
+  public static readonly programFilesX86Variable: string;
+  /**
    * The Windows folder variable: `SystemRoot`.
    */
   public static readonly systemRootVariable: string;
+  /**
+   * The id of PowerShell 7: `pwsh`.
+   */
+  public static readonly powerShellId: string;
   /**
    * The display name of PowerShell 7.
    */
@@ -1476,6 +1506,10 @@ export declare class Resources {
    */
   public static readonly appAliasDirectorySegments: readonly string[];
   /**
+   * The id of Windows PowerShell: `windows-powershell`.
+   */
+  public static readonly windowsPowerShellId: string;
+  /**
    * The display name of Windows PowerShell.
    */
   public static readonly windowsPowerShellName: string;
@@ -1483,6 +1517,50 @@ export declare class Resources {
    * Where Windows PowerShell is under the Windows folder.
    */
   public static readonly windowsPowerShellSegments: readonly string[];
+  /**
+   * The id of Command Prompt: `cmd`.
+   */
+  public static readonly commandPromptId: string;
+  /**
+   * The display name of Command Prompt.
+   */
+  public static readonly commandPromptName: string;
+  /**
+   * Where Command Prompt is under the Windows folder.
+   */
+  public static readonly commandPromptSegments: readonly string[];
+  /**
+   * The id of Git Bash: `git-bash`.
+   */
+  public static readonly gitBashId: string;
+  /**
+   * The display name of Git Bash.
+   */
+  public static readonly gitBashName: string;
+  /**
+   * The arguments that start Git Bash as an interactive login shell: `--login -i`.
+   */
+  public static readonly gitBashArguments: readonly string[];
+  /**
+   * Where Git for Windows installs under a program files folder.
+   */
+  public static readonly gitInstallSegments: readonly string[];
+  /**
+   * Where Git for Windows installs for one person under the local application data folder.
+   */
+  public static readonly gitUserInstallSegments: readonly string[];
+  /**
+   * The folder of a Git for Windows installation that `Path` names: `cmd`.
+   */
+  public static readonly gitCommandFolder: string;
+  /**
+   * The executable in that folder that identifies Git: `git.exe`.
+   */
+  public static readonly gitExecutable: string;
+  /**
+   * Where Git Bash is in a Git for Windows installation.
+   */
+  public static readonly gitBashSegments: readonly string[];
   /**
    * The Windows PowerShell arguments before the encoded registry script.
    */
@@ -1551,6 +1629,10 @@ export declare class Resources {
    * Message for a terminal that does not exist or belongs to another connection.
    */
   public static readonly terminalNotFound: string;
+  /**
+   * Message for opening a terminal with a shell that is not installed.
+   */
+  public static readonly terminalShellNotFound: string;
   /**
    * Message for input to a terminal whose shell is not running.
    */
@@ -2245,7 +2327,7 @@ export interface IPseudoTerminalListener {
 }
 
 /**
- * Finds the shell a new terminal starts.
+ * Finds the shells a new terminal can start.
  */
 export interface IShellLocator {
   /**
@@ -2255,6 +2337,14 @@ export interface IShellLocator {
    * @throws ServiceException when no shell can be found.
    */
   findDefault(environment: ShellEnvironment): Shell;
+
+  /**
+   * Finds every installed shell, including the default shell.
+   * @param environment The environment the shells will start with, which is also where they are looked for.
+   * @returns The shells, each with a distinct id.
+   * @throws ServiceException when the shells cannot be looked for.
+   */
+  findAll(environment: ShellEnvironment): readonly Shell[];
 }
 
 /**
@@ -2290,13 +2380,21 @@ export declare class RegistryVariable {
 }
 
 /**
- * A shell a terminal can start: its display name and how to run it.
+ * A shell a terminal can start: its id, display name, family and how to run it.
  */
 export declare class Shell {
+  /**
+   * The id, stable while the shell stays installed, such as `pwsh` or `/bin/zsh`.
+   */
+  public readonly id: string;
   /**
    * The display name, such as `PowerShell` or `zsh`.
    */
   public readonly name: string;
+  /**
+   * The shell's family.
+   */
+  public readonly kind: TerminalShellKind;
   /**
    * The executable's path.
    */
@@ -2308,12 +2406,14 @@ export declare class Shell {
 
   /**
    * Initializes the shell.
+   * @param id The id; must not be blank.
    * @param name The display name; must not be blank.
+   * @param kind The shell's family.
    * @param executable The executable's path; must not be blank.
    * @param args The arguments; copied.
-   * @throws ArgumentException when the name or the executable is blank.
+   * @throws ArgumentException when the id, the name or the executable is blank.
    */
-  public constructor(name: string, executable: string, args: readonly string[]);
+  public constructor(id: string, name: string, kind: TerminalShellKind, executable: string, args: readonly string[]);
 }
 
 /**
@@ -2404,8 +2504,9 @@ export declare class TerminalSettings {
 }
 
 /**
- * Finds the default shell: PowerShell 7 on Windows, or Windows PowerShell when it is absent, and elsewhere the
- * person's login shell, started as a login shell so it reads their profile.
+ * Finds the installed shells. The default shell is PowerShell 7 on Windows, or Windows PowerShell when it is absent,
+ * and elsewhere the person's login shell. Shells on macOS and Linux start as login shells, so they read the person's
+ * profile.
  */
 export declare class ShellLocator implements IShellLocator {
   /**
@@ -2414,17 +2515,21 @@ export declare class ShellLocator implements IShellLocator {
    * @param userShell Reads the person's login shell from the system, or `null` when none is recorded; a failure counts
    * as none.
    * @param exists Tells whether a file exists.
+   * @param listedShells Reads the system's list of shells, one path per line as in `/etc/shells`, or `null` when there
+   * is none.
    */
-  public constructor(platform: string, userShell: () => string | null, exists: (path: string) => boolean);
+  public constructor(platform: string, userShell: () => string | null, exists: (path: string) => boolean, listedShells: () => string | null);
 
   /**
    * Creates the locator for a platform, reading the login shell from the system's user record. A file counts as
    * present when the file system lists it, so a Microsoft Store app execution alias for PowerShell 7 counts although
    * it cannot be opened as a file; a path that cannot be inspected counts as absent.
    * @param platform The platform, as `process.platform`.
+   * @param listedShellsPath The system's list of shells; `/etc/shells` by default. A path that is not a file counts as
+   * no list.
    * @returns The locator.
    */
-  public static fromPlatform(platform: string): ShellLocator;
+  public static fromPlatform(platform: string, listedShellsPath?: string): ShellLocator;
 
   /**
    * Finds the default shell. On Windows it looks for `pwsh.exe` in `Path`, in `%ProgramFiles%\PowerShell\7` and among
@@ -2435,6 +2540,19 @@ export declare class ShellLocator implements IShellLocator {
    * @throws ServiceException `Unavailable` on Windows when neither PowerShell 7 nor `SystemRoot` is found.
    */
   public findDefault(environment: ShellEnvironment): Shell;
+
+  /**
+   * Finds every installed shell, the default shell first. On Windows these are PowerShell 7 (`pwsh`), Windows
+   * PowerShell (`windows-powershell`), Command Prompt (`cmd`) and Git Bash (`git-bash`), which is looked for through
+   * the `cmd` folder of a Git on `Path`, then in `Git` under `%ProgramFiles%` and `%ProgramFiles(x86)%` and in
+   * `Programs\Git` under `%LOCALAPPDATA%`, and starts with `--login -i`. Elsewhere they are the login shell and the
+   * other existing shells in the system's list, one per name, leaving out terminal multiplexers and shells that
+   * refuse sign-in; each shell's id is its path.
+   * @param environment The environment the shells will start with.
+   * @returns The shells.
+   * @throws ServiceException `Unavailable` on Windows when `SystemRoot` is not set.
+   */
+  public findAll(environment: ShellEnvironment): readonly Shell[];
 }
 
 /**
