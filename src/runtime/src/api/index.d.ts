@@ -9,7 +9,7 @@
 import type { Socket } from "node:net";
 
 import type { IEventListener, IProjectsService, ProviderRegistry, RequestDispatcher } from "@noldova/teamrun-core";
-import type { Exception } from "@noldova/teamrun-foundation-exceptions";
+import type { Exception, ExceptionOptions } from "@noldova/teamrun-foundation-exceptions";
 import type { JsonObject, JsonValue } from "@noldova/teamrun-foundation-json";
 import type { ServiceResponseInfo } from "@noldova/teamrun-foundation-services";
 import type {
@@ -372,8 +372,9 @@ export declare class LaunchException extends Exception {
   /**
    * Initializes the exception with the message `The runtime could not be started: <reason>`.
    * @param reason Why.
+   * @param options The underlying process failure, when present.
    */
-  public constructor(reason: string);
+  public constructor(reason: string, options?: ExceptionOptions);
 }
 
 /**
@@ -1174,6 +1175,30 @@ export declare class Resources {
    */
   public static readonly invalidWelcomeVersion: string;
   public static readonly launchTimedOut: string;
+  /**
+   * The child-process notification that execution has started.
+   */
+  public static readonly spawnEvent: string;
+  /**
+   * The Linux shell used to close inherited descriptors before runtime execution.
+   */
+  public static readonly runtimeLaunchShell: string;
+  /**
+   * The Linux descriptor directory that must be readable and searchable before launch.
+   */
+  public static readonly runtimeLaunchDescriptors: string;
+  /**
+   * Explains how to restore the required Linux launch shell.
+   */
+  public static readonly runtimeLaunchShellUnavailable: string;
+  /**
+   * Explains how to restore access to the Linux descriptor directory.
+   */
+  public static readonly runtimeLaunchDescriptorsUnavailable: string;
+  /**
+   * Fixed shell options and program; the destination executable and arguments follow them.
+   */
+  public static readonly runtimeLaunchShellArguments: readonly string[];
   public static readonly dataDirectoryRequired: string;
   public static readonly stoppedByIdle: string;
   public static readonly stoppedBySignal: string;
@@ -1990,7 +2015,23 @@ export declare class RuntimeEntry {
 }
 
 /**
+ * The command for starting a runtime, with inherited descriptor cleanup on Linux.
+ */
+export declare class RuntimeLaunchCommand extends ProcessCommand {
+  /**
+   * Checks Linux prerequisites and creates the platform's launch command without executing it.
+   * @param platform The host platform, as `process.platform`.
+   * @param executablePath The executable that runs the runtime.
+   * @param args The arguments, preserved literally and copied into the command.
+   * @throws ArgumentException when the executable path is blank.
+   * @throws LaunchException when Linux lacks executable `/bin/bash` or readable, searchable `/proc/self/fd`.
+   */
+  public constructor(platform: string, executablePath: string, args: readonly string[]);
+}
+
+/**
  * Attaches to the runtime of a data directory, starting one when none is live.
+ * Linux startup requires `/bin/bash` and `/proc` to close inherited descriptors in the child.
  */
 export declare class RuntimeLauncher {
   /**
@@ -2027,7 +2068,8 @@ export declare class RuntimeLauncher {
    * @returns The connected client.
    * @throws ConnectionException when the runtime refuses the hello.
    * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
-   * @throws LaunchException when no runtime becomes reachable within the launch timeout.
+   * @throws LaunchException when Linux launch prerequisites are unavailable, process creation fails,
+   * or no runtime becomes reachable within the launch timeout.
    * @remarks A runtime of another build is left running; it is never killed or replaced while its work may be active.
    * The lock of another build is replaced only when no runtime holds the data directory's ownership.
    */

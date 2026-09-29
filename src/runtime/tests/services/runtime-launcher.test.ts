@@ -6,10 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import fs, { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
-import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { ErrorCode, MethodName, ProtocolVersion } from "@noldova/teamrun-protocol";
 import { ConnectionException, Endpoint, LaunchException, LockFile, ProcessProbe, RuntimeBuildMismatchException, RuntimeEntry, RuntimeLauncher,
   RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
@@ -167,8 +168,59 @@ export class RuntimeLauncherTests {
     }
   }
 
+  @TestMethod
+  public async reportsAProcessCreationFailureInsteadOfAnUnhandledError(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", 400);
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["invalid\0argument"], process.env,
+      RuntimeLauncherTests.timings);
+
+    const error = await Assert.throwsAsync(async () => {
+      const client = await launcher.attach("test", new RecordingClientListener());
+      client.close();
+      await Wait.until(() => launcher.readLiveLock() === null);
+    }, LaunchException);
+
+    Assert.isFalse(error.message.includes("did not publish its endpoint in time"), error.message);
+    Assert.isTrue(error.cause instanceof TypeError && "code" in error.cause && error.cause.code === "ERR_INVALID_ARG_VALUE");
+    Assert.isNull(launcher.readLiveLock());
+  }
+
+  @TestMethod
+  public async reportsMissingLinuxPrerequisitesBeforeWaitingForAnEndpoint(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", null);
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+      RuntimeLauncherTests.timings);
+    const originalAccess = fs.accessSync;
+    try {
+      for (const path of ["/bin/bash", "/proc/self/fd"]) {
+        const cause = Object.assign(new Error("Fixture prerequisite is missing"), { code: "ENOENT" });
+        fs.accessSync = (candidate, mode) => {
+          if (candidate === path)
+            throw cause;
+          originalAccess(candidate, mode);
+        };
+        syncBuiltinESMExports();
+
+        const error = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), LaunchException);
+
+        Assert.isTrue(error.message.includes(path), error.message);
+        Assert.areEqual(cause, error.cause);
+        Assert.isNull(launcher.readLiveLock());
+      }
+    }
+    finally {
+      fs.accessSync = originalAccess;
+      syncBuiltinESMExports();
+    }
+  }
+
   private static writeLock(settings: RuntimeSettings, lock: RuntimeLock): void {
     mkdirSync(settings.dataDirectory, { recursive: true });
     writeFileSync(settings.lockPath, `${JSON.stringify(lock.toJson())}\n`);
   }
 }
+
+if (process.platform !== "linux")
+  Skip("Linux runtime prerequisites are checked before spawning.")(RuntimeLauncherTests.prototype.reportsMissingLinuxPrerequisitesBeforeWaitingForAnEndpoint);

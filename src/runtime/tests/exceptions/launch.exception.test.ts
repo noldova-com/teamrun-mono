@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Exception } from "@noldova/teamrun-foundation-exceptions";
+import { Exception, ExceptionOptions } from "@noldova/teamrun-foundation-exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { LaunchException } from "@noldova/teamrun-runtime";
 
@@ -18,5 +18,13 @@ export class LaunchExceptionTests {
 
     Assert.isInstanceOf(exception, Exception);
     Assert.areEqual("The runtime could not be started: timed out", exception.message);
+  }
+
+  @TestMethod
+  public retainsTheUnderlyingProcessFailure(): void {
+    const cause = new Error("process creation failed");
+    const exception = new LaunchException("process creation failed", new ExceptionOptions(cause));
+
+    Assert.areEqual(cause, exception.cause);
   }
 }

@@ -29,6 +29,7 @@ export { InstallationUpdate } from "../models/installation-update.js";
 export { LineBuffer } from "../models/line-buffer.js";
 export { PendingCall } from "../models/pending-call.js";
 export { RegistryVariable } from "../models/registry-variable.js";
+export { RuntimeLaunchCommand } from "../models/runtime-launch-command.js";
 export { RuntimeLock } from "../models/runtime-lock.js";
 export { RuntimeSettings } from "../models/runtime-settings.js";
 export { RuntimeTimings } from "../models/runtime-timings.js";

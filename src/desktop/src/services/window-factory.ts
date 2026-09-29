@@ -150,6 +150,14 @@ export class WindowFactory {
         clearTimeout(timer);
       save();
     });
+    window.once(Resources.closedEvent, () => {
+      if (!Object.isNull(timer))
+        clearTimeout(timer);
+      window.off(Resources.resizeEvent, later);
+      window.off(Resources.moveEvent, later);
+      window.off(Resources.maximizeEvent, later);
+      window.off(Resources.unmaximizeEvent, later);
+    });
   }
 
   private static isVisible(bounds: Rectangle): boolean {

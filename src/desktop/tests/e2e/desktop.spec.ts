@@ -200,8 +200,8 @@ test("opens a terminal in the default shell, runs a command, hides and shows it,
   await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
 });
 
-test("quits when its window is gone before it could save", async () => {
-  expect(await desktop.closeFromPage()).toBe(0);
+test("quits when a window with a pending state save is destroyed", async () => {
+  expect(await desktop.destroyWindow()).toBe(0);
 });
 
 test("opens an attachment in a modal or tab and retains the composer draft", async () => {
