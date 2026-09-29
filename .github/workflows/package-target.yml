@@ -105,6 +105,7 @@ jobs:
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-package/tests.stdout.log"; cat "$RUNNER_TEMP/teamrun-package/tests.stderr.log" >&2' EXIT
           {
+            npm run test:build
             npm run test:release
             npm run test:package
             npm run test:desktop

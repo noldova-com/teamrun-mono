@@ -190,6 +190,11 @@ jobs:
           node node_modules/typescript/bin/tsc --project scripts/tsconfig.json > "$RUNNER_TEMP/teamrun-ci/typecheck.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/typecheck.stderr.log"
           node node_modules/typescript/bin/tsc --project src/desktop/tests/e2e/tsconfig.json >> "$RUNNER_TEMP/teamrun-ci/typecheck.stdout.log" 2>> "$RUNNER_TEMP/teamrun-ci/typecheck.stderr.log"
 
+      - name: Check build contracts
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/build-tests.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/build-tests.stderr.log" >&2' EXIT
+          npm run test:build > "$RUNNER_TEMP/teamrun-ci/build-tests.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build-tests.stderr.log"
+
       - name: Run package tests and coverage gate
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/test.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/test.stderr.log" >&2' EXIT

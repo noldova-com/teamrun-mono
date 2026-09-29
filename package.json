@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "node scripts/build.ts",
+    "test:build": "node scripts/test-build.ts",
     "test": "node scripts/test.ts",
     "cli": "node node_modules/@noldova/teamrun-cli/services/cli-entry.js",
     "desktop": "node scripts/desktop.ts",
