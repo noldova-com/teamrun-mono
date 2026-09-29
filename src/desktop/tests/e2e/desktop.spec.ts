@@ -232,14 +232,12 @@ test("retains terminal output after a narrow resize, widening and a window reloa
   await expect.poll(async () => (await host.boundingBox())?.width).toBe(original.width);
   await expect.poll(async () => (await host.boundingBox())?.height).toBe(original.height);
   await expect.poll(async () => (await desktop.terminalState()).size.columns).toBeGreaterThan("echo teamrun-resize-retains-this-output".length);
-  await terminal.locator(".xterm").hover();
-  await page.mouse.wheel(0, -10_000);
+  await desktop.scrollTerminalToStart();
   await expect(terminal.locator(".xterm-rows")).toContainText(repeated);
 
   await page.reload();
   await expect(terminal.locator(".xterm-rows")).toContainText(/\S/);
-  await terminal.locator(".xterm").hover();
-  await page.mouse.wheel(0, -10_000);
+  await desktop.scrollTerminalToStart();
   await expect(terminal.locator(".xterm-rows")).toContainText(repeated);
   await desktop.capture("terminal-after-resize-reload");
 });

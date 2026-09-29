@@ -104,6 +104,39 @@ export class DesktopFixture {
     return TerminalState.fromJson(response.payload[0]);
   }
 
+  public async scrollTerminalToStart(): Promise<void> {
+    const scrollbar = this.page.locator("tr-terminal-panel .xterm .scrollbar.vertical");
+    const slider = scrollbar.locator(".slider");
+    await expect.poll(() => scrollbar.evaluate(element => {
+      const parent = element.parentElement;
+      return parent !== null && element.clientHeight === parent.clientHeight;
+    })).toBe(true);
+    const { track, thumb } = await scrollbar.evaluate(element => {
+      const slider = element.querySelector(".slider");
+      if (!slider)
+        throw new Error("The terminal scrollbar is not drawn.");
+      const track = element.getBoundingClientRect();
+      const thumb = slider.getBoundingClientRect();
+      return {
+        track: { x: track.x, y: track.y, width: track.width, height: track.height },
+        thumb: { x: thumb.x, y: thumb.y, width: thumb.width, height: thumb.height }
+      };
+    });
+    await this.info.attach("terminal-scroll-geometry", { body: JSON.stringify({ track, thumb }), contentType: "application/json" });
+    if (thumb.height < track.height) {
+      const x = thumb.x + thumb.width / 2;
+      await this.page.mouse.move(x, thumb.y + thumb.height / 2);
+      await this.page.mouse.down();
+      try {
+        await this.page.mouse.move(x, track.y + thumb.height / 2, { steps: 8 });
+      }
+      finally {
+        await this.page.mouse.up();
+      }
+    }
+    await expect(slider).toHaveCSS("top", "0px");
+  }
+
   public async capture(name: string): Promise<Buffer> {
     if (!this.captureSession)
       throw new Error("The fixture capture session is not running.");
