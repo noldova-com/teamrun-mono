@@ -27,7 +27,7 @@ You can submit an issue without choosing labels. Maintainers classify reports an
 - `needs triage` marks a report awaiting assessment; remove it after that assessment.
 - `needs information` marks missing details and stays until the required information is supplied.
 - `good first issue` identifies clearly scoped work suitable for newcomers, with enough guidance to get started.
-- `in progress` marks a claimed issue; see [Before making a change](#before-making-a-change).
+- `in progress` marks an issue someone is working on; see [Before making a change](#before-making-a-change).
 
 The [labels page](https://github.com/noldova-com/teamrun/labels) describes each label's meaning.
 
@@ -35,7 +35,7 @@ The [labels page](https://github.com/noldova-com/teamrun/labels) describes each 
 
 Create or reuse a relevant issue in this repository for every change, including documentation, small fixes, dependencies and agent-assisted work. Discuss substantial product or architecture changes in the issue before implementing them. Agree on a bounded scope and observable acceptance criteria; split larger work into linked issues when needed.
 
-Before you start on an issue, check that it has no `in progress` label and no open PR. Claim it by adding the label and a comment saying where the work happens, such as a branch or an agent's lane; claim a sub-issue rather than its parent. Then read the comments again: if someone claimed the issue before you, delete your comment and leave the label in place. Remove the label when your work on the issue ends, whether its PR merges or you stop. Contributors who cannot set labels claim an issue with the comment alone.
+Before you start on an issue, check that it has no `in progress` label and no open PR, then add the label; for an issue split into sub-issues, label the sub-issue you work on. The **Clear in-progress label** workflow removes the label when the issue closes; if the issue stays open when your work on it ends, remove the label yourself. Contributors who cannot set labels say in a comment that they are working on the issue.
 
 Follow the [coding standards](../docs/CODING-STANDARDS.md), the [UI standards](../docs/UI-STANDARDS.md) for visual and interaction changes, and the [architecture](../docs/ARCHITECTURE.md) for changes to component or data boundaries. Update the owning document when a requirement changes instead of adding a competing rule elsewhere.
 
