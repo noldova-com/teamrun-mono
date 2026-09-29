@@ -136,7 +136,7 @@ export class ConversationEngine implements IConversationEngine {
       attachments = this.attachments.save(params.attachments);
       const question = new MessageDetail(0, DetailKind.Text, params.text, null, now);
       const message = new Message(Guid.createVersion7().toString(), conversation.id, sequence, MessageAuthor.User, null,
-        MessageStatus.Completed, String.isNullOrEmpty(params.text) ? [] : [question], null, now, now, attachments,
+        MessageStatus.Completed, String.isNullOrEmpty(params.text) ? [] : [question], null, now, null, now, attachments,
         null, null, mentions.map(t => new TeammateMention(t.id, t.name)));
       const pending: ReplyWork[] = [];
       for (const participant of participants) {
@@ -360,7 +360,7 @@ export class ConversationEngine implements IConversationEngine {
     this.registry.get(requested.provider);
     const provenance = new Provenance(account?.id ?? null, requested, new ObservedSettings(null, null, null, null, null), null, false);
     const reply = new Message(Guid.createVersion7().toString(), sent.conversationId, sequence, MessageAuthor.Provider, sent.id,
-      MessageStatus.Pending, [], provenance, sent.createdAt, null, [], teammate?.id ?? null, teammate?.name ?? null);
+      MessageStatus.Pending, [], provenance, sent.createdAt, null, null, [], teammate?.id ?? null, teammate?.name ?? null);
     return new ReplyWork(reply, account, teammate?.role ?? null);
   }
 

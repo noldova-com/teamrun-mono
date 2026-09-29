@@ -21,7 +21,7 @@ import { UpdateRestartService } from "../../../src/app/services/update-restart.s
 describe("UpdateRestartService", () => {
   const first = SampleData.withStatus(SampleData.reply, MessageStatus.Running);
   const second = new Message("second", "c1", 3, MessageAuthor.Provider, SampleData.userMessage.id, MessageStatus.Pending, [], first.provenance,
-    SampleData.timestamp, null, [], "bob", "Bob");
+    SampleData.timestamp, null, null, [], "bob", "Bob");
   let bridge: FakeTeamRunBridge;
   let store: ChatStore;
   let restart: UpdateRestartService;

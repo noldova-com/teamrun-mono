@@ -14,7 +14,7 @@ import { LiveCheckReport, ReplyOutcome } from "@noldova/teamrun-cli";
 export class LiveCheckReportTests {
   @TestMethod
   public serializesTheRun(): void {
-    const reply = new Message("m-1", "c-1", 2, MessageAuthor.User, null, MessageStatus.Completed, [], null, "2026-09-10T00:00:00.000Z", "2026-09-10T00:00:01.000Z");
+    const reply = new Message("m-1", "c-1", 2, MessageAuthor.User, null, MessageStatus.Completed, [], null, "2026-09-10T00:00:00.000Z", null, "2026-09-10T00:00:01.000Z");
     const report = new LiveCheckReport("fake", "PONG?", "D:/tmp/project", [new ReplyOutcome(reply, 1, ["deny"])], 42);
 
     const json = report.toJson();

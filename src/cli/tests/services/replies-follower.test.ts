@@ -17,8 +17,8 @@ export class RepliesFollowerTests {
   public async replaysEarlyEventsAndReturnsRepliesInTheirOriginalOrder(): Promise<void> {
     await using host = await CliTestHost.create();
     using session = await RuntimeSession.open(host.connections);
-    const first = new Message("a", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t");
-    const second = new Message("b", "c", 1, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t");
+    const first = new Message("a", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t");
+    const second = new Message("b", "c", 1, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t");
     const follower = new RepliesFollower(session, host.console, DecisionPolicy.Deny, false);
     follower.handleEvent(new Event(EventName.MessageUpdated, second.toJson()));
     const pending = follower.follow([first, second]);

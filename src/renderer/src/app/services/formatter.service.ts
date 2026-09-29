@@ -236,16 +236,13 @@ export class Formatter {
     return String.isNullOrWhitespace(line) ? null : line;
   }
 
-  public duration(message: Message, now: number): string {
-    const started = Date.parse(message.createdAt);
-    const ended = Object.isNull(message.endedAt) ? now : Date.parse(message.endedAt);
-    return Resources.formatDuration(ended - started);
-  }
-
   public activityLabel(message: Message, now: number): string {
     if (this.isWaitingForTurn(message))
       return Resources.waitingForTurnLabel;
-    const duration = this.duration(message, now);
+    if (Object.isNull(message.startedAt))
+      return Resources.didNotStartLabel;
+    const ended = Object.isNull(message.endedAt) ? now : Date.parse(message.endedAt);
+    const duration = Resources.formatDuration(ended - Date.parse(message.startedAt));
     return this.isActive(message) ? Resources.formatWorkingFor(duration) : Resources.formatWorkedFor(duration);
   }
 

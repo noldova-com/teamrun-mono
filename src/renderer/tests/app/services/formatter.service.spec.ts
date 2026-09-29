@@ -28,7 +28,7 @@ describe("Formatter", () => {
 
     expect(formatter().authorLabel(SampleData.userMessage, providers)).toBe(Resources.youLabel);
     expect(formatter().authorLabel(SampleData.reply, providers)).toBe("Codex");
-    expect(formatter().authorLabel(new Message("m3", "c1", 2, MessageAuthor.TeamRun, null, MessageStatus.Completed, [], null, SampleData.timestamp, SampleData.timestamp), providers))
+    expect(formatter().authorLabel(new Message("m3", "c1", 2, MessageAuthor.TeamRun, null, MessageStatus.Completed, [], null, SampleData.timestamp, null, SampleData.timestamp), providers))
       .toBe(Resources.teamRunLabel);
     expect(formatter().providerName("other", providers)).toBe("other");
     expect(formatter().providerName(null, providers)).toBe(Resources.teamRunLabel);
@@ -124,6 +124,17 @@ describe("Formatter", () => {
     expect(formatter().isWaitingForTurn(pending)).toBe(true);
     expect(formatter().isWaitingForTurn(reply([], MessageStatus.Running))).toBe(false);
     expect(formatter().activityLabel(pending, Date.parse(SampleData.timestamp) + 12_000)).toBe("Waiting for its turn");
+  });
+
+  it("measures a reply from its start, not from the message it answers", () => {
+    const sent = Date.parse(SampleData.timestamp);
+    const at = (offset: number): string => new Date(sent + offset).toISOString();
+    const waited = (status: MessageStatus, startedAt: string | null, endedAt: string | null): Message =>
+      new Message("m9", "c1", 2, MessageAuthor.Provider, "m1", status, [], SampleData.provenance, SampleData.timestamp, startedAt, endedAt);
+
+    expect(formatter().activityLabel(waited(MessageStatus.Running, at(30_000), null), sent + 40_000)).toBe("Working for 10s");
+    expect(formatter().activityLabel(waited(MessageStatus.Completed, at(30_000), at(42_000)), sent + 90_000)).toBe("Worked for 12s");
+    expect(formatter().activityLabel(waited(MessageStatus.Cancelled, null, at(30_000)), sent + 90_000)).toBe("Did not start");
   });
 
   it("renders times through the preferred formats", () => {

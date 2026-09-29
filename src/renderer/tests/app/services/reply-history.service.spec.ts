@@ -20,7 +20,7 @@ describe("ReplyHistory", () => {
   const reply = (sequence: number, conversationId = "c1", title = `Command ${sequence}`): Message =>
     new Message(`r${sequence}`, conversationId, sequence, MessageAuthor.Provider, null, MessageStatus.Completed,
       [new MessageDetail(0, DetailKind.Command, `${title}\nlarge output`, null, SampleData.timestamp)], SampleData.reply.provenance,
-      SampleData.timestamp, SampleData.timestamp);
+      SampleData.timestamp, SampleData.timestamp, SampleData.timestamp);
   let messages: Message[];
   let bridge: ReturnType<typeof SampleData.createBridge>;
   let history: ReplyHistory;

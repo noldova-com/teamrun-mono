@@ -90,7 +90,7 @@ export class ConversationsServiceTests {
     host.conversations.setMemberSession(secondMember, "second-session", false);
     const provenance = new Provenance(account.id, new RequestedSettings("fake", null, null),
       new ObservedSettings(null, null, null, null, null), null, false);
-    const reply = new Message("busy", second.id, 0, MessageAuthor.Provider, null, MessageStatus.Pending, [], provenance, "t", null);
+    const reply = new Message("busy", second.id, 0, MessageAuthor.Provider, null, MessageStatus.Pending, [], provenance, "t", null, null);
     host.messages.insert(reply);
     const before = host.context.database.changeFeed.readAfter(0).length;
     Assert.throws(() => host.teammates.update(new TeammateUpdateParams(teammate.id, "Alice", null, replacement.id,
@@ -126,7 +126,7 @@ export class ConversationsServiceTests {
   public refusesToDeleteAnUnreconciledOpenReply(): void {
     using host = new CoreHost();
     const conversation = host.createConversation();
-    host.messages.insert(new Message("orphan", conversation.id, 0, MessageAuthor.User, null, MessageStatus.Running, [], null, "t", null));
+    host.messages.insert(new Message("orphan", conversation.id, 0, MessageAuthor.User, null, MessageStatus.Running, [], null, "t", null, null));
     const failure = Assert.throws(() => host.conversations.delete(new ConversationIdParams(conversation.id)), ServiceException);
     Assert.areEqual(ErrorCode.Conflict, failure.info.name);
     Assert.isNotNull(host.conversations.find(conversation.id));
@@ -258,7 +258,7 @@ export class ConversationsServiceTests {
     const notes = host.createConversation(project, "Notes 100%");
     const text = (id: string, conversationId: string, sequence: number, content: string, at: string): Message => {
       const detail = new MessageDetail(0, DetailKind.Text, content, null, at);
-      return new Message(id, conversationId, sequence, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, at, at);
+      return new Message(id, conversationId, sequence, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, at, null, at);
     };
     const first = "Please fix the LOGIN page as we discussed earlier today.\nIt shows a blank form after the redirect and the tests fail.";
     host.messages.insert(text("m1", tests.id, 0, first, "t1"));

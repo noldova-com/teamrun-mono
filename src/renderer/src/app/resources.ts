@@ -348,6 +348,7 @@ export class Resources {
   public static readonly teamRunLabel: string = "TeamRun";
   public static readonly workingLabel: string = "Working";
   public static readonly waitingForTurnLabel: string = "Waiting for its turn";
+  public static readonly didNotStartLabel: string = "Did not start";
   public static readonly showMoreLabel: string = "Show more";
   public static readonly showLessLabel: string = "Show less";
   public static readonly dateTimeLocale: string = "en-GB";

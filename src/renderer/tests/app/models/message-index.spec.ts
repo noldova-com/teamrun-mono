@@ -14,7 +14,7 @@ import { MessageIndex } from "../../../src/app/models/message-index";
 
 describe("MessageIndex", () => {
   const message = (sequence: number): Message => new Message(`m${sequence}`, "c1", sequence, MessageAuthor.User, null,
-    MessageStatus.Completed, [], null, SampleData.timestamp, SampleData.timestamp);
+    MessageStatus.Completed, [], null, SampleData.timestamp, null, SampleData.timestamp);
 
   it("preserves geometry and controls while reconciling pages and rewind", () => {
     const index = new MessageIndex();

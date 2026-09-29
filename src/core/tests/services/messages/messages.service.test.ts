@@ -185,11 +185,12 @@ export class MessagesServiceTests {
 
   private static userMessage(conversationId: string, sequence: number, text: string): Message {
     const detail = new MessageDetail(0, DetailKind.Text, text, null, "t");
-    return new Message(`msg-${sequence}`, conversationId, sequence, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, "t", "t");
+    return new Message(`msg-${sequence}`, conversationId, sequence, MessageAuthor.User, null, MessageStatus.Completed, [detail], null, "t", null, "t");
   }
 
   private static reply(conversationId: string, sequence: number, status: MessageStatus): Message {
     const provenance = new Provenance(null, new RequestedSettings("fake", null, null), new ObservedSettings(null, null, null, null, null), null, false);
-    return new Message(`reply-${sequence}`, conversationId, sequence, MessageAuthor.Provider, "msg-0", status, [], provenance, "t", null);
+    return new Message(`reply-${sequence}`, conversationId, sequence, MessageAuthor.Provider, "msg-0", status, [], provenance, "t",
+      status === MessageStatus.Pending ? null : "t", null);
   }
 }

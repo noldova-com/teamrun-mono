@@ -76,6 +76,6 @@ export class ReplySummaryTests {
 
   private static message(details: readonly MessageDetail[]): Message {
     const provenance = new Provenance(null, new RequestedSettings("fake", null, null), new ObservedSettings(null, null, null, null, null), null, false);
-    return new Message("r1", "c1", 1, MessageAuthor.Provider, null, MessageStatus.Completed, details, provenance, "t", "t2");
+    return new Message("r1", "c1", 1, MessageAuthor.Provider, null, MessageStatus.Completed, details, provenance, "t", "t", "t2");
   }
 }

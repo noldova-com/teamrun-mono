@@ -46,6 +46,6 @@ export class FileChangeReaderTests {
 
   private static message(payloads: readonly JsonValue[]): Message {
     return new Message("m", "c", 0, MessageAuthor.User, null, MessageStatus.Completed,
-      payloads.map((payload, i) => new MessageDetail(i, DetailKind.FileChange, "change", payload, "t")), null, "t", "t");
+      payloads.map((payload, i) => new MessageDetail(i, DetailKind.FileChange, "change", payload, "t")), null, "t", null, "t");
   }
 }

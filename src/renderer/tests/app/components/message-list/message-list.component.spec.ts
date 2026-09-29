@@ -110,7 +110,7 @@ describe("MessageListComponent", () => {
 
   it("renders only the messages around the viewport and keeps the height of the rest", async () => {
     const many = Array.from({ length: 60 }, (_, i) => new Message(`n${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
-      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, SampleData.timestamp));
+      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
     const bridge = SampleData.createBridge().answer(MethodName.MessageList, () => many.map(t => t.toJson())).answer(MethodName.ApprovalList, () => []);
     TestBed.configureTestingModule({ imports: [MessageListComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const store = TestBed.inject(ChatStore);
@@ -157,7 +157,7 @@ describe("MessageListComponent", () => {
     (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
     try {
       const many = Array.from({ length: 60 }, (_, i) => new Message(`n${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
-        [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, SampleData.timestamp));
+        [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
       const bridge = SampleData.createBridge().answer(MethodName.MessageList, () => many.map(t => t.toJson())).answer(MethodName.ApprovalList, () => []);
       TestBed.configureTestingModule({ imports: [MessageListComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
       const store = TestBed.inject(ChatStore);
@@ -223,7 +223,7 @@ describe("MessageListComponent", () => {
 
   it("reports where the reader is and goes back there when the tab returns", async () => {
     const many = Array.from({ length: 60 }, (_, i) => new Message(`n${i}`, "c1", i, MessageAuthor.User, null, MessageStatus.Completed,
-      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, SampleData.timestamp));
+      [SampleData.detail(0, DetailKind.Text, `t${i}`)], null, SampleData.timestamp, null, SampleData.timestamp));
     const second = new Conversation("c2", "p1", "Second", SampleData.timestamp, SampleData.timestamp);
     const bridge = SampleData.createBridge()
       .answer(MethodName.ConversationList, () => [SampleData.conversation.toJson(), second.toJson()])

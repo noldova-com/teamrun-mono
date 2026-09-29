@@ -14,7 +14,7 @@ import { Message, MessageAuthor, MessageStatus } from "@noldova/teamrun-protocol
 export class ReplyWorkTests {
   @TestMethod
   public ownsTheCapturedReplyAndItsCancellation(): void {
-    const message = new Message("m", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", "t");
+    const message = new Message("m", "c", 0, MessageAuthor.User, null, MessageStatus.Completed, [], null, "t", null, "t");
     const work = new ReplyWork(message, null, "role");
     Assert.areEqual(message, work.message);
     Assert.isNull(work.account);

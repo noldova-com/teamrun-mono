@@ -1316,6 +1316,10 @@ export declare class Resources {
    */
   public static readonly statusField: string;
   /**
+   * Name of a reply's start timestamp field: `startedAt`.
+   */
+  public static readonly startedAtField: string;
+  /**
    * Name of a message's end timestamp field: `endedAt`.
    */
   public static readonly endedAtField: string;
@@ -1541,6 +1545,11 @@ export declare class Resources {
    * Message for an end time present on an open message or absent on an ended one.
    */
   public static readonly messageEndMismatch: string;
+  /**
+   * Message for a start time on a message that is not a provider's reply or on a reply still waiting, or none on a provider's
+   * reply that runs or awaits approval.
+   */
+  public static readonly messageStartMismatch: string;
   /**
    * Message for a provider's message flagged as resumed without a native session id.
    */
@@ -2371,9 +2380,14 @@ export declare class Message {
    */
   public readonly provenance: Provenance | null;
   /**
-   * ISO 8601 timestamp of creation; for a provider's reply, when its run started.
+   * ISO 8601 timestamp of creation; for a provider's reply, the creation time of the message it answers.
    */
   public readonly createdAt: string;
+  /**
+   * ISO 8601 timestamp when a provider's reply began running; `null` for other authors, for a reply still waiting for its turn,
+   * and for one that ended before it ran.
+   */
+  public readonly startedAt: string | null;
   /**
    * ISO 8601 timestamp when the message reached an ended status, `null` while open.
    */
@@ -2390,14 +2404,17 @@ export declare class Message {
    * @param status Where the message stands.
    * @param details The pieces; copied, so later changes to the array do not reach the message.
    * @param provenance Where a provider's reply came from; `null` for every other author.
-   * @param createdAt ISO 8601 timestamp of creation; for a provider's reply, when its run started.
+   * @param createdAt ISO 8601 timestamp of creation; for a provider's reply, the creation time of the message it answers.
+   * @param startedAt ISO 8601 timestamp when a provider's reply began running; `null` for other authors, for a reply still
+   * waiting for its turn, and for one that ended before it ran.
    * @param endedAt ISO 8601 timestamp when the message reached an ended status, `null` while open.
    * @param attachments Saved attachment metadata, copied; defaults to empty and is omitted from JSON when empty.
    * @throws ArgumentException when the id, conversation id, or creation timestamp is blank, when
    * `inReplyTo` is present but blank, when provenance is present on a message that is not a
-   * provider's or absent on one that is, or when an end time is present on an open message or
-   * absent on an ended one; `ArgumentOutOfRangeException` when the sequence is negative or not an
-   * integer.
+   * provider's or absent on one that is, when an end time is present on an open message or
+   * absent on an ended one, or when a start time is blank, present on a message that is not a
+   * provider's or on a pending one, or absent on a provider's running or awaiting reply;
+   * `ArgumentOutOfRangeException` when the sequence is negative or not an integer.
    */
   public constructor(
     id: string,
@@ -2409,6 +2426,7 @@ export declare class Message {
     details: readonly MessageDetail[],
     provenance: Provenance | null,
     createdAt: string,
+    startedAt: string | null,
     endedAt: string | null,
     attachments?: readonly MessageAttachment[],
     teammateId?: string | null,
@@ -2419,7 +2437,9 @@ export declare class Message {
    * Reads a message from untrusted JSON.
    * @param value The untrusted value, expected to carry `id`, `conversationId`, the integer
    * `sequence`, `author`, the nullable `inReplyTo`, `status`, the `details` array of objects, the
-   * nullable `provenance` object, `createdAt`, and the nullable `endedAt`.
+   * nullable `provenance` object, `createdAt`, the optional nullable `startedAt`, and the nullable `endedAt`.
+   * Messages stored before start times were recorded have no `startedAt`: a provider's reply that is not
+   * pending then counts from `createdAt`, and every other message has none.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The message.
    * @throws JsonException when a field is missing or invalid; the exception names the field's
@@ -2431,16 +2451,25 @@ export declare class Message {
    * Renders the JSON object `fromJson` accepts.
    * @returns The object with `id`, `conversationId`, the integer `sequence`, `author`, the nullable
    * `inReplyTo`, `status`, the `details` array of objects, the nullable `provenance` object,
-   * `createdAt`, and the nullable `endedAt`.
+   * `createdAt`, the nullable `startedAt`, and the nullable `endedAt`.
    */
   public toJson(): JsonObject;
 
   /**
-   * Returns a copy with another status and end time; the same invariants apply.
+   * Returns a copy of a waiting reply that began running; the same invariants apply.
+   * @param startedAt ISO 8601 timestamp when the reply began running.
+   * @returns The copy, with status `Running`, the start time and no end time.
+   * @throws ArgumentException when the message is not a provider's reply or the start time is blank.
+   */
+  public withStart(startedAt: string): Message;
+
+  /**
+   * Returns a copy with another status and end time, keeping the start time; the same invariants apply.
    * @param status The new status.
    * @param endedAt The end time, `null` while the message is open.
    * @returns The copy.
-   * @throws ArgumentException when the status and the end time disagree.
+   * @throws ArgumentException when the status and the end time disagree, or when the status
+   * needs a start time the message does not have.
    */
   public withStatus(status: MessageStatus, endedAt: string | null): Message;
 

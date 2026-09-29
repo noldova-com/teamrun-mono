@@ -20,7 +20,7 @@ describe("ReplyHistoryComponent", () => {
   const reply = (sequence: number): Message => new Message(`r${sequence}`, "c1", sequence, MessageAuthor.Provider, null, MessageStatus.Completed,
     [new MessageDetail(0, DetailKind.Command, `Run ${sequence}\noutput ${sequence}`, null, SampleData.timestamp),
       new MessageDetail(1, DetailKind.FileChange, "Edit a.ts", { tool: "Edit", input: { file_path: "a.ts", old_string: "old", new_string: "new" } }, SampleData.timestamp)],
-    SampleData.reply.provenance, SampleData.timestamp, SampleData.timestamp);
+    SampleData.reply.provenance, SampleData.timestamp, SampleData.timestamp, SampleData.timestamp);
 
   it("renders a small range, lazily loads outputs, and restores expansion after scrolling away", async () => {
     const messages = Array.from({ length: 250 }, (_, i) => reply(i));

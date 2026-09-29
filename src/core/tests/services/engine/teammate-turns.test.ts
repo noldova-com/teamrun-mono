@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/teamrun-foundation-core";
 import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { SignInCheck, TurnOutcome } from "@noldova/teamrun-core";
@@ -50,8 +51,13 @@ export class TeammateTurnsTests {
     const sent = await host.engine.send(new MessageSendParams(conversation.id, "@Bob @Alice discuss", null, null, [], [bob.id, alice.id, bob.id]));
     Assert.areEqual("Bob,Alice", sent.replies.map(t => t.teammateName).join(","));
     Assert.areEqual("Bob,Alice", sent.sent.mentions.map(t => t.name).join(","));
-    Assert.isTrue(sent.replies.every(t => t.status === MessageStatus.Pending && t.inReplyTo === sent.sent.id));
+    Assert.isTrue(sent.replies.every(t => t.status === MessageStatus.Pending && t.inReplyTo === sent.sent.id && Object.isNull(t.startedAt)));
     await host.engine.waitForIdle();
+    const first = host.messages.find(sent.replies[0]!.id)!;
+    const second = host.messages.find(sent.replies[1]!.id)!;
+    Assert.isTrue(first.startedAt! >= sent.sent.createdAt);
+    Assert.isTrue(second.startedAt! >= first.endedAt!);
+    Assert.areEqual(sent.sent.createdAt, second.createdAt);
     Assert.areEqual(2, host.adapter.requests.length);
     Assert.isTrue(host.adapter.requests[0]!.prompt.includes("You join this conversation as @Bob"));
     Assert.isTrue(host.adapter.requests[1]!.prompt.includes("@Bob: First answer"));
@@ -107,6 +113,8 @@ export class TeammateTurnsTests {
     await host.engine.cancel(new MessageIdParams(held.replies[1]!.id));
     Assert.areEqual(3, host.adapter.requests.length);
     Assert.isTrue(held.replies.every(t => host.messages.find(t.id)?.status === MessageStatus.Cancelled));
+    Assert.isNotNull(host.messages.find(held.replies[0]!.id)!.startedAt);
+    Assert.isNull(host.messages.find(held.replies[1]!.id)!.startedAt);
     Assert.areEqual(0, host.engine.activeRunCount);
   }
 

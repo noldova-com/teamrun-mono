@@ -470,6 +470,7 @@ export class ConversationEngineTests {
     Assert.areEqual(MessageStatus.Interrupted, reply?.status);
     Assert.areEqual("The runtime stopped before this reply ended.", reply?.details[reply.details.length - 1]?.text);
     Assert.isFalse(Object.isNull(reply?.endedAt));
+    Assert.isNotNull(reply!.startedAt);
     Assert.areEqual(ApprovalStatus.Cancelled, host.approvals.find(pendingApproval.id)?.status);
     Assert.isNull(host.messages.findOpenReply(conversation.id));
     Assert.areEqual(0, engine.reconcile().length);
