@@ -14,6 +14,17 @@ TeamRun is Noldova's desktop application for working with coding agents. Noldova
 - Carry accepted review corrections forward to similar work in scope. Record reusable decisions in their owning document so the user does not have to repeat them.
 - Releases, package publication, repository visibility, Actions enablement, infrastructure, purchases and global tool configuration require explicit authorization. Implementation approval does not authorize them. Verify actual protections, integrations and workflow settings rather than assuming they exist; do not bypass missing checks.
 
+## Parallel lanes
+
+Several agents can work at once, each in its own lane: a Git worktree beside the main checkout, named `<agent>_<number>` (for example `claude_1` or `codex_1`). The main checkout stays on `main`.
+
+- Work only in your own lane. Other lanes and the main checkout are read-only: do not change their files, branches or Git state.
+- Start each issue with `git fetch --prune origin` and `git switch -c rr/<purpose> origin/main`.
+- After your PR merges, confirm that the squash commit matches your branch and check the `main` pipeline run for that merge. Then run `git switch --detach origin/main` and delete the merged branch.
+- Repository-wide Git settings, adding or removing worktrees, and Git maintenance such as `gc`, `prune` or `worktree repair` require the user's approval, because they affect every lane.
+- Run `npm run desktop` with `TEAMRUN_DATA_DIR` set to `~/.noldova/teamrun-dev-<lane>`.
+- Run the full UI suite only when no other lane is running it.
+
 ## Documents
 
 Documents define current requirements for their scope and carry no status labels or lifecycle sections. The user's decisions take precedence. When a decision changes, update its owner and remove contradictory wording or silent exceptions; preserve important superseded rationale in Git history. Unapproved ideas and historical references do not become requirements merely by being copied.
