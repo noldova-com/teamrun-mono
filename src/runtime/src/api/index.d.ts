@@ -1309,13 +1309,9 @@ export declare class Resources {
    */
   public static readonly lineFeedByte: number;
   /**
-   * How many lines the emulator keeps above its screen before they are stored: 512.
+   * How many recent rows the emulator keeps above its screen for reflow before storing them: 1000.
    */
   public static readonly terminalCaptureScrollback: number;
-  /**
-   * How many lines above the screen make the emulator drop its stored lines: 256.
-   */
-  public static readonly terminalCompactionLines: number;
   /**
    * How long to wait for a shell to end after each attempt: 2 seconds.
    */
@@ -2770,8 +2766,8 @@ export declare class TerminalHistory {
 }
 
 /**
- * The runtime's copy of a terminal's screen, drawn by `@xterm/headless`. Lines that leave the screen are stored in
- * the terminal's history as they leave it; erasing saved lines or a full reset clears the history, and the alternate
+ * The runtime's copy of a terminal's screen, drawn by `@xterm/headless`. Recent rows remain available for reflow;
+ * rows leaving that bounded buffer are stored in history. Erasing saved lines or a full reset clears the history, and the alternate
  * screen of full-screen programs is not stored. It answers the primary device attributes query, which the Windows
  * pseudo-console asks when it starts and waits for, so the answer never depends on a window being attached; on
  * Windows it also rewraps the line holding the cursor when the width changes, so a resize keeps the prompt.
@@ -2780,7 +2776,7 @@ export declare class TerminalEmulator implements Disposable {
   /**
    * Initializes an empty screen.
    * @param size The screen's size.
-   * @param history Receives the lines that leave the screen.
+   * @param history Receives the rows that leave the retained buffer.
    * @param windowsBuild The Windows build the pseudo-terminal runs on, or `null` elsewhere.
    * @param answer Sends the emulator's answers to the shell.
    */
@@ -2810,20 +2806,19 @@ export declare class TerminalEmulator implements Disposable {
   public afterWrites(action: () => void): void;
 
   /**
-   * Resizes the screen now. Lines that the new size pushes off the screen are stored, and stored lines never come
-   * back onto it.
+   * Resizes the screen now, reflowing its retained rows and storing any rows beyond the retention limit.
    * @param size The new size.
    */
   public resize(size: TerminalSize): void;
 
   /**
-   * Serializes the screen, the cursor and the modes programs set, including an active alternate screen.
-   * @returns Terminal output that restores the screen in an emulator of the same size.
+   * Serializes the retained rows, screen, cursor and modes programs set, including an active alternate screen.
+   * @returns Terminal output that restores the buffer in an emulator of the same size and scrollback capacity.
    */
   public screen(): string;
 
   /**
-   * Stores the screen's lines up to the cursor or the last line with text, whichever is lower, as a restart does
+   * Stores retained rows and the screen's lines up to the cursor or the last line with text, whichever is lower, as a restart does
    * before the new shell starts on an empty screen.
    */
   public storeScreen(): void;

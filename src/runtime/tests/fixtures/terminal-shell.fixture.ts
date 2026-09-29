@@ -44,8 +44,7 @@ class TerminalShellFixture {
     const argument = args.join(" ");
     switch (name) {
       case "lines":
-        for (let index = 1; index <= Number(argument); index++)
-          process.stdout.write(`line ${index}${TerminalShellFixture.NEW_LINE}`);
+        process.stdout.write(Array.from({ length: Number(argument) }, (_t, index) => `line ${index + 1}${TerminalShellFixture.NEW_LINE}`).join(""));
         break;
       case "print":
         process.stdout.write(argument.replace(TerminalShellFixture.ESCAPE_PATTERN, TerminalShellFixture.ESCAPE));

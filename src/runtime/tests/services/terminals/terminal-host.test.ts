@@ -50,8 +50,8 @@ export class TerminalHostTests {
       await Wait.until(() => owner.output.includes("ready"));
       const id = new TerminalIdParams(opened.id).toJson();
 
-      await TerminalHostTests.succeed(host, owner, MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 20\r").toJson());
-      await Wait.until(() => owner.output.includes("line 20"));
+      await TerminalHostTests.succeed(host, owner, MethodName.TerminalInput, new TerminalInputParams(opened.id, "lines 1300\r").toJson());
+      await Wait.until(() => owner.output.includes("line 1300"));
       await TerminalHostTests.succeed(host, owner, MethodName.TerminalResize, new TerminalResizeParams(opened.id, new TerminalSize(100, 6)).toJson());
       const acknowledged = await TerminalHostTests.succeed(host, owner, MethodName.TerminalAcknowledge,
         new TerminalAcknowledgeParams(opened.id, owner.output.length).toJson());

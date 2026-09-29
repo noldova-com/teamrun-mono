@@ -5089,7 +5089,7 @@ export declare class TerminalTextRun {
 }
 
 /**
- * One stored terminal line, with the wrapping it had when it left the screen. It is text to show, never markup.
+ * One stored terminal line, with the wrapping it had when it left the retained buffer. It is text to show, never markup.
  * @remarks
  * Instances are immutable; the runs are copied on construction. `fromJson` validates untrusted input and reports the
  * offending field's path; `toJson` renders the canonical wire shape.
@@ -5437,9 +5437,9 @@ export declare class TerminalLinePage {
 }
 
 /**
- * Result of `TerminalScreen`: a terminal's state and its current screen. Writing `screen` to an emulator of the
- * state's size restores the screen, the cursor and the modes programs set, including a full-screen program's
- * alternate screen.
+ * Result of `TerminalScreen`: a terminal's state, recent retained rows and current screen. Writing `screen` to an
+ * emulator of the state's size with room for 1000 scrollback rows restores the buffer, cursor and modes programs
+ * set, including a full-screen program's alternate screen.
  * @remarks
  * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
  * path; `toJson` renders the canonical wire shape.

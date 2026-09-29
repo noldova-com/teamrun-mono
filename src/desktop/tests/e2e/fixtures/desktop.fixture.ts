@@ -15,10 +15,11 @@ import { fileURLToPath } from "node:url";
 import { _electron, type CDPSession, type ElectronApplication, expect, type Page, test, type TestInfo } from "@playwright/test";
 import { ProviderRegistry } from "@noldova/teamrun-core";
 import { Resources } from "@noldova/teamrun-desktop";
-import { ConversationCreateParams, MethodName, Project, ProjectOpenParams } from "@noldova/teamrun-protocol";
+import { ConversationCreateParams, MethodName, Project, ProjectOpenParams, Request, Response, TerminalState } from "@noldova/teamrun-protocol";
 import { ProcessInspector, ProcessProbe, ProcessRegistry, RuntimeClient, RuntimeService, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
 
 import DevelopmentBinary from "../../../../../scripts/desktop/development-binary.ts";
+import type { ITeamRunBridge } from "../../../../renderer/src/app/interfaces/i-teamrun-bridge.ts";
 import { FixtureProvider } from "./fixture-provider.fixture.ts";
 import { IsolatedShellLocator } from "./isolated-shell-locator.fixture.ts";
 
@@ -91,6 +92,52 @@ export class DesktopFixture {
   public async restart(): Promise<void> {
     await this.closeWindow();
     await this.launch();
+  }
+
+  public async terminalState(): Promise<TerminalState> {
+    const request = JSON.stringify(new Request("ui-terminal-state", MethodName.TerminalList, null).toJson());
+    const response = Response.fromJson(await this.page.evaluate(request => {
+      const bridge: ITeamRunBridge | undefined = window.teamrun;
+      if (!bridge)
+        throw new Error("The fixture window has no bridge.");
+      return bridge.invoke(JSON.parse(request));
+    }, request));
+    if (response.hasErrors || !Array.isArray(response.payload) || response.payload.length !== 1)
+      throw new Error("The fixture requires exactly one terminal.");
+    return TerminalState.fromJson(response.payload[0]);
+  }
+
+  public async scrollTerminalToStart(): Promise<void> {
+    const scrollbar = this.page.locator("tr-terminal-panel .xterm .scrollbar.vertical");
+    const slider = scrollbar.locator(".slider");
+    await expect.poll(() => scrollbar.evaluate(element => {
+      const parent = element.parentElement;
+      return parent !== null && element.clientHeight === parent.clientHeight;
+    })).toBe(true);
+    const { track, thumb } = await scrollbar.evaluate(element => {
+      const slider = element.querySelector(".slider");
+      if (!slider)
+        throw new Error("The terminal scrollbar is not drawn.");
+      const track = element.getBoundingClientRect();
+      const thumb = slider.getBoundingClientRect();
+      return {
+        track: { x: track.x, y: track.y, width: track.width, height: track.height },
+        thumb: { x: thumb.x, y: thumb.y, width: thumb.width, height: thumb.height }
+      };
+    });
+    await this.info.attach("terminal-scroll-geometry", { body: JSON.stringify({ track, thumb }), contentType: "application/json" });
+    if (thumb.height < track.height) {
+      const x = thumb.x + thumb.width / 2;
+      await this.page.mouse.move(x, thumb.y + thumb.height / 2);
+      await this.page.mouse.down();
+      try {
+        await this.page.mouse.move(x, track.y + thumb.height / 2, { steps: 8 });
+      }
+      finally {
+        await this.page.mouse.up();
+      }
+    }
+    await expect(slider).toHaveCSS("top", "0px");
   }
 
   public async capture(name: string): Promise<Buffer> {
