@@ -25,6 +25,7 @@ import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../../src/app/services/chat-store.service";
 import { LayoutService } from "../../../../src/app/services/layout.service";
 import { PanelDragService } from "../../../../src/app/services/panel-drag.service";
+import { PreferencesService } from "../../../../src/app/services/preferences.service";
 import { ShellService } from "../../../../src/app/services/shell.service";
 import { TerminalsService } from "../../../../src/app/services/terminals.service";
 import { TabGroupComponent } from "../../../../src/app/components/tab-group/tab-group.component";
@@ -154,7 +155,7 @@ describe("TabGroupComponent", () => {
     expect(tabs().map(t => t.dataset["panel"])).toEqual(["Activity", "Terminal:terminal-1"]);
   });
 
-  it("offers a new terminal with the default shell or a chosen one in a group that holds terminals, also without a selected project", async () => {
+  it("offers a new terminal with the chosen default shell or another from its menu in a group that holds terminals, also without a selected project", async () => {
     MemoryStorage.install(window);
     const terminalWindow = TerminalWindow.install();
     onTestFinished(() => terminalWindow.restore());
@@ -167,6 +168,7 @@ describe("TabGroupComponent", () => {
     const shell = TestBed.inject(ShellService);
     const terminals = TestBed.inject(TerminalsService);
     onTestFinished(() => terminals.stop());
+    TestBed.inject(PreferencesService).setDefaultShellId("cmd");
     const fixture = TestBed.createComponent(TabGroupComponent);
     const render = (panel: Panel): void => {
       fixture.componentRef.setInput("frame", shell.geometry().frameOf(layout.arrangement().groupOf(panel)?.id ?? -1));
@@ -192,11 +194,11 @@ describe("TabGroupComponent", () => {
     };
     await vi.waitFor(() => expect(items().map(t => [t.querySelector("mat-icon")?.textContent,
       ...Array.from(t.querySelectorAll(".mat-mdc-menu-item-text > span"), s => s.textContent)])).toEqual([
-      [Resources.shellKindIcons[TerminalShellKind.PowerShell], "PowerShell", Resources.defaultShellMark],
-      [Resources.shellKindIcons[TerminalShellKind.CommandPrompt], "Command Prompt"]
+      [Resources.shellKindIcons[TerminalShellKind.PowerShell], "PowerShell"],
+      [Resources.shellKindIcons[TerminalShellKind.CommandPrompt], "Command Prompt", Resources.defaultShellMark]
     ]));
-    items()[1]!.click();
+    items()[0]!.click();
     await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9", "t10"]));
-    expect(bridge.requests.filter(t => t.method === MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t.payload).shellId)).toEqual([null, "cmd"]);
+    expect(bridge.requests.filter(t => t.method === MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t.payload).shellId)).toEqual(["cmd", "pwsh"]);
   });
 });

@@ -236,6 +236,7 @@ export class Resources {
   };
   public static readonly imageOpenModeHint: string = "Show images in a popup or in a separate tab beside your conversations.";
   public static readonly imageOpenModeField: string = "imageOpenMode";
+  public static readonly defaultShellIdField: string = "defaultShellId";
   public static readonly imageOpenModeLabels: Readonly<Record<ImageOpenMode, string>> = {
     [ImageOpenMode.Popup]: "Popup",
     [ImageOpenMode.Tab]: "Tab"
@@ -695,6 +696,9 @@ export class Resources {
   public static readonly galleryCode: string = "```typescript\nconst message = 'Toggle word wrap to keep a long line inside this code block while preserving its original text.';\n```";
   public static readonly gallerySettingLabel: string = "A setting";
   public static readonly gallerySettingHint: string = "What it does, in a sentence.";
+  public static readonly terminalTitle: string = "Terminal";
+  public static readonly defaultShellLabel: string = "Default shell";
+  public static readonly defaultShellHint: string = "What a new terminal runs. The menu beside + in a terminal dock opens any other shell.";
   public static readonly shortcutsTitle: string = "Shortcuts";
   public static readonly shortcutsText: string =
     "The shortcuts work wherever the focus is, except while a dialog or a menu is open. On a Mac, Cmd stands in for Ctrl.";
@@ -911,6 +915,7 @@ export class Resources {
     [SettingsSection.Appearance]: Resources.appearanceTitle,
     [SettingsSection.Providers]: Resources.providersTitle,
     [SettingsSection.Teammates]: Resources.teammatesTitle,
+    [SettingsSection.Terminal]: Resources.terminalTitle,
     [SettingsSection.Shortcuts]: Resources.shortcutsTitle,
     [SettingsSection.Gallery]: Resources.galleryTitle,
     [SettingsSection.About]: Resources.aboutTitle
@@ -921,6 +926,7 @@ export class Resources {
     [SettingsSection.Appearance]: "palette",
     [SettingsSection.Providers]: "smart_toy",
     [SettingsSection.Teammates]: "group",
+    [SettingsSection.Terminal]: "terminal",
     [SettingsSection.Shortcuts]: "keyboard",
     [SettingsSection.Gallery]: "widgets",
     [SettingsSection.About]: "info"

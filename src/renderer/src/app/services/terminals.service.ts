@@ -57,6 +57,10 @@ export class TerminalsService {
   public readonly sessions: Signal<ReadonlyMap<string, TerminalSession>> = this.sessionsSignal.asReadonly();
   public readonly error: Signal<string | null> = this.errorSignal.asReadonly();
   public readonly shells: Signal<readonly TerminalShell[]> = this.shellsSignal.asReadonly();
+  public readonly defaultShell: Signal<TerminalShell | null> = computed(() => {
+    const shells = this.shells();
+    return shells.find(t => t.id === this.preferences.defaultShellId()) ?? shells.find(t => t.isDefault) ?? null;
+  });
 
   public constructor() {
     afterRenderEffect(() => {
@@ -105,8 +109,11 @@ export class TerminalsService {
 
   public async open(groupId: number | null = null, shellId: string | null = null): Promise<void> {
     const projectId = this.store.selectedProject()?.id ?? null;
+    if (Object.isNull(shellId) && this.shells().length === 0)
+      await this.loadShells();
+    const chosen = shellId ?? this.defaultShell()?.id ?? null;
     await this.perform(async () => {
-      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, shellId, this.nextSize()).toJson());
+      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, chosen, this.nextSize()).toJson());
       const session = await this.attach(TerminalState.fromJson(opened));
       session.requestFocus();
       this.place(new Panel(PanelKind.Terminal, session.id), groupId);

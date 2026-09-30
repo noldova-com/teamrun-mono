@@ -54,6 +54,7 @@ describe("PreferencesService", () => {
     service.setCodeTextSize(12.4);
     service.setDefaultComposer(new ComposerSettings("codex", "gpt-5", "high", null));
     service.rememberComposer("c1", new ComposerSettings("claude", null, null, "a1", "alice"));
+    service.setDefaultShellId("cmd");
     TestBed.tick();
 
     expect(document.documentElement.style.getPropertyValue(Resources.monoFontVariable)).toBe(Resources.systemMonoStack);
@@ -71,7 +72,10 @@ describe("PreferencesService", () => {
     expect(service.composerFor("missing")).toBeNull();
     expect(service.accessMode()).toBe(AccessMode.Ask);
     service.setAccessMode(AccessMode.Full);
-    expect(Preferences.fromJson(JSON.parse(storage.getItem(Resources.preferencesStorageKey) ?? "null")).accessMode).toBe(AccessMode.Full);
+    const changed = Preferences.fromJson(JSON.parse(storage.getItem(Resources.preferencesStorageKey) ?? "null"));
+    expect(changed.accessMode).toBe(AccessMode.Full);
+    expect(changed.defaultShellId).toBe("cmd");
+    expect(service.defaultShellId()).toBe("cmd");
   });
 
   it("falls back to the defaults for unreadable storage", () => {
@@ -94,6 +98,8 @@ describe("PreferencesService", () => {
     expect(Preferences.fromJson({ timeFormat: "h:mm a", dateTimeFormat: " " }).timeFormat).toBe("h:mm a");
     expect(Preferences.fromJson({ timeFormat: "h:mm a", dateTimeFormat: " " }).dateTimeFormat).toBe(Resources.defaultDateTimeFormat);
     expect(Preferences.fromJson([]).codeFont).toBe(FontChoice.Noldova);
+    expect(Preferences.fromJson({ defaultShellId: " " }).defaultShellId).toBeNull();
+    expect(Preferences.createDefault().defaultShellId).toBeNull();
     expect(Preferences.fromJson(null).toJson()).toEqual(Preferences.createDefault().toJson());
   });
 

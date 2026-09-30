@@ -1,0 +1,19 @@
+<!--
+@license
+Copyright (c) Noldova.
+
+This source code is licensed under the license found in the
+LICENSE file in the root directory of this source tree.
+-->
+
+<h2 class="tr-settings-title">{{ resources.terminalTitle }}</h2>
+<tr-settings-row [label]="resources.defaultShellLabel" [hint]="resources.defaultShellHint">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tr-select">
+    <mat-select class="tr-default-shell-select" [aria-label]="resources.defaultShellLabel" [value]="terminals.defaultShell()?.id"
+      (valueChange)="preferences.setDefaultShellId($event)">
+      @for (shell of terminals.shells(); track shell.id) {
+        <mat-option [value]="shell.id">{{ shell.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</tr-settings-row>
