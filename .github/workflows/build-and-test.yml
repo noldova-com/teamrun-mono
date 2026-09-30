@@ -312,6 +312,21 @@ jobs:
           trap 'cat "$RUNNER_TEMP/teamrun-ci/renderer.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/renderer.stderr.log" >&2' EXIT
           npm run test:renderer > "$RUNNER_TEMP/teamrun-ci/renderer.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/renderer.stderr.log"
 
+      - name: Measure renderer test timing (temporary, #250)
+        if: ${{ !cancelled() && matrix.suite == 'UI' }}
+        run: |
+          node -p "const o = require('os'); ['parallelism', o.availableParallelism(), 'cpus', o.cpus().length, o.cpus()[0].model, 'memory GiB', (o.totalmem() / 2 ** 30).toFixed(1), 'load', o.loadavg().map(t => t.toFixed(2)).join('/')].join(' ')"
+          if [ "$RUNNER_OS" = macOS ]; then sysctl -n hw.physicalcpu hw.logicalcpu machdep.cpu.brand_string; fi
+          for workers in default 3 2 1; do
+            if [ "$workers" = default ]; then unset VITEST_MAX_WORKERS; else export VITEST_MAX_WORKERS=$workers; fi
+            started=$(date +%s)
+            npm run test:renderer -- --reporters=verbose > "$RUNNER_TEMP/timing-$workers.log" 2>&1 || true
+            echo "=== workers $workers: $(( $(date +%s) - started )) s, load $(node -p "require('os').loadavg()[0].toFixed(2)")"
+            sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E 'Test Files|Tests  |Duration' || true
+            sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E '[0-9]{4,}ms' | sort -t' ' -k1 | head -40 || true
+          done
+          for workers in default 3 2 1; do echo "##[group]verbose $workers"; sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
+
       - name: Run desktop UI workflows
         if: matrix.suite == 'UI'
         env:
