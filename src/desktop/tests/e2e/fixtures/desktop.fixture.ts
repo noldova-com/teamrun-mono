@@ -31,6 +31,8 @@ export class DesktopFixture {
   private static readonly EXIT_MILLISECONDS: number = 10_000;
   private static readonly PNG_WIDTH_OFFSET: number = 16;
   private static readonly PNG_HEIGHT_OFFSET: number = 20;
+  private static readonly WINDOW_POSITION_VARIABLE: string = "TEAMRUN_UI_TEST_WINDOW_POSITION";
+  private static readonly WINDOW_POSITION_PATTERN: RegExp = /^(-?\d+),(-?\d+)$/;
 
   private readonly info: TestInfo;
   private readonly errors: string[] = [];
@@ -248,6 +250,7 @@ export class DesktopFixture {
       stream?.pipe(log, { end: false });
     }
     this.window = await this.application.firstWindow();
+    await this.moveWindow();
     this.captureSession = await this.window.context().newCDPSession(this.window);
     await this.captureSession.send("Emulation.setDeviceMetricsOverride", {
       width: DesktopFixture.VIEWPORT_WIDTH,
@@ -291,6 +294,26 @@ export class DesktopFixture {
     });
     await expect(this.window.locator("tr-sidebar")).toBeVisible();
     await expect(this.window.getByRole("button", { name: "Conversation A", exact: true })).toBeVisible();
+  }
+
+  private async moveWindow(): Promise<void> {
+    const position = process.env[DesktopFixture.WINDOW_POSITION_VARIABLE];
+    if (position === undefined)
+      return;
+    if (!this.application)
+      throw new Error("The fixture window is not running.");
+    const match = DesktopFixture.WINDOW_POSITION_PATTERN.exec(position);
+    if (!match)
+      throw new Error(`${DesktopFixture.WINDOW_POSITION_VARIABLE} must be the window's screen position as "<x>,<y>", for example "-1920,0", not "${position}".`);
+    const target = { x: Number(match[1]), y: Number(match[2]) };
+    const bounds = await this.application.evaluate(({ BrowserWindow }, target) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (!window)
+        throw new Error("The native fixture window is missing.");
+      window.setPosition(target.x, target.y);
+      return window.getBounds();
+    }, target);
+    expect({ x: bounds.x, y: bounds.y }, `The fixture window could not be moved to ${position}`).toEqual(target);
   }
 
   public async destroyWindow(): Promise<number | null> {
