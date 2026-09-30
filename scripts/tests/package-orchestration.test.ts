@@ -113,11 +113,20 @@ class PackageOrchestrationTests {
       assert.equal(PackageScriptFixture.processCommands.length, 0);
     });
     
-    test("the packaging test entry point type-checks then executes its bounded suite", async () => {
+    test("the packaging test entry point type-checks then measures every listed file, loaded or not, at full coverage", async () => {
       await import("../test-package.ts");
       assert.deepEqual(PackageScriptFixture.compilerCommands, [["--project", "scripts/tsconfig.json"]]);
-      assert.equal(PackageScriptFixture.processCommands[0]?.[0], "--test");
-      assert.ok(PackageScriptFixture.processCommands[0]?.includes("--test-coverage-lines=100"));
+      assert.equal(PackageScriptFixture.processCommands.length, 2);
+      for (const command of PackageScriptFixture.processCommands) {
+        assert.equal(command[0], "--test");
+        for (const flag of ["--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
+          "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100"])
+          assert.ok(command.includes(flag), flag);
+        assert.equal(command.filter(t => t.startsWith("--test-coverage-exclude=")).length, 1);
+      }
+      assert.ok(PackageScriptFixture.processCommands[0]?.includes("--test-coverage-include=scripts/packaging/package-options.ts"));
+      assert.ok(PackageScriptFixture.processCommands[1]?.includes("--test-coverage-include=scripts/package.ts"));
+      assert.ok(PackageScriptFixture.processCommands[1]?.includes("--test-coverage-include=scripts/test-package.ts"));
       assert.ok(PackageScriptFixture.processCommands[1]?.includes("scripts/tests/package-orchestration.test.ts"));
     });
   }

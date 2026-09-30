@@ -11,8 +11,8 @@ import Script from "./script.ts";
 class TestPackage extends Script {
   private static readonly TYPECHECK_ARGUMENTS: readonly string[] = ["--project", "scripts/tsconfig.json"];
   private static readonly COVERAGE_ARGUMENTS: readonly string[] = [
-    "--test", "--experimental-test-coverage",
-    "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100",
+    "--test", "--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
+    "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100"
   ];
   private static readonly SUPPORT_ARGUMENTS: readonly string[] = [
     "--test-coverage-include=scripts/packaging/app-image-launcher.ts",
