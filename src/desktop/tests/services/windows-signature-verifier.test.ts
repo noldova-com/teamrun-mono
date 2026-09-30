@@ -47,32 +47,58 @@ export class WindowsSignatureVerifierTests {
   }
 
   @TestMethod
-  public async checksRealSignaturesWithWindowsPowerShell(): Promise<void> {
+  public async acceptsAValidSignatureWhoseSignerMatchesEveryNamedField(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const signed = directory.resolve("it's $(Get-Date) [1].exe");
-    await copyFile(process.execPath, signed);
-    const signer = Authenticode.signer(signed);
-    const common = signer.split(", ")[0] ?? "";
-    Assert.isTrue(common.startsWith("CN="), signer);
-    const verifier = (publisher: string): WindowsSignatureVerifier => WindowsSignatureVerifier.forSystemRoot(publisher, Authenticode.systemRoot);
+    const signed = await WindowsSignatureVerifierTests.copySigned(directory, "it's $(Get-Date) [1].exe");
+    await WindowsSignatureVerifierTests.verifier(Authenticode.nodeSigner).verify(signed);
+    await WindowsSignatureVerifierTests.verifier(WindowsSignatureVerifierTests.commonName).verify(signed);
+  }
 
-    await verifier(signer).verify(signed);
-    await verifier(common).verify(signed);
-    for (const publisher of [Resources.windowsPublisher, signer.replace(common, common.toUpperCase()), `${common}, O=Someone Else`])
-      await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, verifier(publisher), signed);
-    for (const publisher of ["", "__WINDOWS_PUBLISHER__"])
-      await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, verifier(publisher), signed);
+  @TestMethod
+  public async refusesASignatureFromAnotherPublisher(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const signed = await WindowsSignatureVerifierTests.copySigned(directory, "signed.exe");
+    const common = WindowsSignatureVerifierTests.commonName;
+    for (const publisher of [Resources.windowsPublisher, Authenticode.nodeSigner.replace(common, common.toUpperCase()), `${common}, O=Someone Else`])
+      await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, WindowsSignatureVerifierTests.verifier(publisher), signed);
+  }
 
+  @TestMethod
+  public async refusesAnUnsignedFileAndOneChangedAfterSigning(): Promise<void> {
+    using directory = new TemporaryDirectory();
     const unsigned = directory.resolve("unsigned.exe");
     await writeFile(unsigned, "not signed");
-    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, verifier(signer), unsigned);
-    const changed = directory.resolve("changed.exe");
-    await copyFile(process.execPath, changed);
+    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, WindowsSignatureVerifierTests.verifier(Authenticode.nodeSigner), unsigned);
+    const changed = await WindowsSignatureVerifierTests.copySigned(directory, "changed.exe");
     await Authenticode.tamper(changed);
-    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, verifier(signer), changed);
+    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureRejected, WindowsSignatureVerifierTests.verifier(Authenticode.nodeSigner), changed);
+  }
 
-    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, verifier(signer), directory.resolve("missing.exe"));
-    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, WindowsSignatureVerifier.forSystemRoot(signer, directory.path), signed);
+  @TestMethod
+  public async refusesWhenWindowsPowerShellCannotCheckTheSignature(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const signed = await WindowsSignatureVerifierTests.copySigned(directory, "signed.exe");
+    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, WindowsSignatureVerifierTests.verifier("__WINDOWS_PUBLISHER__"), signed);
+    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, WindowsSignatureVerifierTests.verifier(Authenticode.nodeSigner),
+      directory.resolve("missing.exe"));
+    await WindowsSignatureVerifierTests.refuses(Resources.updateSignatureUnchecked, WindowsSignatureVerifier.forSystemRoot(Authenticode.nodeSigner, directory.path),
+      signed);
+  }
+
+  private static get commonName(): string {
+    const common = Authenticode.nodeSigner.split(", ")[0] ?? "";
+    Assert.isTrue(common.startsWith("CN="), Authenticode.nodeSigner);
+    return common;
+  }
+
+  private static verifier(publisher: string): WindowsSignatureVerifier {
+    return WindowsSignatureVerifier.forSystemRoot(publisher, Authenticode.systemRoot);
+  }
+
+  private static async copySigned(directory: TemporaryDirectory, name: string): Promise<string> {
+    const file = directory.resolve(name);
+    await copyFile(process.execPath, file);
+    return file;
   }
 
   private static fake(args: readonly string[], publisher: string = "CN=Example", timeoutMilliseconds: number = 10_000): WindowsSignatureVerifier {
@@ -86,4 +112,7 @@ export class WindowsSignatureVerifierTests {
 }
 
 if (process.platform !== "win32")
-  Skip("Authenticode signatures and Windows PowerShell exist only on Windows.")(WindowsSignatureVerifierTests.prototype.checksRealSignaturesWithWindowsPowerShell);
+  for (const test of [WindowsSignatureVerifierTests.prototype.acceptsAValidSignatureWhoseSignerMatchesEveryNamedField,
+    WindowsSignatureVerifierTests.prototype.refusesASignatureFromAnotherPublisher, WindowsSignatureVerifierTests.prototype.refusesAnUnsignedFileAndOneChangedAfterSigning,
+    WindowsSignatureVerifierTests.prototype.refusesWhenWindowsPowerShellCannotCheckTheSignature])
+    Skip("Authenticode signatures and Windows PowerShell exist only on Windows.")(test);

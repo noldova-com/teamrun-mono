@@ -13,6 +13,13 @@ import { win32 } from "node:path";
 import { Resources } from "@noldova/teamrun-desktop";
 
 export class Authenticode {
+  private static nodeSignerValue: string | null = null;
+
+  public static get nodeSigner(): string {
+    Authenticode.nodeSignerValue ??= Authenticode.signer(process.execPath);
+    return Authenticode.nodeSignerValue;
+  }
+
   public static get systemRoot(): string {
     const systemRoot = process.env[Resources.systemRootVariable];
     if (!systemRoot) throw new Error("Windows did not provide SystemRoot.");

@@ -34,29 +34,37 @@ export class ElectronUpdateBackendTests {
   private static readonly INSTALLER: string = "TeamRun-99.0.0.exe";
 
   @TestMethod
-  public async installsOnlyAnInstallerThePublisherSigned(): Promise<void> {
-    Assert.isTrue(existsSync(ElectronUpdateBackendTests.BINARY), "Prepare the development binary with npm run desktop -- --prepare-only.");
-    using directory = new TemporaryDirectory();
-    const signer = Authenticode.signer(process.execPath);
-    const installers = new Map([["signed", await readFile(process.execPath)], ["unsigned", Buffer.from("not signed")]]);
-    const server = await ElectronUpdateBackendTests.serve(installers);
-    try {
-      const feed = (name: string): string => `http://127.0.0.1:${(server.address() as AddressInfo).port}/${name}/`;
-      const accepted = directory.resolve("accepted");
+  public async refusesAnInstallerFromAnotherPublisherOrWithoutSignatureAndKeepsNothing(): Promise<void> {
+    await ElectronUpdateBackendTests.withFeed(async (directory, feed) => {
       const otherPublisher = directory.resolve("other-publisher");
       const unsigned = directory.resolve("unsigned");
-
-      Assert.areEqual([null, Resources.updateSignatureRejected, Resources.updateSignatureRejected].join("|"), (await ElectronUpdateBackendTests.run(directory, [
-        { dataDirectory: accepted, feedUrl: feed("signed"), publisher: signer },
+      Assert.areEqual([Resources.updateSignatureRejected, Resources.updateSignatureRejected].join("|"), (await ElectronUpdateBackendTests.run(directory, [
         { dataDirectory: otherPublisher, feedUrl: feed("signed"), publisher: Resources.windowsPublisher },
-        { dataDirectory: unsigned, feedUrl: feed("unsigned"), publisher: signer }])).join("|"));
-      Assert.areEqual(ElectronUpdateBackendTests.INSTALLER, (await ElectronUpdateBackendTests.pendingInstallers(directory, accepted)).join());
+        { dataDirectory: unsigned, feedUrl: feed("unsigned"), publisher: Authenticode.nodeSigner }])).join("|"));
       Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, otherPublisher)).join());
       Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, unsigned)).join());
+    });
+  }
 
+  @TestMethod
+  public async keepsAnInstallerThePublisherSignedAndChecksItAgainWhenReused(): Promise<void> {
+    await ElectronUpdateBackendTests.withFeed(async (directory, feed) => {
+      const data = directory.resolve("data");
+      Assert.areEqual("", (await ElectronUpdateBackendTests.run(directory, [
+        { dataDirectory: data, feedUrl: feed("signed"), publisher: Authenticode.nodeSigner }])).join("|"));
+      Assert.areEqual(ElectronUpdateBackendTests.INSTALLER, (await ElectronUpdateBackendTests.pendingInstallers(directory, data)).join());
       Assert.areEqual(Resources.updateSignatureRejected, (await ElectronUpdateBackendTests.run(directory, [
-        { dataDirectory: accepted, feedUrl: feed("signed"), publisher: Resources.windowsPublisher }])).join("|"));
-      Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, accepted)).join());
+        { dataDirectory: data, feedUrl: feed("signed"), publisher: Resources.windowsPublisher }])).join("|"));
+      Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, data)).join());
+    });
+  }
+
+  private static async withFeed(body: (directory: TemporaryDirectory, feed: (name: string) => string) => Promise<void>): Promise<void> {
+    Assert.isTrue(existsSync(ElectronUpdateBackendTests.BINARY), "Prepare the development binary with npm run desktop -- --prepare-only.");
+    using directory = new TemporaryDirectory();
+    const server = await ElectronUpdateBackendTests.serve(new Map([["signed", await readFile(process.execPath)], ["unsigned", Buffer.from("not signed")]]));
+    try {
+      await body(directory, name => `http://127.0.0.1:${(server.address() as AddressInfo).port}/${name}/`);
     }
     finally {
       server.close();
@@ -111,4 +119,6 @@ export class ElectronUpdateBackendTests {
 }
 
 if (process.platform !== "win32")
-  Skip("Authenticode signatures and the Windows installer updater exist only on Windows.")(ElectronUpdateBackendTests.prototype.installsOnlyAnInstallerThePublisherSigned);
+  for (const test of [ElectronUpdateBackendTests.prototype.refusesAnInstallerFromAnotherPublisherOrWithoutSignatureAndKeepsNothing,
+    ElectronUpdateBackendTests.prototype.keepsAnInstallerThePublisherSignedAndChecksItAgainWhenReused])
+    Skip("Authenticode signatures and the Windows installer updater exist only on Windows.")(test);
