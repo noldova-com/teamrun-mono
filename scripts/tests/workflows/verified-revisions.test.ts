@@ -29,6 +29,18 @@ class VerifiedRevisionsTests {
       assert.deepEqual(requests[0]!.headers, { Accept: "application/vnd.github+json", Authorization: "Bearer fixture-token", "X-GitHub-Api-Version": "2026-03-10" });
     });
 
+    test("lists the head commit trees of successful Build and test runs for merge groups, as GitHub reports them", async () => {
+      const urls: URL[] = [];
+      const revisions = new VerifiedRevisions("noldova-com/teamrun", "fixture-token", async url => {
+        urls.push(new URL(String(url)));
+        return Response.json({ workflow_runs: [{ head_sha: "c".repeat(40), head_commit: { id: "c".repeat(40), tree_id: VerifiedRevisionsTests.REVISION } }] });
+      });
+
+      assert.deepEqual(await revisions.listQueueTreesAsync(), [VerifiedRevisionsTests.REVISION]);
+      assert.equal(urls[0]!.pathname, "/repos/noldova-com/teamrun/actions/workflows/build-and-test.yml/runs");
+      assert.deepEqual(Object.fromEntries(urls[0]!.searchParams), { event: "merge_group", status: "success", per_page: "100" });
+    });
+
     test("requires a repository and a token and rejects failed requests and malformed run lists", async () => {
       const respond = (body: unknown, status: number = 200): VerifiedRevisions =>
         new VerifiedRevisions("noldova-com/teamrun", "fixture-token", async () => Response.json(body, { status }));
@@ -40,6 +52,8 @@ class VerifiedRevisionsTests {
         await assert.rejects(respond(body).listAsync(), /Invalid workflow run list\./, JSON.stringify(body));
       for (const run of [null, {}, { head_sha: "abc" }, { head_sha: 7 }])
         await assert.rejects(respond({ workflow_runs: [run] }).listAsync(), /Invalid workflow run list entry/, JSON.stringify(run));
+      for (const run of [null, {}, { head_commit: null }, { head_commit: { tree_id: "abc" } }])
+        await assert.rejects(respond({ workflow_runs: [run] }).listQueueTreesAsync(), /Invalid workflow run list entry/, JSON.stringify(run));
     });
   }
 }

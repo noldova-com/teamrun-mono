@@ -10,6 +10,9 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -52,8 +55,8 @@ jobs:
         id: scope
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/classify-changes.ts
 
@@ -396,7 +399,7 @@ jobs:
           set -euo pipefail
           case "$CHANGES_RESULT:$RUN_CODE:$BUILD_RESULT:$VALIDATION_RESULT" in
             success:false:skipped:skipped)
-              echo 'Documentation-only change: the code build and the test matrix were intentionally skipped.' >> "$GITHUB_STEP_SUMMARY"
+              echo 'The change classification skipped the code build and the test matrix; its summary gives the reason.' >> "$GITHUB_STEP_SUMMARY"
               ;;
             success:true:success:success)
               echo 'The build and every required test target passed.' >> "$GITHUB_STEP_SUMMARY"
