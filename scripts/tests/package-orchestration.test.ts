@@ -16,9 +16,11 @@ import BuildEvidence from "../build/build-evidence.ts";
 import Config from "../config.ts";
 import PackageOptionsFixture from "./packaging/fixtures/package-options.fixture.ts";
 import PackageScriptFixture from "./fixtures/package-script.fixture.ts";
+import TrustedSigningModuleFixture from "./packaging/fixtures/trusted-signing-module.fixture.ts";
 
 mock.module("../script.ts", { exports: { default: PackageScriptFixture } });
 mock.module("../packaging/package-options.ts", { exports: { default: PackageOptionsFixture } });
+mock.module("../packaging/trusted-signing-module.ts", { exports: { default: TrustedSigningModuleFixture } });
 const { default: Package } = await import("../package.ts");
 
 class PackageOrchestrationTests {
@@ -49,6 +51,7 @@ class PackageOrchestrationTests {
       PackageScriptFixture.processCommands.length = 0;
       PackageScriptFixture.compilerCommands.length = 0;
       PackageScriptFixture.messages.length = 0;
+      TrustedSigningModuleFixture.preparations.length = 0;
       t.mock.method(BuildEvidence, "requireCurrent", async (): Promise<void> => {});
       for (const name of ["package.json", "package-lock.json", "LICENSE"])
         await writeFile(name, name === "LICENSE" ? "fixture license" : "{}");
@@ -90,6 +93,29 @@ class PackageOrchestrationTests {
         assert.ok(typeof report === "object" && report !== null && "sourceRevision" in report);
         assert.equal(report.sourceRevision, host === "win32" ? "release-revision" : host === "darwin" ? "github-revision" : null);
       }
+    });
+
+    test("signed Windows packaging saves the recorded signing module before building; other targets do not", async t => {
+      const signing = ["AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "APPLE_KEYCHAIN_PROFILE"];
+      const original = signing.map(name => process.env[name]);
+      t.after(() => {
+        for (const [index, name] of signing.entries())
+          if (original[index] === undefined) delete process.env[name]; else process.env[name] = original[index];
+      });
+      for (const name of signing)
+        process.env[name] = "fixture";
+      process.argv.push("--signed");
+      await new Package().runAsync();
+      assert.deepEqual(TrustedSigningModuleFixture.preparations, [0]);
+      assert.ok(PackageScriptFixture.messages.includes("Saving the recorded TrustedSigning module..."));
+      assert.ok(PackageScriptFixture.processCommands.at(-1)?.includes("--config.win.signtoolOptions.sign=./scripts/packaging/windows-sign-hook.ts"));
+      TrustedSigningModuleFixture.preparations.length = 0;
+      PackageOptionsFixture.host = "darwin";
+      await new Package().runAsync();
+      process.argv.pop();
+      PackageOptionsFixture.host = "win32";
+      await new Package().runAsync();
+      assert.deepEqual(TrustedSigningModuleFixture.preparations, []);
     });
 
     test("directory mode does not generate an installer policy or artifact report", async () => {

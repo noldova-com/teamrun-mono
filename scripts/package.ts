@@ -19,6 +19,7 @@ import PackageOptions from "./packaging/package-options.ts";
 import PackageException from "./packaging/package.exception.ts";
 import PackagedManifest from "./packaging/packaged-manifest.ts";
 import Script from "./script.ts";
+import TrustedSigningModule from "./packaging/trusted-signing-module.ts";
 import WindowsInstallerPolicy from "./packaging/windows-installer-policy.ts";
 
 export default class Package extends Script {
@@ -32,6 +33,7 @@ export default class Package extends Script {
   private static readonly RENDERER_INDEX: string = "index.html";
   private static readonly MISSING_RENDERER: string = "The renderer build did not produce index.html.";
   private static readonly TESTING_PACKAGE_NAME: string = "@noldova/teamrun-foundation-testing";
+  private static readonly SIGNING_MODULE: string = "Saving the recorded TrustedSigning module...";
   private static readonly STAGING: string = "Staging the application directory...";
   private static readonly INSTALLING: string = "Installing locked production dependencies...";
   private static readonly NODE_MODULES_PREFIX: string = "node_modules/";
@@ -54,6 +56,10 @@ export default class Package extends Script {
     }
     options.assertSigningEnvironment(process.env);
     await BuildEvidence.requireCurrent();
+    if (options.signed && options.platform === Package.WINDOWS_PLATFORM) {
+      this.writeLog(Package.SIGNING_MODULE);
+      await new TrustedSigningModule().prepareAsync();
+    }
     await this.executeNpmCommandAsync(Package.RENDERER_BUILD_ARGUMENTS, process.cwd());
     const rendererOutput = path.resolve(Package.RENDERER_OUTPUT);
     if (!await this.pathExistsAsync(path.join(rendererOutput, Package.RENDERER_INDEX)))

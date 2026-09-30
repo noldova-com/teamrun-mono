@@ -20,10 +20,12 @@ class TestPackage extends Script {
     "--test-coverage-include=scripts/packaging/package-artifacts.ts",
     "--test-coverage-include=scripts/packaging/packaged-manifest.ts",
     "--test-coverage-include=scripts/packaging/package.exception.ts",
+    "--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
     "--test-coverage-include=scripts/packaging/windows-installer-policy.ts",
+    "--test-coverage-include=scripts/packaging/windows-sign-hook.ts",
     "scripts/tests/packaging/package-options.test.ts", "scripts/tests/packaging/package-artifacts.test.ts",
-    "scripts/tests/packaging/windows-installer-policy.test.ts",
-    "scripts/tests/packaging/app-image-launcher.test.ts"
+    "scripts/tests/packaging/trusted-signing-module.test.ts", "scripts/tests/packaging/windows-installer-policy.test.ts",
+    "scripts/tests/packaging/app-image-launcher.test.ts", "scripts/tests/packaging/windows-sign-hook.test.ts"
   ];
   private static readonly COMMAND_ARGUMENTS: readonly string[] = [
     "--experimental-test-module-mocks", "--test-coverage-include=scripts/package.ts",
