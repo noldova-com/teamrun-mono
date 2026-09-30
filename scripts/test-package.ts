@@ -8,7 +8,7 @@
 
 import Script from "./script.ts";
 
-class TestPackage extends Script {
+export default class TestPackage extends Script {
   private static readonly TYPECHECK_ARGUMENTS: readonly string[] = ["--project", "scripts/tsconfig.json"];
   private static readonly COVERAGE_ARGUMENTS: readonly string[] = [
     "--test", "--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
@@ -20,13 +20,16 @@ class TestPackage extends Script {
     "--test-coverage-include=scripts/packaging/package-artifacts.ts",
     "--test-coverage-include=scripts/packaging/packaged-manifest.ts",
     "--test-coverage-include=scripts/packaging/package.exception.ts",
-    "--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
     "--test-coverage-include=scripts/packaging/windows-installer-policy.ts",
-    "--test-coverage-include=scripts/packaging/windows-sign-hook.ts",
     "scripts/tests/packaging/package-options.test.ts", "scripts/tests/packaging/package-artifacts.test.ts",
-    "scripts/tests/packaging/trusted-signing-module.test.ts", "scripts/tests/packaging/windows-installer-policy.test.ts",
-    "scripts/tests/packaging/app-image-launcher.test.ts", "scripts/tests/packaging/windows-sign-hook.test.ts"
+    "scripts/tests/packaging/windows-installer-policy.test.ts", "scripts/tests/packaging/app-image-launcher.test.ts"
   ];
+  private static readonly SIGNING_ARGUMENTS: readonly string[] = [
+    "--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
+    "--test-coverage-include=scripts/packaging/windows-sign-hook.ts",
+    "scripts/tests/packaging/trusted-signing-module.test.ts", "scripts/tests/packaging/windows-sign-hook.test.ts"
+  ];
+  private static readonly SIGNING_PLATFORM: string = "win32";
   private static readonly COMMAND_ARGUMENTS: readonly string[] = [
     "--experimental-test-module-mocks", "--test-coverage-include=scripts/package.ts",
     "--test-coverage-include=scripts/test-package.ts",
@@ -37,6 +40,8 @@ class TestPackage extends Script {
   public override async runAsync(): Promise<void> {
     await this.executeTypeScriptCompilerAsync(TestPackage.TYPECHECK_ARGUMENTS);
     await this.executeProcessAsync(process.execPath, [...TestPackage.COVERAGE_ARGUMENTS, ...TestPackage.SUPPORT_ARGUMENTS], process.cwd());
+    if (process.platform === TestPackage.SIGNING_PLATFORM)
+      await this.executeProcessAsync(process.execPath, [...TestPackage.COVERAGE_ARGUMENTS, ...TestPackage.SIGNING_ARGUMENTS], process.cwd());
     await this.executeProcessAsync(process.execPath, [...TestPackage.COVERAGE_ARGUMENTS, ...TestPackage.COMMAND_ARGUMENTS], process.cwd());
   }
 }

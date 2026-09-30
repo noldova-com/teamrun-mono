@@ -139,21 +139,44 @@ class PackageOrchestrationTests {
       assert.equal(PackageScriptFixture.processCommands.length, 0);
     });
     
-    test("the packaging test entry point type-checks then measures every listed file, loaded or not, at full coverage", async () => {
-      await import("../test-package.ts");
-      assert.deepEqual(PackageScriptFixture.compilerCommands, [["--project", "scripts/tsconfig.json"]]);
-      assert.equal(PackageScriptFixture.processCommands.length, 2);
-      for (const command of PackageScriptFixture.processCommands) {
-        assert.equal(command[0], "--test");
-        for (const flag of ["--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
-          "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100"])
-          assert.ok(command.includes(flag), flag);
-        assert.equal(command.filter(t => t.startsWith("--test-coverage-exclude=")).length, 1);
+    test("the packaging test entry point type-checks then measures every listed file, loaded or not, at full coverage", async t => {
+      for (const platform of ["linux", "win32"] as const) {
+        PackageScriptFixture.compilerCommands.length = 0;
+        PackageScriptFixture.processCommands.length = 0;
+        t.mock.property(process, "platform", platform);
+        try {
+          if (platform === "linux")
+            await import("../test-package.ts");
+          else
+            await new (await import("../test-package.ts")).default().runAsync();
+        }
+        finally { t.mock.restoreAll(); }
+        assert.deepEqual(PackageScriptFixture.compilerCommands, [["--project", "scripts/tsconfig.json"]]);
+        const commands = PackageScriptFixture.processCommands;
+        assert.equal(commands.length, platform === "win32" ? 3 : 2);
+        for (const command of commands) {
+          assert.equal(command[0], "--test");
+          for (const flag of ["--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
+            "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100"])
+            assert.ok(command.includes(flag), flag);
+          assert.equal(command.filter(t => t.startsWith("--test-coverage-exclude=")).length, 1);
+        }
+        assert.ok(commands[0]?.includes("--test-coverage-include=scripts/packaging/package-options.ts"));
+        const signing = commands.filter(command => command.some(t => t.includes("trusted-signing-module") || t.includes("windows-sign-hook")));
+        if (platform === "win32") {
+          assert.deepEqual(signing, [commands[1]]);
+          for (const argument of ["--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
+            "--test-coverage-include=scripts/packaging/windows-sign-hook.ts", "scripts/tests/packaging/trusted-signing-module.test.ts",
+            "scripts/tests/packaging/windows-sign-hook.test.ts"])
+            assert.ok(commands[1]?.includes(argument), argument);
+        }
+        else
+          assert.deepEqual(signing, []);
+        const orchestration = commands.at(-1);
+        assert.ok(orchestration?.includes("--test-coverage-include=scripts/package.ts"));
+        assert.ok(orchestration?.includes("--test-coverage-include=scripts/test-package.ts"));
+        assert.ok(orchestration?.includes("scripts/tests/package-orchestration.test.ts"));
       }
-      assert.ok(PackageScriptFixture.processCommands[0]?.includes("--test-coverage-include=scripts/packaging/package-options.ts"));
-      assert.ok(PackageScriptFixture.processCommands[1]?.includes("--test-coverage-include=scripts/package.ts"));
-      assert.ok(PackageScriptFixture.processCommands[1]?.includes("--test-coverage-include=scripts/test-package.ts"));
-      assert.ok(PackageScriptFixture.processCommands[1]?.includes("scripts/tests/package-orchestration.test.ts"));
     });
   }
 }

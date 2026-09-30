@@ -20,6 +20,7 @@ class TrustedSigningModuleTests {
   private static root: string = "";
   private static readonly PATH_VARIABLE: string = "PATH";
   private static readonly MODULE_PATH_VARIABLE: string = "PSModulePath";
+  private static readonly USER_PROFILE_VARIABLE: string = "USERPROFILE";
 
   public static register(): void {
     beforeEach(async t => {
@@ -28,6 +29,7 @@ class TrustedSigningModuleTests {
       const originalDirectory = process.cwd();
       const originalModulePath = process.env[TrustedSigningModuleTests.MODULE_PATH_VARIABLE];
       const originalPath = process.env[TrustedSigningModuleTests.PATH_VARIABLE];
+      const originalUserProfile = process.env[TrustedSigningModuleTests.USER_PROFILE_VARIABLE];
       TrustedSigningModuleTests.root = await mkdtemp(path.join(tmpdir(), "teamrun-signing-module-"));
       t.after(async () => {
         process.chdir(originalDirectory);
@@ -35,9 +37,12 @@ class TrustedSigningModuleTests {
         else process.env[TrustedSigningModuleTests.MODULE_PATH_VARIABLE] = originalModulePath;
         if (originalPath === undefined) delete process.env[TrustedSigningModuleTests.PATH_VARIABLE];
         else process.env[TrustedSigningModuleTests.PATH_VARIABLE] = originalPath;
+        if (originalUserProfile === undefined) delete process.env[TrustedSigningModuleTests.USER_PROFILE_VARIABLE];
+        else process.env[TrustedSigningModuleTests.USER_PROFILE_VARIABLE] = originalUserProfile;
         await rm(TrustedSigningModuleTests.root, { recursive: true, force: true });
       });
       process.chdir(TrustedSigningModuleTests.root);
+      process.env[TrustedSigningModuleTests.USER_PROFILE_VARIABLE] = TrustedSigningModuleTests.root;
     });
 
     test("prepare saves exactly the recorded version into a fresh directory and checks that it loads", async () => {
@@ -53,6 +58,7 @@ class TrustedSigningModuleTests {
       assert.equal(module.manifestPath, path.join(directory, "TrustedSigning", "0.5.8", "TrustedSigning.psd1"));
       await access(module.manifestPath);
       await assert.rejects(access(stale));
+      await access(path.join(TrustedSigningModuleTests.root, "AppData", "Local", "Microsoft", "PowerShell", "StartupProfileData-NonInteractive"));
     });
 
     test("prepare fails when the saved module reports another version", async () => {
