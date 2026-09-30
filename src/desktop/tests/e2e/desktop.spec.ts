@@ -490,7 +490,7 @@ test("shows approvals and stops an active fixture reply", async () => {
   await expect(page.locator("tr-composer textarea")).toBeEnabled();
 });
 
-test("leaves the standard gap between the rewind dialog's checkbox and its label, with the box level with the label's first line", async () => {
+test("sets the rewind dialog's checkbox apart from its description, with the standard gap to its label and the box level with the label's first line", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
   await page.locator("tr-composer textarea").fill("Rewind me");
@@ -501,6 +501,7 @@ test("leaves the standard gap between the rewind dialog's checkbox and its label
   await question.getByRole("button", { name: "Rewind to here", exact: true }).click();
   const checkbox = page.locator("mat-dialog-container mat-checkbox");
   await expect(checkbox).toBeVisible();
+  await page.locator("mat-dialog-container").evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(t => t.finished)));
   const geometry = await checkbox.evaluate(element => {
     const box = element.querySelector(".mdc-checkbox__background")!.getBoundingClientRect();
     const label = element.querySelector(".mat-internal-form-field-label")!;
@@ -508,9 +509,11 @@ test("leaves the standard gap between the rewind dialog's checkbox and its label
     range.selectNodeContents(label);
     const lines = Array.from(range.getClientRects());
     const content = label.getBoundingClientRect().left + parseFloat(getComputedStyle(label).paddingLeft);
-    return { gap: content - box.right, boxTop: box.top, lineTop: lines[0]!.top, wraps: new Set(lines.map(t => Math.round(t.top))).size > 1 };
+    const text = element.closest("mat-dialog-content")!.querySelector("p")!.getBoundingClientRect();
+    return { gap: content - box.right, above: element.getBoundingClientRect().top - text.bottom, boxTop: box.top, lineTop: lines[0]!.top, wraps: new Set(lines.map(t => Math.round(t.top))).size > 1 };
   });
   expect(geometry.gap).toBeCloseTo(8, 0);
+  expect(geometry.above).toBeCloseTo(12, 0);
   expect(Math.abs(geometry.boxTop - geometry.lineTop)).toBeLessThanOrEqual(1);
   expect(geometry.wraps).toBe(true);
   await desktop.capture("rewind-dialog");
