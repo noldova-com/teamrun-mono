@@ -37,7 +37,7 @@ export class Authenticode {
 
   public static signer(file: string): string {
     return execFileSync(win32.join(Authenticode.systemRoot, ...Resources.windowsPowerShellSegments),
-      ["-NoProfile", "-NonInteractive", "-Command", "(Get-AuthenticodeSignature -LiteralPath $env:TEAMRUN_TEST_FILE).SignerCertificate.Subject"],
+      ["-NoProfile", "-NonInteractive", "-Command", "(Microsoft.PowerShell.Security\\Get-AuthenticodeSignature -LiteralPath $env:TEAMRUN_TEST_FILE).SignerCertificate.Subject"],
       { env: { ...process.env, TEAMRUN_TEST_FILE: file }, encoding: "utf8", windowsHide: true }).trim();
   }
 

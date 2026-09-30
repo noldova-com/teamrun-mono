@@ -177,7 +177,7 @@ jobs:
               $publisher = [System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($env:WINDOWS_PUBLISHER).Decode($flags) -split "\r?\n"
               $failed = $false
               foreach ($file in $env:SIGNED_FILES -split " ") {
-                $signature = Get-AuthenticodeSignature -LiteralPath $file
+                $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $file
                 $subject = if ($null -eq $signature.SignerCertificate) { @() } else { $signature.SignerCertificate.SubjectName.Decode($flags) -split "\r?\n" }
                 $published = @($publisher | Where-Object { $subject -cnotcontains $_ }).Count -eq 0
                 "{0}: {1}; signer {2}; timestamped {3}; publisher {4}" -f $file, $signature.Status, $signature.SignerCertificate.Subject, ($null -ne $signature.TimeStamperCertificate), $published

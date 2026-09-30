@@ -98,7 +98,7 @@ export class Resources {
     "$ErrorActionPreference = 'Stop'",
     "$flags = [System.Security.Cryptography.X509Certificates.X500DistinguishedNameFlags]::UseNewLines",
     `$publisher = [System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($env:${Resources.signaturePublisherVariable}).Decode($flags) -split '\\r?\\n'`,
-    `$signature = Get-AuthenticodeSignature -LiteralPath $env:${Resources.signatureFileVariable}`,
+    `$signature = Microsoft.PowerShell.Security\\Get-AuthenticodeSignature -LiteralPath $env:${Resources.signatureFileVariable}`,
     "$subject = if ($null -eq $signature.SignerCertificate) { @() } else { $signature.SignerCertificate.SubjectName.Decode($flags) -split '\\r?\\n' }",
     "$signed = $signature.Status -eq 'Valid' -and @($publisher | Where-Object { $subject -cnotcontains $_ }).Count -eq 0",
     `[Console]::Out.WriteLine($(if ($signed) { '${Resources.signatureAccepted}' } else { '${Resources.signatureRefused}' }))`
