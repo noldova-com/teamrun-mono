@@ -156,8 +156,8 @@ export class HostedTerminalTests {
       await Wait.until(() => owner.changes.length === 1);
       const exception = Assert.throws(() => terminal.input("ls\r"), ServiceException);
 
-      Assert.areEqual(7, owner.changes[0]?.exitCode);
-      Assert.areEqual(7, terminal.state.exitCode);
+      Assert.areEqual(7, owner.changes[0]?.exit?.code);
+      Assert.areEqual(7, terminal.state.exit?.code);
       Assert.areEqual(ErrorCode.Conflict, exception.info.name);
     }
     finally {
@@ -182,11 +182,11 @@ export class HostedTerminalTests {
       const texts = (await terminal.lines(0, 500)).lines.map(t => t.text);
 
       Assert.areEqual(1, restarted.restartCount);
-      Assert.isNull(restarted.exitCode);
-      Assert.areEqual(3, owner.changes[0]?.exitCode);
-      Assert.isNull(owner.changes[1]?.exitCode);
-      Assert.isTrue(owner.changes.some(t => t.restartCount === 1 && t.exitCode !== null));
-      Assert.isTrue(owner.changes.some(t => t.restartCount === 2 && t.exitCode === null));
+      Assert.isNull(restarted.exit);
+      Assert.areEqual(3, owner.changes[0]?.exit?.code);
+      Assert.isNull(owner.changes[1]?.exit);
+      Assert.isTrue(owner.changes.some(t => t.restartCount === 1 && t.exit !== null));
+      Assert.isTrue(owner.changes.some(t => t.restartCount === 2 && t.exit === null));
       Assert.isTrue(texts.filter(t => t === "ready").length >= 2);
       Assert.areEqual("Fixture", terminal.state.shell);
     }
@@ -279,7 +279,7 @@ export class HostedTerminalTests {
     const exception = await Assert.throwsAsync(() => terminal.restart(FixtureShell.environment()), ServiceException);
 
     Assert.isFalse(owner.output.includes("foreign"));
-    Assert.isFalse(owner.changes.some(t => t.exitCode === 9));
+    Assert.isFalse(owner.changes.some(t => t.exit?.code === 9));
     Assert.areEqual(ErrorCode.NotFound, exception.info.name);
     Assert.isFalse(existsSync(directory.resolve("terminal.jsonl")));
   }

@@ -71,7 +71,7 @@ export class TerminalSession {
     this.terminal.write(screen.screen);
     this.sequence = screen.state.sequence;
     this.stateSignal.set(screen.state);
-    this.terminal.options.disableStdin = !Object.isNull(screen.state.exitCode);
+    this.terminal.options.disableStdin = !Object.isNull(screen.state.exit);
     this.loaded = true;
     for (const apply of this.waiting.splice(0))
       apply();
@@ -100,7 +100,7 @@ export class TerminalSession {
     this.sequence = state.sequence;
     if (state.restartCount > this.stateSignal().restartCount)
       this.terminal.write(Resources.terminalRestartReset + Resources.terminalLineFeed.repeat(this.terminal.rows) + Resources.terminalHome);
-    this.terminal.options.disableStdin = !Object.isNull(state.exitCode);
+    this.terminal.options.disableStdin = !Object.isNull(state.exit);
     this.stateSignal.set(state);
   }
 

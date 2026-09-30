@@ -30,6 +30,7 @@ import {
   ProviderModel,
   ProjectIdParams,
   RequestedSettings,
+  type TerminalExit,
   TerminalLineRange,
   TerminalShell,
   TerminalShellKind,
@@ -99,8 +100,8 @@ export class SampleData {
       .answer(MethodName.ProviderModelCatalog, () => ["gpt-5", "gpt-5-mini"].map((id, index) => new ProviderModel(id, id, "Fixture", ["medium", "high"], index === 0, null, true).toJson()));
   }
 
-  public static terminal(id: string, sequence: number = 0, exitCode: number | null = null, restartCount: number = 0): TerminalState {
-    return new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exitCode, restartCount, sequence,
+  public static terminal(id: string, sequence: number = 0, exit: TerminalExit | null = null, restartCount: number = 0): TerminalState {
+    return new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exit, restartCount, sequence,
       new TerminalLineRange(0, 0));
   }
 

@@ -12,6 +12,7 @@ import {
   ErrorCode,
   Event,
   EventName,
+  TerminalExit,
   type TerminalLinePage,
   TerminalOutputPayload,
   TerminalScreen,
@@ -38,7 +39,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
   private emulator: TerminalEmulator;
   private size: TerminalSize;
   private pty: PseudoTerminal | null = null;
-  private exitCode: number | null = null;
+  private exit: TerminalExit | null = null;
   private restartCount: number = 0;
   private sequence: number = 0;
   private output: string = String.empty;
@@ -80,7 +81,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
   }
 
   public get state(): TerminalState {
-    return new TerminalState(this.id, this.projectId, this.shell.name, this.shell.kind, this.settings.windowsBuild, this.emulator.size, this.exitCode,
+    return new TerminalState(this.id, this.projectId, this.shell.name, this.shell.kind, this.settings.windowsBuild, this.emulator.size, this.exit,
       this.restartCount, this.sequence, this.history.stored);
   }
 
@@ -141,14 +142,14 @@ export class HostedTerminal implements IPseudoTerminalListener {
     this.updateFlow();
   }
 
-  public onExit(source: PseudoTerminal, exitCode: number): void {
+  public onExit(source: PseudoTerminal, exitCode: number | null): void {
     if (source !== this.pty)
       return;
 
     this.pty = null;
     this.emulator.afterWrites(() => {
       this.flushOutput();
-      this.exitCode = exitCode;
+      this.exit = new TerminalExit(exitCode);
       this.emitChanged();
     });
   }
@@ -176,7 +177,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
     this.emulator = emulator;
     this.pty = pty;
     this.paused = false;
-    this.exitCode = null;
+    this.exit = null;
     this.restartCount += 1;
     this.emitChanged();
   }

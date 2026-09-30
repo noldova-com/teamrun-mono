@@ -43,6 +43,12 @@ export class FakePty implements IPty {
       listener({ exitCode });
   }
 
+  public emitExitWithoutCode(): void {
+    const event: { exitCode?: number } = {};
+    for (const listener of [...this.exitListeners])
+      listener(event as { exitCode: number });
+  }
+
   public resize(columns: number, rows: number): void {
     this.sizes.push(`${columns}x${rows}`);
   }

@@ -21,8 +21,9 @@ export class PseudoTerminal {
   private readonly forceSignal: string | undefined;
   private readonly graceMilliseconds: number;
   private readonly subscriptions: readonly IDisposable[];
-  private readonly exited: PromiseWithResolvers<void> = Promise.withResolvers<void>();
-  private exitCode: number | null = null;
+  private readonly exit: PromiseWithResolvers<void> = Promise.withResolvers<void>();
+  private killed: boolean = false;
+  private exited: boolean = false;
 
   public constructor(pty: IPty, listener: IPseudoTerminalListener, forceSignal: string | undefined, graceMilliseconds: number) {
     this.pty = pty;
@@ -46,7 +47,7 @@ export class PseudoTerminal {
   }
 
   public get hasExited(): boolean {
-    return !Object.isNull(this.exitCode);
+    return this.exited;
   }
 
   public write(data: string): void {
@@ -54,6 +55,9 @@ export class PseudoTerminal {
   }
 
   public resize(size: TerminalSize): void {
+    if (this.killed)
+      return;
+
     this.pty.resize(size.columns, size.rows);
   }
 
@@ -66,12 +70,14 @@ export class PseudoTerminal {
   }
 
   public async end(): Promise<void> {
-    if (this.hasExited)
+    if (this.exited)
       return;
 
-    this.pty.resume();
-    this.pty.kill();
-    if (await this.exitsWithin(this.graceMilliseconds))
+    if (!this.killed) {
+      this.pty.resume();
+      this.kill();
+    }
+    if (await this.exitsWithin(this.graceMilliseconds) || Object.isUndefined(this.forceSignal))
       return;
     this.pty.kill(this.forceSignal);
     await this.exitsWithin(this.graceMilliseconds);
@@ -83,23 +89,29 @@ export class PseudoTerminal {
       timer = setTimeout(resolve, milliseconds);
     });
     try {
-      await Promise.race([this.exited.promise, elapsed]);
+      await Promise.race([this.exit.promise, elapsed]);
     }
     finally {
       if (!Object.isNull(timer))
         clearTimeout(timer);
     }
-    return this.hasExited;
+    return this.exited;
+  }
+
+  private kill(): void {
+    this.killed = true;
+    this.pty.kill();
   }
 
   private handleExit(exitCode: number): void {
-    this.exitCode = exitCode;
+    this.exited = true;
     for (const subscription of this.subscriptions)
       subscription.dispose();
-    this.pty.kill();
+    if (!this.killed)
+      this.kill();
     this.releaseOutputReader();
-    this.exited.resolve();
-    this.listener.onExit(this, exitCode);
+    this.exit.resolve();
+    this.listener.onExit(this, Number.isInteger(exitCode) ? exitCode : null);
   }
 
   private releaseOutputReader(): void {

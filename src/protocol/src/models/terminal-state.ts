@@ -12,6 +12,7 @@ import { JsonReader, type JsonObject } from "@noldova/teamrun-foundation-json";
 
 import { TerminalShellKind } from "../enums/terminal-shell-kind.js";
 import { Resources } from "../resources.js";
+import { TerminalExit } from "./terminal-exit.js";
 import { TerminalLineRange } from "./terminal-line-range.js";
 import { TerminalSize } from "./terminal-size.js";
 
@@ -22,7 +23,7 @@ export class TerminalState {
   public readonly shellKind: TerminalShellKind;
   public readonly conptyBuild: number | null;
   public readonly size: TerminalSize;
-  public readonly exitCode: number | null;
+  public readonly exit: TerminalExit | null;
   public readonly restartCount: number;
   public readonly sequence: number;
   public readonly stored: TerminalLineRange;
@@ -34,7 +35,7 @@ export class TerminalState {
     shellKind: TerminalShellKind,
     conptyBuild: number | null,
     size: TerminalSize,
-    exitCode: number | null,
+    exit: TerminalExit | null,
     restartCount: number,
     sequence: number,
     stored: TerminalLineRange) {
@@ -44,8 +45,6 @@ export class TerminalState {
     ArgumentException.throwIfNullOrWhitespace(shell, Resources.shellField);
     if (!Object.isNull(conptyBuild) && (!Number.isInteger(conptyBuild) || conptyBuild < 1))
       throw new ArgumentOutOfRangeException(Resources.conptyBuildField, conptyBuild);
-    if (!Object.isNull(exitCode) && !Number.isInteger(exitCode))
-      throw new ArgumentOutOfRangeException(Resources.exitCodeField, exitCode);
     if (!Number.isInteger(restartCount) || restartCount < 0)
       throw new ArgumentOutOfRangeException(Resources.restartCountField, restartCount);
     if (!Number.isInteger(sequence) || sequence < 0)
@@ -57,7 +56,7 @@ export class TerminalState {
     this.shellKind = shellKind;
     this.conptyBuild = conptyBuild;
     this.size = size;
-    this.exitCode = exitCode;
+    this.exit = exit;
     this.restartCount = restartCount;
     this.sequence = sequence;
     this.stored = stored;
@@ -66,6 +65,7 @@ export class TerminalState {
   public static fromJson(value: unknown, path?: string): TerminalState {
     const reader = JsonReader.fromValue(value, path);
     const size = reader.readObject(Resources.sizeField);
+    const exit = reader.readNullableObject(Resources.exitField);
     const stored = reader.readObject(Resources.storedField);
     return new TerminalState(
       reader.readNonBlankString(Resources.idField),
@@ -74,7 +74,7 @@ export class TerminalState {
       reader.readOneOf(Resources.shellKindField, Object.values(TerminalShellKind)),
       reader.readNullableInteger(Resources.conptyBuildField),
       TerminalSize.fromJson(size.toJson(), size.path),
-      reader.readNullableInteger(Resources.exitCodeField),
+      Object.isNull(exit) ? null : TerminalExit.fromJson(exit.toJson(), exit.path),
       reader.readInteger(Resources.restartCountField),
       reader.readInteger(Resources.sequenceField),
       TerminalLineRange.fromJson(stored.toJson(), stored.path));
@@ -88,7 +88,7 @@ export class TerminalState {
       [Resources.shellKindField]: this.shellKind,
       [Resources.conptyBuildField]: this.conptyBuild,
       [Resources.sizeField]: this.size.toJson(),
-      [Resources.exitCodeField]: this.exitCode,
+      [Resources.exitField]: Object.isNull(this.exit) ? null : this.exit.toJson(),
       [Resources.restartCountField]: this.restartCount,
       [Resources.sequenceField]: this.sequence,
       [Resources.storedField]: this.stored.toJson()

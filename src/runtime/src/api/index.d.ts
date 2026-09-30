@@ -2317,9 +2317,10 @@ export interface IPseudoTerminalListener {
   /**
    * Receives the shell's end, after all of its output.
    * @param source The pseudo-terminal whose shell ended.
-   * @param exitCode The shell's exit code.
+   * @param exitCode The shell's exit code, or `null` when `node-pty` reported the end before it had the code, which
+   * the Windows pseudo-console does when the runtime is busy.
    */
-  onExit(source: PseudoTerminal, exitCode: number): void;
+  onExit(source: PseudoTerminal, exitCode: number | null): void;
 }
 
 /**
@@ -2620,11 +2621,12 @@ export declare class TerminalEnvironment {
 
 /**
  * The pseudo-terminal a shell runs in, behind which `node-pty` stays: it passes input, size and flow control to the
- * shell, reports output and the shell's end, and ends the shell on request. When a shell ends by itself, it still asks
- * `node-pty` to end it, which closes the shell's input, and on Windows it releases the thread `node-pty` keeps reading
- * the pseudo-console's output. `node-pty` offers no public way to release that thread and otherwise keeps it until more
- * output arrives, which never happens after an exit (microsoft/node-pty#887); reaching it is the exception the coding
- * standards record.
+ * shell, reports output and the shell's end, and ends the shell on request. It asks `node-pty` to end the shell exactly
+ * once, on request or after the shell ended by itself, because on Windows every request closes the pseudo-console
+ * while `node-pty` still has its record of the shell, and closing it twice corrupts the runtime's heap. Asking closes
+ * the shell's input, and on Windows the end releases the thread `node-pty` keeps reading the pseudo-console's output.
+ * `node-pty` offers no public way to release that thread and otherwise keeps it until more output arrives, which never
+ * happens after an exit (microsoft/node-pty#887); reaching it is the exception the coding standards record.
  */
 export declare class PseudoTerminal {
   /**
@@ -2670,7 +2672,8 @@ export declare class PseudoTerminal {
   public write(data: string): void;
 
   /**
-   * Resizes the pseudo-terminal.
+   * Resizes the pseudo-terminal; ignored once the shell was asked to end, because `node-pty` would resize a
+   * pseudo-console it has closed.
    * @param size The new size.
    */
   public resize(size: TerminalSize): void;
@@ -2686,9 +2689,10 @@ export declare class PseudoTerminal {
   public resume(): void;
 
   /**
-   * Ends the shell: asks it to end (a hangup outside Windows), waits, then forces it and waits again. It reads the
-   * output again first, because the Windows pseudo-console cannot end a shell while its output waits to be read.
-   * @returns A promise that settles when the shell has ended or the second wait has passed; `hasExited` tells which.
+   * Ends the shell: asks it to end (a hangup outside Windows) and waits; where a signal forces a shell, it then sends
+   * the signal and waits again. It reads the output again first, because the Windows pseudo-console cannot end a shell
+   * while its output waits to be read. A second call while the shell is still ending only waits.
+   * @returns A promise that settles when the shell has ended or the last wait has passed; `hasExited` tells which.
    */
   public end(): Promise<void>;
 }
@@ -2938,9 +2942,9 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
   /**
    * Records the running shell's end once its output is processed, and sends `TerminalChanged`.
    * @param source The pseudo-terminal.
-   * @param exitCode The exit code.
+   * @param exitCode The exit code, or `null` when the platform did not report it.
    */
-  public onExit(source: PseudoTerminal, exitCode: number): void;
+  public onExit(source: PseudoTerminal, exitCode: number | null): void;
 }
 
 /**

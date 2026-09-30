@@ -447,6 +447,7 @@ export class Resources {
   public static readonly chooseShellLabel: string = "Choose a shell";
   public static readonly defaultShellMark: string = "Default";
   public static readonly restartTerminalLabel: string = "Restart";
+  public static readonly terminalExitedWithoutCode: string = "The shell exited without an exit code.";
   public static readonly defaultTerminalColumns: number = 80;
   public static readonly defaultTerminalRows: number = 24;
   public static readonly terminalScrollback: number = 1000;

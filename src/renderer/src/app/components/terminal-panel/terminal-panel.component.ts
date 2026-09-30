@@ -13,6 +13,7 @@ import {
 import { MatButtonModule } from "@angular/material/button";
 
 import "@noldova/teamrun-foundation-core";
+import type { TerminalExit } from "@noldova/teamrun-protocol";
 
 import type { Panel } from "../../models/panel";
 import { Resources } from "../../resources";
@@ -37,7 +38,7 @@ export class TerminalPanelComponent {
 
   protected readonly resources: typeof Resources = Resources;
   protected readonly session: Signal<TerminalSession | null> = computed(() => this.terminals.sessionOf(this.panel()));
-  protected readonly exitCode: Signal<number | null> = computed(() => this.session()?.state().exitCode ?? null);
+  protected readonly exit: Signal<TerminalExit | null> = computed(() => this.session()?.state().exit ?? null);
 
   public readonly panel: InputSignal<Panel> = input.required<Panel>();
 
