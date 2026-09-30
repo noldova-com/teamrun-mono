@@ -15,6 +15,7 @@ import type { TurnStart } from "../models/turn-start.js";
 export interface ITurnListener {
   onStarted(start: TurnStart): void;
   onDetail(detail: TurnDetail): void;
+  onThinking(): void;
   onApprovalRequested(ask: ApprovalAsk): Promise<string>;
   onObserved(observed: ObservedSettings): void;
 }

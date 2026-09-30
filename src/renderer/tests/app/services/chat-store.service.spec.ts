@@ -24,6 +24,7 @@ import {
   EventName,
   Message,
   MessageAuthor,
+  MessageIdParams,
   MessagePage,
   MessageSendResult,
   MessageStatus,
@@ -239,6 +240,23 @@ describe("ChatStore", () => {
     TestBed.tick();
     await vi.waitFor(() => expect(store.pendingApprovals()).toEqual([]));
     expect(bridge.requests.find(t => t.method === MethodName.ApprovalDecide)?.payload).toEqual({ approvalId: "ap1", optionId: "yes" });
+  });
+
+  it("marks a running reply as thinking until its next detail or its end, and ignores replies that are not running", async () => {
+    bridge.answer(MethodName.MessageListOpen, () => [SampleData.reply.toJson()]);
+    await store.initialize();
+    const thinking = (messageId: string): Event => new Event(EventName.ReplyThinking, new MessageIdParams(messageId).toJson());
+
+    bridge.emit(thinking("unknown"));
+    bridge.emit(thinking("m2"));
+    expect([...store.thinkingReplies()]).toEqual(["m2"]);
+    bridge.emit(new Event(EventName.DetailAppended, new DetailEventPayload("m2", SampleData.detail(0, DetailKind.Reasoning, "Planning")).toJson()));
+    expect([...store.thinkingReplies()]).toEqual([]);
+    bridge.emit(thinking("m2"));
+    bridge.emit(new Event(EventName.MessageUpdated, SampleData.withStatus(SampleData.reply, MessageStatus.Completed).toJson()));
+    expect([...store.thinkingReplies()]).toEqual([]);
+    bridge.emit(thinking("m2"));
+    expect([...store.thinkingReplies()]).toEqual([]);
   });
 
   it("loads the catalog and selects a project without opening a conversation", async () => {

@@ -785,6 +785,12 @@ export declare enum EventName {
    */
   DetailUpdated = "DetailUpdated",
   /**
+   * A running reply's provider is thinking without text to show. Sent at the first thinking progress of a reply and again
+   * only after a detail other than thinking text, and never stored, so a reloaded window does not see it. Payload:
+   * `MessageIdParams`.
+   */
+  ReplyThinking = "ReplyThinking",
+  /**
    * A provider asked for permission. Payload: `Approval`.
    */
   ApprovalCreated = "ApprovalCreated",

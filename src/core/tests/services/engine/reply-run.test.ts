@@ -10,7 +10,7 @@ import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { ApprovalAsk, Resources, TurnDetail, TurnStart } from "@noldova/teamrun-core";
 import { ActiveRun, ReplyRun, TurnRequest } from "@noldova/teamrun-core";
-import { Message, MessageAuthor, MessageStatus, Provenance } from "@noldova/teamrun-protocol";
+import { EventName, Message, MessageAuthor, MessageIdParams, MessageStatus, Provenance } from "@noldova/teamrun-protocol";
 import { ApprovalKind, ApprovalOption, ApprovalOutcome, DetailKind, MessageListParams, MessageSendParams, ObservedSettings, RequestedSettings } from "@noldova/teamrun-protocol";
 
 import { CoreHost } from "../../fixtures/core-host.fixture.js";
@@ -37,6 +37,26 @@ export class ReplyRunTests {
     Assert.areEqual("Alice", saved?.teammateName);
     Assert.isTrue(saved?.details.some(t => t.text === "complete") ?? false);
     Assert.isFalse(saved?.details.some(t => t.text === "part") ?? true);
+  }
+
+  @TestMethod
+  public async announcesThinkingUntilThinkingTextOrAnotherDetailAndStoresNothing(): Promise<void> {
+    using host = new CoreHost();
+    const conversation = host.createConversation();
+    host.adapter.thinkingBeforeDetails = 3;
+    host.adapter.extraDetails = [new TurnDetail(DetailKind.Reasoning, "Planning", null, null)];
+    host.adapter.thinkingAfterDetails = 2;
+    const sent = await host.engine.send(new MessageSendParams(conversation.id, "hello", new RequestedSettings("fake", null, null), null));
+    await host.engine.waitForIdle();
+    const replyId = sent.replies[0]!.id;
+    const names = host.listener.names().filter(t => t === EventName.ReplyThinking || t === EventName.DetailAppended);
+    Assert.areEqual([EventName.ReplyThinking, EventName.DetailAppended, EventName.DetailAppended, EventName.ReplyThinking].join(","), names.join(","));
+    const payloads = host.listener.events.filter(t => t.name === EventName.ReplyThinking).map(t => MessageIdParams.fromJson(t.payload).messageId);
+    Assert.areEqual([replyId, replyId].join(","), payloads.join(","));
+    const before = JSON.stringify(host.messages.find(replyId)?.toJson());
+    host.adapter.lastListener?.onThinking();
+    Assert.areEqual(2, host.listener.count(EventName.ReplyThinking));
+    Assert.areEqual(before, JSON.stringify(host.messages.find(replyId)?.toJson()));
   }
 
   @TestMethod

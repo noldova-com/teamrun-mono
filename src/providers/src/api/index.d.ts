@@ -974,6 +974,14 @@ export declare class Resources {
   public static readonly maximumInputKeys: number;
   public static readonly claudeMaximumTurns: number;
   /**
+   * The Claude Code argument that chooses how thinking is shown: `thinking-display`.
+   */
+  public static readonly claudeThinkingDisplayArgument: string;
+  /**
+   * The thinking display that streams summarized thinking text: `summarized`.
+   */
+  public static readonly claudeSummarizedThinkingDisplay: string;
+  /**
    * The project instruction file TeamRun appends to Claude Code's system prompt.
    */
   public static readonly projectInstructionsFileName: string;
@@ -1017,6 +1025,10 @@ export declare class Resources {
   public static readonly userMessageType: "user";
   public static readonly resultMessageType: "result";
   public static readonly initSubtype: "init";
+  /**
+   * The subtype of Claude Code's system messages that report thinking progress without text: `thinking_tokens`.
+   */
+  public static readonly thinkingTokensSubtype: "thinking_tokens";
   public static readonly successSubtype: "success";
   public static readonly textBlockType: "text";
   public static readonly thinkingBlockType: "thinking";

@@ -90,7 +90,9 @@ export class MessageCardComponent implements OnInit {
   protected readonly answers = computed(() => this.formatter.answers(this.message()));
   protected readonly segments: Signal<readonly ReplySegment[]> = computed(() => this.formatter.segments(this.message()));
   protected readonly activity: Signal<readonly ActivityEntry[]> = computed(() => this.segments().flatMap(t => t.entries));
-  protected readonly activityLabel: Signal<string> = computed(() => this.formatter.activityLabel(this.message(), this.now()));
+  protected readonly activityLabel: Signal<string> = computed(() => this.isActive() && this.store.thinkingReplies().has(this.message().id)
+    ? Resources.thinkingLabel
+    : this.formatter.activityLabel(this.message(), this.now()));
   protected readonly approvals: Signal<readonly Approval[]> = computed(() => this.store.pendingApprovals().filter(t => t.messageId === this.message().id));
   protected readonly rootPath: Signal<string | null> = computed(() => this.store.selectedProject()?.rootPath ?? null);
   protected readonly edits: Signal<readonly FileEdit[]> = computed(() => this.changes.editsOf(this.message()));

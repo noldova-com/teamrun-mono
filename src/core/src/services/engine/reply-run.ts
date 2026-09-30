@@ -20,6 +20,7 @@ import { ConversationMemberParams,
   EventName,
   Message,
   MessageDetail,
+  MessageIdParams,
   MessageStatus,
   type ObservedSettings,
   type Provenance
@@ -51,6 +52,7 @@ export class ReplyRun implements ITurnListener {
   private readonly events: IEventSink;
   private readonly imagesDirectory: string;
   private finished: boolean = false;
+  private thinkingReported: boolean = false;
   private readonly conversations: IConversationsService | null;
 
   public constructor(
@@ -107,6 +109,8 @@ export class ReplyRun implements ITurnListener {
     if (this.finished)
       return;
     const detail = this.storeImage(reported);
+    if (detail.kind !== DetailKind.Reasoning)
+      this.thinkingReported = false;
     const id = detail.providerItemId;
     const known = Object.isNull(id) ? undefined : this.detailsByItem.get(id);
     if (!Object.isUndefined(known)) {
@@ -116,6 +120,13 @@ export class ReplyRun implements ITurnListener {
     const appended = this.appendDetail(detail.kind, detail.text, detail.payload);
     if (!Object.isNull(id))
       this.detailsByItem.set(id, appended);
+  }
+
+  public onThinking(): void {
+    if (this.finished || this.thinkingReported)
+      return;
+    this.thinkingReported = true;
+    this.events.publish(new Event(EventName.ReplyThinking, new MessageIdParams(this.message.id).toJson()));
   }
 
   public async onApprovalRequested(ask: ApprovalAsk): Promise<string> {

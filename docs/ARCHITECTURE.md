@@ -129,7 +129,7 @@ Model catalogs are discovered per provider account. Preserve the distinction bet
 
 Provider processes receive only their required environment. TeamRun-driven sessions must not inherit unrelated user MCP servers, plugins or account connectors. Profile isolation is an adapter-specific contract that must be verified against the chosen tooling; an empty configuration list is not proof that inherited integrations are disabled. For tooling that requires a dedicated managed profile, create it without reading or copying the user's authentication material. Native sign-in remains a user action.
 
-Adapters normalize text, reasoning, tool activity, file changes, approvals, cancellation and errors into the common protocol. Provenance records requested settings separately from observed provider, model, effort, harness version, account identity and native session/turn ids. Missing observations remain unknown.
+Adapters normalize text, reasoning, thinking progress, tool activity, file changes, approvals, cancellation and errors into the common protocol. Adapters ask providers for readable thinking where they offer it, such as Claude's summarized thinking. Thinking progress without text reaches windows as a transient event and is not stored. Provenance records requested settings separately from observed provider, model, effort, harness version, account identity and native session/turn ids. Missing observations remain unknown.
 
 An approval is registered before its event is published and is addressed by its own id. Bind the response to the live request and reply; reject stale, duplicate or unrelated decisions. Completing or cancelling a reply resolves its outstanding waiters. Every connected client receives the authoritative outcome.
 

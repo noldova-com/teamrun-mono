@@ -188,6 +188,7 @@ export class ClaudeAdapter implements IProviderAdapter {
       systemPrompt: ClaudeAdapter.createSystemPrompt(request.workingDirectory, request.instructions),
       abortController: abort,
       includePartialMessages: true,
+      extraArgs: { [Resources.claudeThinkingDisplayArgument]: Resources.claudeSummarizedThinkingDisplay },
       maxTurns: Resources.claudeMaximumTurns,
       stderr: (data: string) => stderr.push(data),
       canUseTool: (toolName, input) => turn.decide(toolName, input),

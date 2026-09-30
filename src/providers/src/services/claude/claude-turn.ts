@@ -107,6 +107,8 @@ export class ClaudeTurn {
     if (message.type === Resources.systemMessageType) {
       if (message.subtype === Resources.initSubtype)
         await this.handleInit(message, query);
+      else if (message.subtype === Resources.thinkingTokensSubtype)
+        this.listener.onThinking();
       return;
     }
     if (message.type === Resources.streamEventType) {

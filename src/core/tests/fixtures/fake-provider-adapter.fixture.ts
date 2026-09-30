@@ -35,6 +35,8 @@ export class FakeProviderAdapter implements IProviderAdapter {
   public listModelsFailure: unknown = null;
   public detailTexts: readonly string[] = ["Working"];
   public streamedTexts: readonly string[] = [];
+  public thinkingBeforeDetails: number = 0;
+  public thinkingAfterDetails: number = 0;
   public approvalAsk: ApprovalAsk | null = null;
   public approvalAsks: readonly ApprovalAsk[] = [];
   public afterDetails: (() => void) | null = null;
@@ -92,12 +94,16 @@ export class FakeProviderAdapter implements IProviderAdapter {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, content);
     }
+    for (let index = 0; index < this.thinkingBeforeDetails; index++)
+      listener.onThinking();
     for (const detail of this.extraDetails)
       listener.onDetail(detail);
     for (const text of this.detailTexts)
       listener.onDetail(new TurnDetail(DetailKind.Text, text, null, null));
     for (const text of this.streamedTexts)
       listener.onDetail(new TurnDetail(DetailKind.Text, text, null, "streamed-item"));
+    for (let index = 0; index < this.thinkingAfterDetails; index++)
+      listener.onThinking();
     if (!Object.isNull(this.approvalAsk)) {
       const optionId = await listener.onApprovalRequested(this.approvalAsk);
       listener.onDetail(new TurnDetail(DetailKind.Note, `decided ${optionId}`, null, null));

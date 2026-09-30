@@ -108,6 +108,8 @@ export class ClaudeTurnTests {
       SdkMessages.user("55555555-5555-5555-5555-555555555555", "typed by hand"),
       SdkMessages.user("66666666-6666-6666-6666-666666666666", [SdkMessages.toolResult("tu-9", "child result")], "tu-1"),
       SdkMessages.status("s-1"),
+      SdkMessages.thinkingTokens("s-1", 20),
+      SdkMessages.thinkingTokens("s-1", 40),
       SdkMessages.success("s-1", "All done")
     ]);
     query.accountInfoResult = { email: "a@b.c", organization: "Org", subscriptionType: "max" };
@@ -126,6 +128,7 @@ export class ClaudeTurnTests {
     Assert.areEqual("s-1", listener.starts[0]?.nativeSessionId);
     Assert.isTrue(listener.starts[0]?.resumedNativeSession ?? false);
     Assert.areEqual(3, listener.observations.length);
+    Assert.areEqual(2, listener.thinking);
     const expectedTexts = [
       "Session tools: Read, Bash. MCP servers: none. Permission mode: acceptEdits.", "Hello", "Pondering", "Bash: ls -la", "Edit: a.ts", "Read (a, b, c, d)",
       "Glob", "Custom", "switched", "listing", "part one\n\npart two"

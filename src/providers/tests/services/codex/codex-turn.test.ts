@@ -25,6 +25,7 @@ export class CodexTurnTests {
     turn.handleNotification("item/completed", JsonReader.fromValue({ threadId: "other", item: { id: "x", type: "agentMessage", text: "elsewhere" } }));
     turn.handleNotification("item/completed", JsonReader.fromValue({ item: { id: "x", type: "agentMessage", text: "nowhere" } }));
     turn.handleNotification("item/started", JsonReader.fromValue({ threadId: "t-1", item: { id: "c", type: "commandExecution", command: "ls" } }));
+    turn.handleNotification("item/started", JsonReader.fromValue({ threadId: "t-1", item: { id: "r", type: "reasoning" } }));
     turn.handleNotification("item/completed", JsonReader.fromValue({ threadId: "t-1", item: { id: "a", type: "agentMessage", text: "hi" } }));
     turn.handleNotification("item/completed", JsonReader.fromValue({ threadId: "t-1", item: { id: "u", type: "userMessage" } }));
     turn.handleNotification("model/rerouted", JsonReader.fromValue({ threadId: "t-1", fromModel: "a", toModel: "b", reason: "load" }));
@@ -37,6 +38,7 @@ export class CodexTurnTests {
     Assert.areEqual(DetailKind.Error, listener.details[4]?.kind);
     Assert.areEqual("b", turn.observed.model);
     Assert.areEqual("b", listener.lastObserved?.model);
+    Assert.areEqual(1, listener.thinking);
     Assert.isFalse(turn.isComplete);
   }
 

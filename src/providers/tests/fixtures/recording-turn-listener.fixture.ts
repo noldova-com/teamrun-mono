@@ -16,6 +16,7 @@ export class RecordingTurnListener implements ITurnListener {
   public readonly observations: ObservedSettings[] = [];
   public readonly asks: ApprovalAsk[] = [];
   public readonly decisions: string[] = [];
+  public thinking: number = 0;
   public defaultDecision: string = "accept";
   public decisionFailure: Error | null = null;
 
@@ -33,6 +34,10 @@ export class RecordingTurnListener implements ITurnListener {
 
   public onDetail(detail: TurnDetail): void {
     this.details.push(detail);
+  }
+
+  public onThinking(): void {
+    this.thinking += 1;
   }
 
   public onApprovalRequested(ask: ApprovalAsk): Promise<string> {
