@@ -17,3 +17,12 @@ LICENSE file in the root directory of this source tree.
     </mat-select>
   </mat-form-field>
 </tr-settings-row>
+<tr-settings-row [label]="resources.terminalOutputLimitLabel" [hint]="resources.terminalOutputLimitHint">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tr-field">
+    <input matInput type="number" class="tr-terminal-output-limit" [attr.aria-label]="resources.terminalOutputLimitLabel"
+      [attr.aria-invalid]="outputLimitInvalid()" [min]="resources.minimumTerminalOutputLimit" [max]="resources.maximumTerminalOutputLimit"
+      step="1" [value]="preferences.terminalOutputLimit()" #outputLimit (change)="setOutputLimit(outputLimit.valueAsNumber)">
+  </mat-form-field>
+  <span>{{ resources.terminalOutputLimitUnit }}</span>
+  @if (outputLimitInvalid()) { <p class="tr-error" role="alert">{{ resources.terminalOutputLimitInvalid }}</p> }
+</tr-settings-row>

@@ -54,14 +54,14 @@ export class HostedTerminal implements IPseudoTerminalListener {
   public readonly owner: ITerminalOwner;
 
   private constructor(id: string, owner: ITerminalOwner, projectId: string | null, folder: string, shell: Shell, size: TerminalSize,
-    historyPath: string, settings: TerminalSettings) {
+    historyPaths: readonly [string, string], storedLimit: number, settings: TerminalSettings) {
     this.id = id;
     this.owner = owner;
     this.projectId = projectId;
     this.folder = folder;
     this.shell = shell;
     this.settings = settings;
-    this.history = new TerminalHistory(historyPath, () => this.updateFlow());
+    this.history = new TerminalHistory(historyPaths, storedLimit, () => this.updateFlow());
     this.emulator = new TerminalEmulator(size, this.history, settings.windowsBuild, t => this.answer(t));
     this.size = size;
   }
@@ -74,9 +74,10 @@ export class HostedTerminal implements IPseudoTerminalListener {
     shell: Shell,
     environment: ShellEnvironment,
     size: TerminalSize,
-    historyPath: string,
+    historyPaths: readonly [string, string],
+    storedLimit: number,
     settings: TerminalSettings): HostedTerminal {
-    const terminal = new HostedTerminal(id, owner, projectId, folder, shell, size, historyPath, settings);
+    const terminal = new HostedTerminal(id, owner, projectId, folder, shell, size, historyPaths, storedLimit, settings);
     terminal.pty = terminal.launch(environment);
     return terminal;
   }

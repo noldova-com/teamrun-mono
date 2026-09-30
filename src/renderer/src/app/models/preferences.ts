@@ -30,6 +30,7 @@ export class Preferences {
   public readonly openMode: OpenMode;
   public readonly imageOpenMode: ImageOpenMode;
   public readonly defaultShellId: string | null;
+  public readonly terminalOutputLimit: number;
 
   public constructor(
     theme: string,
@@ -45,7 +46,8 @@ export class Preferences {
     dateTimeFormat: string = Resources.defaultDateTimeFormat,
     openMode: OpenMode = OpenMode.DoubleClick,
     imageOpenMode: ImageOpenMode = ImageOpenMode.Popup,
-    defaultShellId: string | null = null) {
+    defaultShellId: string | null = null,
+    terminalOutputLimit: number = Resources.defaultTerminalOutputLimit) {
     this.theme = theme;
     this.interfaceFont = interfaceFont;
     this.codeFont = codeFont;
@@ -60,6 +62,7 @@ export class Preferences {
     this.openMode = openMode;
     this.imageOpenMode = imageOpenMode;
     this.defaultShellId = defaultShellId;
+    this.terminalOutputLimit = terminalOutputLimit;
   }
 
   public static createDefault(): Preferences {
@@ -95,7 +98,12 @@ export class Preferences {
       Preferences.readOptionalString(record[Resources.dateTimeFormatField]) ?? defaults.dateTimeFormat,
       Preferences.readChoice(record[Resources.openModeField], Object.values(OpenMode), defaults.openMode),
       Preferences.readChoice(record[Resources.imageOpenModeField], Object.values(ImageOpenMode), defaults.imageOpenMode),
-      Preferences.readOptionalString(record[Resources.defaultShellIdField]));
+      Preferences.readOptionalString(record[Resources.defaultShellIdField]),
+      Preferences.readTerminalOutputLimit(record[Resources.terminalOutputLimitField], defaults.terminalOutputLimit));
+  }
+
+  public static isTerminalOutputLimit(value: unknown): value is number {
+    return Object.isNumber(value) && Number.isInteger(value) && value >= Resources.minimumTerminalOutputLimit && value <= Resources.maximumTerminalOutputLimit;
   }
 
   public toJson(): Record<string, unknown> {
@@ -117,7 +125,8 @@ export class Preferences {
       [Resources.dateTimeFormatField]: this.dateTimeFormat,
       [Resources.openModeField]: this.openMode,
       [Resources.imageOpenModeField]: this.imageOpenMode,
-      [Resources.defaultShellIdField]: this.defaultShellId
+      [Resources.defaultShellIdField]: this.defaultShellId,
+      [Resources.terminalOutputLimitField]: this.terminalOutputLimit
     };
   }
 
@@ -136,7 +145,8 @@ export class Preferences {
       changes.dateTimeFormat ?? this.dateTimeFormat,
       changes.openMode ?? this.openMode,
       changes.imageOpenMode ?? this.imageOpenMode,
-      changes.defaultShellId ?? this.defaultShellId);
+      changes.defaultShellId ?? this.defaultShellId,
+      changes.terminalOutputLimit ?? this.terminalOutputLimit);
   }
 
   private static readTheme(value: unknown, fallback: string): string {
@@ -151,6 +161,10 @@ export class Preferences {
     return Object.isNumber(value) && Number.isInteger(value) && value >= Resources.minimumTextSize && value <= Resources.maximumTextSize
       ? value
       : fallback;
+  }
+
+  private static readTerminalOutputLimit(value: unknown, fallback: number): number {
+    return Preferences.isTerminalOutputLimit(value) ? value : fallback;
   }
 
   private static readComposer(value: unknown): ComposerSettings | null {

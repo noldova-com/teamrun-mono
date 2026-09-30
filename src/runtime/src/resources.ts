@@ -190,7 +190,6 @@ export class Resources {
   public static readonly lowWatermarkParameterName: string = "lowWatermark";
   public static readonly terminalsDirectoryName: string = "terminals";
   public static readonly terminalDirectoryMode: number = 0o700;
-  public static readonly terminalHistoryExtension: string = ".jsonl";
   public static readonly terminalHistoryFlags: string = "w+";
   public static readonly terminalHistoryMode: number = 0o600;
   public static readonly terminalHistoryBlockLines: number = 64;
@@ -352,6 +351,10 @@ export class Resources {
 
   public static formatVersionMismatch(client: string, runtime: string): string {
     return `The client speaks protocol ${client}, which runtime protocol ${runtime} cannot serve.`;
+  }
+
+  public static formatTerminalHistoryFile(terminalId: string, index: number): string {
+    return `${terminalId}-${index}.jsonl`;
   }
 
   public static formatAlreadyRunning(processId: number, endpoint: string): string {

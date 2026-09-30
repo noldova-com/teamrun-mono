@@ -273,6 +273,8 @@ export class TerminalSession {
 
   private async rebuild(screen: TerminalScreen | null, anchor: number, offset: number): Promise<void> {
     this.terminal.reset();
+    if (this.window.first === this.window.stored.start && this.window.stored.dropped > 0)
+      await this.write(`${Resources.terminalNoteAttributes}${Resources.formatDroppedLines(this.window.stored.dropped)}${Resources.terminalResetAttributes}${Resources.terminalLineBreak}`);
     const pages = this.window.pages;
     let anchorRow = 0;
     for (const [index, page] of pages.entries()) {

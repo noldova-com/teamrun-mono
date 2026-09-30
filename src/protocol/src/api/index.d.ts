@@ -1476,6 +1476,14 @@ export declare class Resources {
    */
   public static readonly endField: string;
   /**
+   * Name of the field carrying how many lines a terminal dropped to stay within its limit: `dropped`.
+   */
+  public static readonly droppedField: string;
+  /**
+   * Name of the field carrying the most bytes a terminal stores of its output: `storedLimit`.
+   */
+  public static readonly storedLimitField: string;
+  /**
    * Name of a page's terminal lines field: `lines`.
    */
   public static readonly linesField: string;
@@ -1544,6 +1552,22 @@ export declare class Resources {
    */
   public static readonly terminalTextStyles: number;
   /**
+   * The unit a person sets a terminal's stored-output limit in: one mebibyte, 1,048,576 bytes.
+   */
+  public static readonly terminalStoredLimitUnit: number;
+  /**
+   * The stored-output limit of a terminal opened without one: 100 units.
+   */
+  public static readonly defaultTerminalStoredLimit: number;
+  /**
+   * The smallest stored-output limit: 10 units.
+   */
+  public static readonly minimumTerminalStoredLimit: number;
+  /**
+   * The largest stored-output limit: 10,000 units.
+   */
+  public static readonly maximumTerminalStoredLimit: number;
+  /**
    * Message for a range of terminal lines that ends before it starts.
    */
   public static readonly terminalLineRangeReversed: string;
@@ -1555,6 +1579,10 @@ export declare class Resources {
    * Message for a page of terminal lines that reaches outside the stored lines.
    */
   public static readonly terminalPageOutsideStored: string;
+  /**
+   * Message for a range of terminal lines whose dropped count exceeds its start.
+   */
+  public static readonly terminalDroppedBeyondStart: string;
   /**
    * Message for provenance present on a message that is not a provider's, or absent on one that is.
    */
@@ -4906,7 +4934,8 @@ export declare class TerminalSize {
 
 /**
  * A range of a terminal's stored lines, by line number from `start` up to but excluding `end`. Line numbers keep
- * counting when stored lines are cleared, so a number always names the same line.
+ * counting when stored lines are cleared or dropped, so a number always names the same line; `dropped` says how many
+ * of the lines before `start` the terminal dropped to stay within its stored-output limit.
  * @remarks
  * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's
  * path; `toJson` renders the canonical wire shape.
@@ -4920,30 +4949,36 @@ export declare class TerminalLineRange {
    * The number after the last line; an integer not below `start`.
    */
   public readonly end: number;
+  /**
+   * How many lines the terminal dropped to stay within its stored-output limit since its stored lines were last
+   * cleared; a non-negative integer not above `start`. They are the lines just before `start`.
+   */
+  public readonly dropped: number;
 
   /**
    * Initializes the range.
    * @param start The number of the first line; a non-negative integer.
    * @param end The number after the last line; an integer not below `start`, which it equals when the range is empty.
-   * @throws ArgumentOutOfRangeException when `start` is negative or either value is not an integer.
-   * @throws ArgumentException when `end` is below `start`.
+   * @param dropped How many lines before `start` were dropped; a non-negative integer not above `start`, 0 by default.
+   * @throws ArgumentOutOfRangeException when `start` or `dropped` is negative or any value is not an integer.
+   * @throws ArgumentException when `end` is below `start` or `dropped` is above `start`.
    */
-  public constructor(start: number, end: number);
+  public constructor(start: number, end: number, dropped?: number);
 
   /**
    * Reads the range from untrusted JSON.
-   * @param value The untrusted value, expected to carry `start` and `end`.
+   * @param value The untrusted value, expected to carry `start`, `end` and `dropped`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The range.
    * @throws JsonException when a field is missing or not an integer; the exception names the field's path.
-   * @throws ArgumentOutOfRangeException when `start` is negative.
-   * @throws ArgumentException when `end` is below `start`.
+   * @throws ArgumentOutOfRangeException when `start` or `dropped` is negative.
+   * @throws ArgumentException when `end` is below `start` or `dropped` is above `start`.
    */
   public static fromJson(value: unknown, path?: string): TerminalLineRange;
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `start` and `end`.
+   * @returns The object with `start`, `end` and `dropped`.
    */
   public toJson(): JsonObject;
 }
@@ -5203,29 +5238,37 @@ export declare class TerminalOpenParams {
    * The terminal's starting size.
    */
   public readonly size: TerminalSize;
+  /**
+   * The most bytes of output the terminal stores; beyond it the oldest stored lines are dropped in blocks.
+   */
+  public readonly storedLimit: number;
 
   /**
    * Initializes the parameters.
    * @param projectId The `Project` id, or `null` for the home folder; a given id must not be blank.
    * @param shellId The `TerminalShell` id, or `null` for the platform's default shell; a given id must not be blank.
    * @param size The terminal's starting size.
+   * @param storedLimit The most bytes of output to store; an integer from `Resources.minimumTerminalStoredLimit` to
+   * `Resources.maximumTerminalStoredLimit`, `Resources.defaultTerminalStoredLimit` by default.
    * @throws ArgumentException when `projectId` or `shellId` is blank.
+   * @throws ArgumentOutOfRangeException when `storedLimit` is not an integer within its range.
    */
-  public constructor(projectId: string | null, shellId: string | null, size: TerminalSize);
+  public constructor(projectId: string | null, shellId: string | null, size: TerminalSize, storedLimit?: number);
 
   /**
    * Reads the parameters from untrusted JSON.
-   * @param value The untrusted value, expected to carry the nullable `projectId`, the nullable `shellId` and `size`.
+   * @param value The untrusted value, expected to carry the nullable `projectId`, the nullable `shellId`, `size` and
+   * `storedLimit`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The parameters.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
-   * @throws ArgumentOutOfRangeException when the size is out of range.
+   * @throws ArgumentOutOfRangeException when the size or the stored-output limit is out of range.
    */
   public static fromJson(value: unknown, path?: string): TerminalOpenParams;
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `projectId`, `shellId` and `size`.
+   * @returns The object with `projectId`, `shellId`, `size` and `storedLimit`.
    */
   public toJson(): JsonObject;
 }

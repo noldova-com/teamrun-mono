@@ -6,14 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { existsSync, statSync, truncateSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, truncateSync } from "node:fs";
 
 import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { ErrorCode, TerminalLine, TerminalTextRun } from "@noldova/teamrun-protocol";
+import { ErrorCode, Resources, TerminalLine, TerminalTextRun } from "@noldova/teamrun-protocol";
 import { TerminalHistory } from "@noldova/teamrun-runtime";
 
 import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
+import { TerminalHistoryFiles } from "../../fixtures/terminal-history-files.fixture.js";
 import { Wait } from "../../fixtures/wait.fixture.js";
 
 @TestClass
@@ -22,7 +23,7 @@ export class TerminalHistoryTests {
   public async readsPagesAcrossTheWholeHistory(): Promise<void> {
     using directory = new TemporaryDirectory();
     let written = 0;
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => { written += 1; });
+    const history = TerminalHistoryTests.create(directory, () => { written += 1; });
     for (let index = 0; index < 150; index++)
       history.append(TerminalHistoryTests.line(`line ${index} é日本`));
 
@@ -39,6 +40,7 @@ export class TerminalHistoryTests {
     Assert.areEqual(150, beyond.start);
     Assert.areEqual(0, beyond.lines.length);
     Assert.areEqual(150, all.stored.end);
+    Assert.areEqual(0, all.stored.dropped);
     Assert.areEqual(0, history.backlog);
     Assert.isTrue(written > 0);
     await history.close();
@@ -47,7 +49,7 @@ export class TerminalHistoryTests {
   @TestMethod
   public async readsLinesThatSpanReadChunks(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = TerminalHistoryTests.create(directory);
     const long = "ж".repeat(900);
     for (let index = 0; index < 200; index++)
       history.append(TerminalHistoryTests.line(`${index} ${long}`));
@@ -60,23 +62,97 @@ export class TerminalHistoryTests {
   }
 
   @TestMethod
-  public async keepsCountingAfterTheLinesAreCleared(): Promise<void> {
+  public async dropsTheOlderFileWhenTheNewerOneFillsItsHalfOfTheLimit(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
-    for (let index = 0; index < 10; index++)
-      history.append(TerminalHistoryTests.line(`old ${index}`));
+    const files = TerminalHistoryFiles.in(directory, "t");
+    const history = new TerminalHistory(files, 20 * TerminalHistoryTests.bytes, () => undefined);
+    for (let index = 0; index < 35; index++)
+      history.append(TerminalHistoryTests.numbered(index));
+
+    const all = await history.read(0, 100);
+    const across = await history.read(25, 7);
+
+    Assert.areEqual(20, all.start);
+    Assert.areEqual("line 0020,line 0034", `${all.lines[0]?.text},${all.lines[14]?.text}`);
+    Assert.areEqual(15, all.lines.length);
+    Assert.areEqual("20 35 20", `${all.stored.start} ${all.stored.end} ${all.stored.dropped}`);
+    Assert.areEqual("25,26,27,28,29,30,31", across.lines.map(t => Number(t.text.slice(5))).join(","));
+    Assert.areEqual(10 * TerminalHistoryTests.bytes, statSync(files[0]).size);
+    Assert.areEqual(5 * TerminalHistoryTests.bytes, statSync(files[1]).size);
+    await history.close();
+  }
+
+  @TestMethod
+  public async keepsItsFilesWithinTheLimitWhileOutputNeverEnds(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const files = TerminalHistoryFiles.in(directory, "t");
+    const limit = 50 * TerminalHistoryTests.bytes;
+    const history = new TerminalHistory(files, limit, () => undefined);
+    let largest = 0;
+    for (let round = 0; round < 20; round++) {
+      for (let index = 0; index < 97; index++)
+        history.append(TerminalHistoryTests.numbered(round * 97 + index));
+      await history.read(0, 1);
+      largest = Math.max(largest, files.filter(t => existsSync(t)).reduce((total, file) => total + statSync(file).size, 0));
+    }
+
+    const page = await history.read(0, 500);
+
+    Assert.isTrue(largest <= limit);
+    Assert.areEqual(1940, page.stored.end);
+    Assert.areEqual(page.stored.start, page.stored.dropped);
+    Assert.areEqual(page.stored.end - page.stored.start, page.lines.length);
+    Assert.isTrue(page.lines.every((line, index) => Number(line.text.slice(5)) === page.start + index));
+    await history.close();
+  }
+
+  @TestMethod
+  public async readsAConsistentPageWhileLinesAreDroppedDuringTheRead(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), 20 * TerminalHistoryTests.bytes, () => undefined);
+    let next = 0;
+    const burst = (): void => {
+      for (let index = 0; index < 25; index++)
+        history.append(TerminalHistoryTests.numbered(next++));
+    };
+    burst();
+    const pages = [history.read(0, 100), history.read(0, 100), history.read(0, 100)];
+    let settled = false;
+    void Promise.all(pages).then(() => { settled = true; });
+    while (!settled) {
+      burst();
+      await new Promise(resolve => setImmediate(resolve));
+    }
+
+    for (const page of await Promise.all(pages)) {
+      Assert.areEqual(page.stored.start, page.start);
+      Assert.areEqual(page.stored.end - page.stored.start, page.lines.length);
+      Assert.isTrue(page.lines.every((line, index) => Number(line.text.slice(5)) === page.start + index));
+    }
+    await history.close();
+  }
+
+  @TestMethod
+  public async keepsCountingAfterTheLinesAreClearedAndForgetsWhatWasDropped(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const files = TerminalHistoryFiles.in(directory, "t");
+    const history = new TerminalHistory(files, 20 * TerminalHistoryTests.bytes, () => undefined);
+    for (let index = 0; index < 25; index++)
+      history.append(TerminalHistoryTests.numbered(index));
     await history.read(0, 1);
-    history.append(TerminalHistoryTests.line("dropped"));
+    const dropped = history.stored.dropped;
+    history.append(TerminalHistoryTests.line("unwritten"));
 
     history.clear();
     history.append(TerminalHistoryTests.line("new 0"));
     history.append(TerminalHistoryTests.line("new 1"));
     const page = await history.read(0, 10);
 
-    Assert.areEqual(11, page.start);
+    Assert.areEqual(10, dropped);
+    Assert.areEqual(26, page.start);
     Assert.areEqual("new 0,new 1", page.lines.map(t => t.text).join(","));
-    Assert.areEqual(11, history.stored.start);
-    Assert.areEqual(13, history.stored.end);
+    Assert.areEqual("26 28 0", `${history.stored.start} ${history.stored.end} ${history.stored.dropped}`);
+    Assert.isFalse(existsSync(files[1]));
     Assert.areEqual(0, history.backlog);
     await history.close();
   }
@@ -84,7 +160,7 @@ export class TerminalHistoryTests {
   @TestMethod
   public async clearsAnUnwrittenBatch(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = TerminalHistoryTests.create(directory);
 
     history.append(TerminalHistoryTests.line("never written"));
     history.clear();
@@ -99,7 +175,7 @@ export class TerminalHistoryTests {
   @TestMethod
   public async writesEachLineOnceWhenAReadWritesPendingLines(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = TerminalHistoryTests.create(directory);
     history.append(TerminalHistoryTests.line("a"));
     const reading = history.read(0, 10);
     await Promise.resolve();
@@ -116,27 +192,29 @@ export class TerminalHistoryTests {
   }
 
   @TestMethod
-  public async deletesItsFileAndProtectsIt(): Promise<void> {
+  public async deletesItsFilesAndProtectsThem(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const path = directory.resolve("t.jsonl");
-    const history = new TerminalHistory(path, () => undefined);
-    history.append(TerminalHistoryTests.line("secret"));
+    const files = TerminalHistoryFiles.in(directory, "t");
+    const history = new TerminalHistory(files, 20 * TerminalHistoryTests.bytes, () => undefined);
+    for (let index = 0; index < 15; index++)
+      history.append(TerminalHistoryTests.numbered(index));
     await history.read(0, 1);
-    const mode = statSync(path).mode & 0o777;
+    const modes = files.map(t => statSync(t).mode & 0o777);
     history.append(TerminalHistoryTests.line("pending"));
 
     await history.close();
-    await new TerminalHistory(directory.resolve("never.jsonl"), () => undefined).close();
+    await TerminalHistoryTests.create(directory, () => undefined, "never").close();
 
-    Assert.isFalse(existsSync(path));
+    Assert.isFalse(files.some(existsSync));
     if (process.platform !== "win32")
-      Assert.areEqual(0o600, mode);
+      Assert.areEqual("384,384", modes.join(","));
   }
 
   @TestMethod
   public async stopsStoringAfterAWriteFails(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("missing", "t.jsonl"), () => undefined);
+    const history = new TerminalHistory([directory.resolve("missing", "t-1.jsonl"), directory.resolve("missing", "t-2.jsonl")],
+      Resources.defaultTerminalStoredLimit, () => undefined);
 
     history.append(TerminalHistoryTests.line("lost"));
     await Wait.until(() => history.backlog === 0);
@@ -152,19 +230,47 @@ export class TerminalHistoryTests {
   }
 
   @TestMethod
+  public async stopsStoringWhenAFileCannotBeRemoved(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const files = TerminalHistoryFiles.in(directory, "t");
+    mkdirSync(files[0]);
+    const history = new TerminalHistory(files, Resources.defaultTerminalStoredLimit, () => undefined);
+
+    history.clear();
+    const exception = await Assert.throwsAsync(() => history.read(0, 10), ServiceException);
+    history.append(TerminalHistoryTests.line("ignored"));
+
+    Assert.areEqual(ErrorCode.Unavailable, exception.info.name);
+    Assert.areEqual(0, history.stored.end);
+    await Assert.throwsAsync(() => history.close(), Error);
+  }
+
+  @TestMethod
   public async reportsADamagedFile(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const path = directory.resolve("t.jsonl");
-    const history = new TerminalHistory(path, () => undefined);
+    const files = TerminalHistoryFiles.in(directory, "t");
+    const history = TerminalHistoryTests.create(directory);
     history.append(TerminalHistoryTests.line("one"));
     history.append(TerminalHistoryTests.line("two"));
     await history.read(0, 1);
 
-    truncateSync(path, 5);
+    truncateSync(files[0], 5);
     const exception = await Assert.throwsAsync(() => history.read(0, 2), ServiceException);
 
     Assert.areEqual(ErrorCode.Internal, exception.info.name);
     await history.close();
+  }
+
+  private static get bytes(): number {
+    return Buffer.byteLength(`${JSON.stringify(TerminalHistoryTests.numbered(0).toJson())}\n`);
+  }
+
+  private static create(directory: TemporaryDirectory, onWritten: () => void = () => undefined, name: string = "t"): TerminalHistory {
+    return new TerminalHistory(TerminalHistoryFiles.in(directory, name), Resources.defaultTerminalStoredLimit, onWritten);
+  }
+
+  private static numbered(index: number): TerminalLine {
+    return TerminalHistoryTests.line(`line ${String(index).padStart(4, "0")}`);
   }
 
   private static line(text: string): TerminalLine {

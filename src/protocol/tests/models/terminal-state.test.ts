@@ -23,7 +23,7 @@ export class TerminalStateTests {
     exit: null,
     restartCount: 2,
     sequence: 17,
-    stored: { start: 0, end: 250 }
+    stored: { start: 0, end: 250, dropped: 0 }
   };
 
   @TestMethod

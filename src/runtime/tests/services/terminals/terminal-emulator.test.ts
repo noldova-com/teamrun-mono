@@ -7,17 +7,18 @@
  */
 
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { TerminalSize } from "@noldova/teamrun-protocol";
+import { Resources, TerminalSize } from "@noldova/teamrun-protocol";
 import { TerminalEmulator, TerminalHistory } from "@noldova/teamrun-runtime";
 
 import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
+import { TerminalHistoryFiles } from "../../fixtures/terminal-history-files.fixture.js";
 
 @TestClass
 export class TerminalEmulatorTests {
   @TestMethod
   public async storesOlderLinesInOrderAndKeepsRecentRowsForReload(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     let text = "";
     for (let index = 1; index <= 2600; index++)
@@ -40,7 +41,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async clearsTheStoredLinesWhenTheSavedLinesAreErasedOrTheTerminalResets(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
 
     for (const clearing of ["\u001b[3J", "\u001b[?3J", "\u001bc"]) {
@@ -61,7 +62,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async keepsNothingOfTheAlternateScreen(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
     await TerminalEmulatorTests.write(emulator, "a\r\nb\r\nc\r\nd\r\n");
     const stored = history.stored.end;
@@ -79,7 +80,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async keepsRecentRowsWhenTheScreenShrinksAndGrows(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     await TerminalEmulatorTests.write(emulator, "a1\r\na2\r\na3\r\na4\r\na5");
 
@@ -101,7 +102,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async storesTheScreenUpToTheCursorOrItsLastText(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 6), history, 26200, () => undefined);
     await TerminalEmulatorTests.write(emulator, "x\r\ny\r\nz\u001b[2A");
 
@@ -115,7 +116,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async storesTheInitialBlankCursorRowBeforeTheFirstWrite(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
 
     emulator.storeScreen();
@@ -128,7 +129,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async runsActionsAfterTheOutputWrittenBeforeThem(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 19045, () => undefined);
     const order: string[] = [];
 
@@ -148,7 +149,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async answersThePrimaryDeviceAttributesQueryOnly(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     const answers: string[] = [];
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, t => answers.push(t));
 
@@ -161,7 +162,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async answersTheCursorPositionQueryFromItsOwnCursor(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     const answers: string[] = [];
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, t => answers.push(t));
 
@@ -174,7 +175,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async keepsTheLineHoldingTheCursorWhenTheWidthChangesOnWindows(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, 26200, () => undefined);
     await TerminalEmulatorTests.write(emulator, "PS C:\\project> ");
 
@@ -189,8 +190,8 @@ export class TerminalEmulatorTests {
   public async restoresTheSameOutputAfterNarrowingWideningAndReloading(): Promise<void> {
     using directory = new TemporaryDirectory();
     for (const windowsBuild of [null, 26200]) {
-      const history = new TerminalHistory(directory.resolve(`before-${windowsBuild}.jsonl`), () => undefined);
-      const restoredHistory = new TerminalHistory(directory.resolve(`after-${windowsBuild}.jsonl`), () => undefined);
+      const history = new TerminalHistory(TerminalHistoryFiles.in(directory, `before-${windowsBuild}`), Resources.defaultTerminalStoredLimit, () => undefined);
+      const restoredHistory = new TerminalHistory(TerminalHistoryFiles.in(directory, `after-${windowsBuild}`), Resources.defaultTerminalStoredLimit, () => undefined);
       using emulator = new TerminalEmulator(new TerminalSize(80, 5), history, windowsBuild, () => undefined);
       using restored = new TerminalEmulator(new TerminalSize(80, 5), restoredHistory, windowsBuild, () => undefined);
       await TerminalEmulatorTests.write(emulator, "\u001b[31mred-output-with-a-long-line\u001b[0m\r\nwide-界-🙂-output\r\n");
@@ -211,8 +212,8 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async keepsRetainedRowsWhenTheNarrowSnapshotIsReloadedBeforeWidening(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("before.jsonl"), () => undefined);
-    const restoredHistory = new TerminalHistory(directory.resolve("after.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "before"), Resources.defaultTerminalStoredLimit, () => undefined);
+    const restoredHistory = new TerminalHistory(TerminalHistoryFiles.in(directory, "after"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(80, 5), history, 26200, () => undefined);
     using restored = new TerminalEmulator(new TerminalSize(2, 5), restoredHistory, 26200, () => undefined);
     const prompt = "PS C:\\fixture-project-with-a-long-name> ";
@@ -232,7 +233,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async storesEveryRetainedAndVisibleRowOnceWhenTheShellRestarts(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
     const expected = Array.from({ length: 1100 }, (_t, index) => `row-${index}`);
     await TerminalEmulatorTests.write(emulator, expected.join("\r\n") + "\r\n");
@@ -250,7 +251,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async storesResizeOverflowWithoutLosingOrRepeatingRows(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, () => undefined);
     const lines = Array.from({ length: 500 }, (_t, index) => `line-${String(index).padStart(3, "0")}`);
     await TerminalEmulatorTests.write(emulator, lines.join("\r\n") + "\r\n");
@@ -271,7 +272,7 @@ export class TerminalEmulatorTests {
   @TestMethod
   public async resumesCapturingAfterAnAlternateScreenWithAFullRetainedBuffer(): Promise<void> {
     using directory = new TemporaryDirectory();
-    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const history = new TerminalHistory(TerminalHistoryFiles.in(directory, "t"), Resources.defaultTerminalStoredLimit, () => undefined);
     using emulator = new TerminalEmulator(new TerminalSize(20, 3), history, null, () => undefined);
     const expected = Array.from({ length: 1100 }, (_t, index) => `normal-${index}`);
     await TerminalEmulatorTests.write(emulator, expected.join("\r\n") + "\r\n");

@@ -279,6 +279,20 @@ describe("TerminalSession", () => {
         .answer(MethodName.TerminalScreen, () => new TerminalScreen(stateWith(10 + ++screens), screenRows.join("\r\n")).toJson());
     });
 
+    it("says how many older lines were dropped once the scroll reaches the first stored line", async () => {
+      store = Array.from({ length: 1700 }, (_t, index) => `stored ${index}`);
+      range = new TerminalLineRange(1200, 1700, 1200);
+      session.load(new TerminalScreen(stateWith(10), screenRows.join("\r\n")));
+      await parsed();
+
+      await scrollToTop(531);
+
+      expect(lines().slice(0, 2)).toEqual(["1,200 older lines were dropped", "stored 1200"]);
+      expect(terminal.buffer.active.getLine(0)?.getCell(0)?.isDim()).not.toBe(0);
+      expect(terminal.buffer.active.getLine(0)?.getCell(0)?.isItalic()).not.toBe(0);
+      expect(Resources.formatDroppedLines(1)).toBe("1 older line was dropped");
+    });
+
     it("loads the stored lines page by page when scrolled to the top, keeping the top line in place", async () => {
       await start(1300);
       expect(terminal.buffer.active.viewportY).toBe(6);

@@ -15,6 +15,7 @@ import {
   type Event,
   EventName,
   MethodName,
+  Resources as ProtocolResources,
   TerminalIdParams,
   TerminalOpenParams,
   TerminalOutputPayload,
@@ -113,7 +114,8 @@ export class TerminalsService {
       await this.loadShells();
     const chosen = shellId ?? this.defaultShell()?.id ?? null;
     await this.perform(async () => {
-      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, chosen, this.nextSize()).toJson());
+      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, chosen, this.nextSize(),
+        this.preferences.terminalOutputLimit() * ProtocolResources.terminalStoredLimitUnit).toJson());
       const session = await this.attach(TerminalState.fromJson(opened));
       session.requestFocus();
       this.place(new Panel(PanelKind.Terminal, session.id), groupId);

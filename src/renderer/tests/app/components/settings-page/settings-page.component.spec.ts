@@ -147,4 +147,37 @@ describe("SettingsPageComponent", () => {
     expect(select().getAttribute("aria-label")).toBe(Resources.defaultShellLabel);
     expect(bridge.methods.filter(t => t === MethodName.TerminalShells)).toHaveLength(1);
   });
+
+  it("keeps a valid output limit and explains an invalid one", async () => {
+    MemoryStorage.install(window);
+    const bridge = SampleData.createBridge();
+    TestBed.configureTestingModule({ imports: [SettingsPageComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    TestBed.inject(NavigationService).openSettings(SettingsSection.Terminal);
+    const fixture = TestBed.createComponent(SettingsPageComponent);
+    const element = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const input = element.querySelector<HTMLInputElement>(".tr-terminal-output-limit")!;
+    const enter = (value: string): void => {
+      input.value = value;
+      input.dispatchEvent(new Event("change"));
+      fixture.detectChanges();
+    };
+    const preferences = TestBed.inject(PreferencesService);
+
+    expect(input.value).toBe("100");
+    expect(element.textContent).toContain(Resources.terminalOutputLimitUnit);
+    enter("2500");
+    expect(preferences.terminalOutputLimit()).toBe(2500);
+    expect(element.querySelector("[role=alert]")).toBeNull();
+    for (const value of ["9", "10001", "12.5", ""]) {
+      enter(value);
+      expect(preferences.terminalOutputLimit()).toBe(2500);
+      expect(element.querySelector("[role=alert]")?.textContent).toBe(Resources.terminalOutputLimitInvalid);
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+    }
+    enter("10");
+    expect(preferences.terminalOutputLimit()).toBe(10);
+    expect(element.querySelector("[role=alert]")).toBeNull();
+  });
 });

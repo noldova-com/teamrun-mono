@@ -1326,10 +1326,6 @@ export declare class Resources {
    */
   public static readonly terminalDirectoryMode: number;
   /**
-   * The extension of a stored-lines file: `.jsonl`, one JSON line per stored line.
-   */
-  public static readonly terminalHistoryExtension: string;
-  /**
    * How a stored-lines file is opened: created or emptied, for reading and writing.
    */
   public static readonly terminalHistoryFlags: string;
@@ -1710,6 +1706,14 @@ export declare class Resources {
    * @returns The text.
    */
   public static formatVersionMismatch(client: string, runtime: string): string;
+
+  /**
+   * Names one of a terminal's two stored-lines files: `<terminal id>-<index>.jsonl`, one JSON line per stored line.
+   * @param terminalId The terminal id.
+   * @param index Which of the two files, 1 or 2.
+   * @returns The file name.
+   */
+  public static formatTerminalHistoryFile(terminalId: string, index: number): string;
 
   /**
    * Formats the already-running message.
@@ -2864,24 +2868,27 @@ export declare class TerminalLineReader {
 }
 
 /**
- * A terminal's stored lines, in a file of the runtime's data directory, written without blocking the runtime. Line
- * numbers keep counting after the lines are cleared. The file is created with the first line and deleted by `close`.
+ * A terminal's stored lines, in two files of the runtime's data directory, written without blocking the runtime. New
+ * lines go to the newer file until it would exceed half the limit; then the older file and its lines are dropped and
+ * a new file starts, so the files together stay within the limit plus one line. Line numbers keep counting after
+ * lines are cleared or dropped. A file is created with its first line; `close` deletes both.
  */
 export declare class TerminalHistory {
   /**
-   * Initializes the history without creating its file.
-   * @param path The file's path.
+   * Initializes the history without creating its files.
+   * @param paths The two files' paths.
+   * @param limit The most bytes the files hold together.
    * @param onWritten Called after each write finishes, when `backlog` has shrunk.
    */
-  public constructor(path: string, onWritten: () => void);
+  public constructor(paths: readonly [string, string], limit: number, onWritten: () => void);
 
   /**
-   * The lines stored so far.
+   * The lines stored so far, with how many were dropped since the last `clear`.
    */
   public get stored(): TerminalLineRange;
 
   /**
-   * The bytes of stored lines not yet written to the file.
+   * The bytes of stored lines not yet written to the files.
    */
   public get backlog(): number;
 
@@ -2892,13 +2899,13 @@ export declare class TerminalHistory {
   public append(line: TerminalLine): void;
 
   /**
-   * Forgets every stored line, as clearing a terminal does.
+   * Forgets every stored line and the count of dropped lines, as clearing a terminal does.
    */
   public clear(): void;
 
   /**
    * Reads a page of stored lines once the lines stored before it are written.
-   * @param start The number of the first line to read; lines already cleared are skipped.
+   * @param start The number of the first line to read; lines already cleared or dropped are skipped.
    * @param limit How many lines at most.
    * @returns The page.
    * @throws ServiceException `Unavailable` (as a rejected promise) when a write failed, or `Internal` when the file
@@ -2907,9 +2914,9 @@ export declare class TerminalHistory {
   public read(start: number, limit: number): Promise<TerminalLinePage>;
 
   /**
-   * Discards lines not yet written, then closes and deletes the file.
-   * @returns A promise that settles when the file is gone.
-   * @throws Error (as a rejected promise) when the file cannot be closed or deleted.
+   * Discards lines not yet written, then closes and deletes the files.
+   * @returns A promise that settles when the files are gone.
+   * @throws Error (as a rejected promise) when a file cannot be closed or deleted.
    */
   public close(): Promise<void>;
 }
@@ -3003,7 +3010,8 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
    * @param shell The shell.
    * @param environment The shell's environment.
    * @param size The terminal's size.
-   * @param historyPath The file for the stored lines.
+   * @param historyPaths The two files for the stored lines.
+   * @param storedLimit The most bytes the stored lines take in those files.
    * @param settings The platform's terminal settings.
    * @returns The terminal; a shell whose executable cannot run ends at once with an exit code.
    * @throws Error when `node-pty` cannot start the pseudo-terminal.
@@ -3016,7 +3024,8 @@ export declare class HostedTerminal implements IPseudoTerminalListener {
     shell: Shell,
     environment: ShellEnvironment,
     size: TerminalSize,
-    historyPath: string,
+    historyPaths: readonly [string, string],
+    storedLimit: number,
     settings: TerminalSettings): HostedTerminal;
 
   /**

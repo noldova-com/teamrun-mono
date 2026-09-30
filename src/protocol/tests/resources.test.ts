@@ -46,7 +46,7 @@ export class ResourcesTests {
       Resources.versionTextInvalid, Resources.resumedWithoutSession, Resources.approvalDecisionMismatch,
       Resources.approvalWithoutOptions, Resources.decisionStatusMismatch, Resources.unknownDecision, Resources.decisionOutcomeMismatch,
       Resources.provenanceMismatch, Resources.messageEndMismatch, Resources.terminalLineRangeReversed, Resources.terminalRunsMismatch,
-      Resources.terminalPageOutsideStored
+      Resources.terminalPageOutsideStored, Resources.terminalDroppedBeyondStart
     ];
 
     for (const message of messages)
@@ -63,5 +63,15 @@ export class ResourcesTests {
     Assert.areEqual(0x1000000, Resources.terminalRgbColor);
     Assert.areEqual(0x1ffffff, Resources.maximumTerminalColor);
     Assert.areEqual(0x1ff, Resources.terminalTextStyles);
+  }
+
+  @TestMethod
+  public boundsTheStoredOutputOfATerminal(): void {
+    Assert.areEqual("dropped", Resources.droppedField);
+    Assert.areEqual("storedLimit", Resources.storedLimitField);
+    Assert.areEqual(1024 * 1024, Resources.terminalStoredLimitUnit);
+    Assert.areEqual(100 * 1024 * 1024, Resources.defaultTerminalStoredLimit);
+    Assert.areEqual(10 * 1024 * 1024, Resources.minimumTerminalStoredLimit);
+    Assert.areEqual(10_000 * 1024 * 1024, Resources.maximumTerminalStoredLimit);
   }
 }

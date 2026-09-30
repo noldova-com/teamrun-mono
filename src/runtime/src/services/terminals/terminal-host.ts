@@ -141,7 +141,7 @@ export class TerminalHost {
     if (statSync(folder, { throwIfNoEntry: false })?.isDirectory() !== true)
       throw new ServiceException(ErrorCode.NotFound, Resources.terminalFolderMissing, [folder]);
 
-    const opening = this.start(owner, params.projectId, folder, params.shellId, params.size);
+    const opening = this.start(owner, params.projectId, folder, params.shellId, params.size, params.storedLimit);
     this.track(opening.then(() => undefined));
     return opening;
   }
@@ -160,14 +160,15 @@ export class TerminalHost {
   }
 
   private async start(owner: ITerminalOwner, projectId: string | null, folder: string, shellId: string | null,
-    size: TerminalSize): Promise<HostedTerminal> {
+    size: TerminalSize, storedLimit: number): Promise<HostedTerminal> {
     if (this.stopped)
       throw new ServiceException(ErrorCode.Unavailable, Resources.terminalsStopped);
     const environment = await this.environment.create();
     const shell = Object.isNull(shellId) ? this.shells.findDefault(environment) : await this.findShell(shellId, environment);
     const id = Guid.createVersion7().toString();
     const terminal = HostedTerminal.start(id, owner, projectId, folder, shell, environment, size,
-      join(this.directory, `${id}${Resources.terminalHistoryExtension}`), this.settings);
+      [join(this.directory, Resources.formatTerminalHistoryFile(id, 1)), join(this.directory, Resources.formatTerminalHistoryFile(id, 2))], storedLimit,
+      this.settings);
     if (this.stopped || owner.isClosed) {
       await terminal.close();
       throw new ServiceException(ErrorCode.Unavailable, Resources.terminalsStopped);

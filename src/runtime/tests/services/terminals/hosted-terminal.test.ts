@@ -11,7 +11,7 @@ import { release } from "node:os";
 
 import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { ErrorCode, TerminalSize } from "@noldova/teamrun-protocol";
+import { ErrorCode, Resources, TerminalSize } from "@noldova/teamrun-protocol";
 import { HostedTerminal, PseudoTerminal, type ShellEnvironment, TerminalSettings } from "@noldova/teamrun-runtime";
 
 import { FakePty } from "../../fixtures/fake-pty.fixture.js";
@@ -19,6 +19,7 @@ import { FixtureShell } from "../../fixtures/fixture-shell.fixture.js";
 import { RecordingPseudoTerminalListener } from "../../fixtures/recording-pseudo-terminal-listener.fixture.js";
 import { RecordingTerminalOwner } from "../../fixtures/recording-terminal-owner.fixture.js";
 import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
+import { TerminalHistoryFiles } from "../../fixtures/terminal-history-files.fixture.js";
 import { Wait } from "../../fixtures/wait.fixture.js";
 
 @TestClass
@@ -47,6 +48,28 @@ export class HostedTerminalTests {
       Assert.areEqual(owner.sequences.map((_t, index) => index + 1).join(","), owner.sequences.join(","));
       Assert.areEqual(terminal.state.stored.end, owner.outputs.at(-1)?.stored.end);
       Assert.areEqual(HostedTerminalTests.settings().windowsBuild, terminal.state.conptyBuild);
+    }
+    finally {
+      await terminal.close();
+    }
+  }
+
+  @TestMethod
+  public async dropsTheOldestStoredLinesBeyondItsLimit(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const owner = new RecordingTerminalOwner();
+    const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings(), 16 * 1024);
+    try {
+      await Wait.until(() => owner.output.includes("ready"));
+
+      terminal.input("lines 1300\r");
+      await HostedTerminalTests.acknowledgeUntil(terminal, owner, "line 1300");
+      await Wait.until(() => terminal.state.stored.dropped > 0);
+      const page = await terminal.lines(0, 500);
+
+      Assert.areEqual(page.stored.dropped, page.start);
+      Assert.isFalse(page.lines.some(t => t.text === "line 1"));
+      Assert.isTrue(page.stored.dropped > 0);
     }
     finally {
       await terminal.close();
@@ -303,12 +326,13 @@ export class HostedTerminalTests {
     Assert.isFalse(owner.output.includes("foreign"));
     Assert.isFalse(owner.changes.some(t => t.exit?.code === 9));
     Assert.areEqual(ErrorCode.NotFound, exception.info.name);
-    Assert.isFalse(existsSync(directory.resolve("terminal.jsonl")));
+    Assert.isFalse(TerminalHistoryFiles.in(directory, "terminal").some(existsSync));
   }
 
-  private static start(owner: RecordingTerminalOwner, directory: TemporaryDirectory, environment: ShellEnvironment, settings: TerminalSettings): HostedTerminal {
+  private static start(owner: RecordingTerminalOwner, directory: TemporaryDirectory, environment: ShellEnvironment, settings: TerminalSettings,
+    storedLimit: number = Resources.defaultTerminalStoredLimit): HostedTerminal {
     return HostedTerminal.start("terminal-1", owner, "project-1", directory.path, FixtureShell.create(), environment, new TerminalSize(200, 5),
-      directory.resolve("terminal.jsonl"), settings);
+      TerminalHistoryFiles.in(directory, "terminal"), storedLimit, settings);
   }
 
   private static settings(): TerminalSettings {
