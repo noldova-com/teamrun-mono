@@ -469,6 +469,22 @@ test("shows approvals and stops an active fixture reply", async () => {
   await page.locator("tr-composer textarea").fill("Wait for cancellation");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.locator("tr-message-list")).toContainText("Waiting for Stop.");
+  for (const [spinner, text] of [[".tr-tab-working .tr-tab-spinner", ".tr-tab-working .tr-tab-label"], ["tr-sidebar .tr-row-working", "tr-sidebar .tr-row-working"]] as const) {
+    await expect(page.locator(spinner)).toBeVisible();
+    const drawn = await page.locator(spinner).evaluate((element, label) => {
+      const circle = element.querySelector<SVGCircleElement>(".mdc-circular-progress__indeterminate-container circle")!;
+      const box = element.getBoundingClientRect();
+      const ring = circle.getBoundingClientRect();
+      const beside = label === null ? element.parentElement! : document.querySelector(label)!;
+      return { width: box.width, height: box.height, radius: Number(circle.getAttribute("r")), ring: Math.max(ring.width, ring.height),
+        stroke: getComputedStyle(circle).stroke, text: getComputedStyle(beside).color };
+    }, spinner === text ? null : text);
+    expect([drawn.width, drawn.height], spinner).toEqual([12, 12]);
+    expect(drawn.radius, spinner).toBeGreaterThan(0);
+    expect(drawn.ring, spinner).toBeGreaterThan(4);
+    expect(drawn.stroke, spinner).toBe(drawn.text);
+  }
+  await desktop.capture("running-conversation-spinners");
   await page.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
   await expect(page.locator("tr-composer textarea")).toBeEnabled();

@@ -83,6 +83,7 @@ describe("DocumentTabsComponent", () => {
     expect(tabs()[1]!.classList.contains("tr-tab-active")).toBe(true);
     expect(tabs()[0]!.querySelector("mat-progress-spinner")).not.toBeNull();
     expect(tabs()[0]!.querySelector<HTMLElement>("mat-progress-spinner")!.style.width).toBe(`${Resources.conversationSpinnerDiameter}px`);
+    expect(Number(tabs()[0]!.querySelector("mat-progress-spinner circle")?.getAttribute("r"))).toBeGreaterThan(0);
     expect(tabs()[1]!.querySelector("mat-progress-spinner")).toBeNull();
 
     tabs()[0]!.click();

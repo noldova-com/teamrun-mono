@@ -1441,6 +1441,11 @@ tr-settings-page {
   min-width: 18rem;
 }
 
+.tr-tab-spinner.mat-mdc-progress-spinner,
+.tr-row-working.mat-mdc-progress-spinner {
+  --mat-progress-spinner-active-indicator-color: currentColor;
+}
+
 .tr-reply-status .mat-mdc-progress-spinner {
   --mat-progress-spinner-active-indicator-color: var(--mat-sys-primary);
 }
