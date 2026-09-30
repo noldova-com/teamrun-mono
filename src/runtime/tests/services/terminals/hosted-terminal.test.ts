@@ -145,6 +145,28 @@ export class HostedTerminalTests {
   }
 
   @TestMethod
+  public async answersTheCursorPositionQueryFromItsOwnScreen(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const owner = new RecordingTerminalOwner();
+    const terminal = HostedTerminalTests.start(owner, directory, FixtureShell.environment(), HostedTerminalTests.settings());
+    try {
+      await Wait.until(() => owner.output.includes("ready"));
+
+      terminal.input("cursor\r");
+      await Wait.until(() => /cursor \d+;\d+R/.test(owner.output));
+      const answered = /cursor (\d+);(\d+)R/.exec(owner.output);
+      const screen = terminal.screen();
+
+      Assert.isNotNull(answered);
+      Assert.isTrue(Number(answered[1]) >= 2);
+      Assert.isTrue(screen.screen.includes(`cursor ${answered[1]};${answered[2]}R`));
+    }
+    finally {
+      await terminal.close();
+    }
+  }
+
+  @TestMethod
   public async reportsTheExitAndRefusesInputAfterIt(): Promise<void> {
     using directory = new TemporaryDirectory();
     const owner = new RecordingTerminalOwner();

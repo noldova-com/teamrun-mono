@@ -18,7 +18,8 @@ export default class BuildProjectFixture {
     "tsconfig.base.json", "package-lock.json", "scripts/build.ts", "scripts/build/build-evidence.ts",
     "scripts/config.ts", "scripts/script.ts", "scripts/build/package-info.ts"
   ];
-  public static readonly RESOURCES: string = 'export const version = "__VERSION__";\nexport const protocol = "__PROTOCOL_VERSION__";\n';
+  public static readonly RESOURCES: string =
+    'export const version = "__VERSION__";\nexport const protocol = "__PROTOCOL_VERSION__";\nexport const publisher = "__WINDOWS_PUBLISHER__";\n';
 
   public readonly directory: string;
 
@@ -30,7 +31,7 @@ export default class BuildProjectFixture {
     const fixture = new BuildProjectFixture(await realpath(await mkdtemp(path.join(tmpdir(), "teamrun-build-test-"))));
     try {
       await fixture.write("package.json", JSON.stringify({ name: "build-fixture", version: Config.VERSION, private: true,
-        type: "module", teamrun: { protocolVersion: Config.PROTOCOL_VERSION } }));
+        type: "module", teamrun: { protocolVersion: Config.PROTOCOL_VERSION, windowsPublisher: Config.WINDOWS_PUBLISHER } }));
       for (const file of BuildProjectFixture.ROOT_INPUTS)
         await fixture.write(file, file.endsWith(".json") ? "{}\n" : `// ${file}\n`);
       await fixture.write("LICENSE", "Fixture license\n");

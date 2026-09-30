@@ -46,7 +46,8 @@ class WorkflowCommandsTests {
       const head = await repository.commit({ "docs/guide.md": "guide" });
       const output = path.join(repository.directory, "outputs");
       const summary = path.join(repository.directory, "summary");
-      t.mock.method(globalThis, "fetch", async () => Response.json({ workflow_runs: [{ head_sha: verified }] }));
+      t.mock.method(globalThis, "fetch", async (url: URL) =>
+        Response.json({ workflow_runs: url.searchParams.get("event") === "merge_group" ? [] : [{ head_sha: verified }] }));
       const environment = { GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary, GITHUB_REPOSITORY: "noldova-com/teamrun", GH_TOKEN: "fixture-token",
         EVENT_NAME: "push", HEAD_SHA: head };
 
@@ -56,7 +57,7 @@ class WorkflowCommandsTests {
       await new ClassifyChanges().runAsync(environment, repository.directory);
       await new ClassifyChanges().runAsync({ ...environment, EVENT_NAME: undefined, HEAD_SHA: undefined }, repository.directory);
       assert.equal(await readFile(output, "utf8"), "run-code=false\nrun-code=true\n");
-      assert.match(await readFile(summary, "utf8"), new RegExp(`^Only Markdown documentation changed.*Compared with ${verified}.*\nFull build .*Manual runs`));
+      assert.match(await readFile(summary, "utf8"), new RegExp(`^Code builds and tests are not required\\. Only Markdown documentation changed since ${verified}.*\nFull build .*Manual runs`));
       const child = spawnSync(process.execPath, [fileURLToPath(new URL("../classify-changes.ts", import.meta.url))], {
         cwd: repository.directory, env: { ...process.env, GITHUB_OUTPUT: "" }, encoding: "utf8", timeout: 10_000
       });
@@ -75,14 +76,29 @@ class WorkflowCommandsTests {
       assert.doesNotMatch(workflow, /contents: write|actions: write/);
     });
 
+    test("merge groups run both required checks without widening their permissions", async () => {
+      const checks = await readFile(".github/workflows/build-and-test.yml", "utf8");
+      const linked = await readFile(".github/workflows/require-linked-issue.yml", "utf8");
+      for (const workflow of [checks, linked])
+        assert.ok(workflow.includes("  merge_group:\n    types: [checks_requested]\n    branches: [main]\n"));
+      assert.ok(checks.includes("BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}"));
+      assert.ok(checks.includes("HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"));
+      assert.ok(checks.includes("\npermissions:\n  contents: read\n\n"));
+      assert.ok(linked.includes("\npermissions:\n  issues: read\n  pull-requests: read\n\n"));
+      assert.ok(linked.includes("group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"));
+      assert.ok(linked.includes("if: github.event_name == 'merge_group'"));
+      assert.ok(linked.includes("if: github.event_name == 'pull_request_target'"));
+    });
+
     test("each target runs its package tests and its UI workflows in parallel jobs that the required aggregate check needs", async () => {
       const workflow = await readFile(".github/workflows/build-and-test.yml", "utf8");
       assert.ok(workflow.includes("name: Build and test (${{ matrix.target }}, ${{ matrix.suite }})"));
       assert.ok(workflow.includes("suite: [packages, UI]\n        target: [Linux x64, Linux ARM64, Windows x64, Windows ARM64, macOS x64, macOS ARM64]\n"));
       for (const step of ["Run package tests and coverage gate", "Check build contracts", "Check release contracts", "Check packaging contracts", "Check workflow scripts"])
         assert.ok(workflow.includes(`- name: ${step}\n        if: matrix.suite == 'packages'\n`), step);
-      for (const step of ["Prepare Electron runtime", "Check desktop tooling", "Run renderer tests", "Run desktop UI workflows"])
+      for (const step of ["Check desktop tooling", "Run renderer tests", "Run desktop UI workflows"])
         assert.ok(workflow.includes(`- name: ${step}\n        if: matrix.suite == 'UI'\n`), step);
+      assert.ok(workflow.includes("- name: Prepare Electron runtime\n        if: matrix.suite == 'UI' || runner.os == 'Windows'\n"));
       assert.ok(workflow.includes("name: logs-${{ matrix.suite }}-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}"));
       assert.ok(workflow.includes("name: Build and test (all targets)\n    needs: [changes, build, validate]\n"));
     });

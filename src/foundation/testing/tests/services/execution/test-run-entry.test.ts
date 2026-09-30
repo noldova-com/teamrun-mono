@@ -6,7 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/teamrun-foundation-core";
+
 import { spawn } from "node:child_process";
+import { closeSync, openSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,10 +21,12 @@ import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
 @TestClass
 export class TestRunEntryTests {
   @TestMethod
-  @TestData("finishesCleanly", 0, false)
-  @TestData("passesButLeaksATimer", 1, true)
-  @TestData("failsAndLeaksATimer", 1, true)
-  public async exitsAfterReportingEvenWhenATestLeaksAResource(method: string, code: number, leaked: boolean): Promise<void> {
+  @TestData("finishesCleanly", 0, null)
+  @TestData("passesButLeaksATimer", 1, "resources remain open: Timeout")
+  @TestData("failsAndLeaksATimer", 1, "resources remain open: Timeout")
+  @TestData("passesButLeaksAWorkerThread", 1, "Node names no open resource; a worker thread or a native handle keeps it alive")
+  public async exitsAfterReportingEvenWhenATestLeaksAResource(method: string, code: number, failure: string | null): Promise<void> {
+    const leaked = !Object.isNull(failure);
     const directory = await mkdtemp(join(tmpdir(), "teamrun-entry-lifetime-"));
     try {
       const fixture = new URL("../../fixtures/execution/entry-lifetime.fixture.js", import.meta.url).href;
@@ -30,7 +35,9 @@ export class TestRunEntryTests {
       const result = await this.runEntryArgumentsAsync(["TestPackage", directory], JSON.stringify([method]), summaryPath);
       const summary = await readFile(summaryPath, "utf8");
       Assert.areEqual(code, result.exitCode, result.errorOutput);
-      Assert.areEqual(leaked, result.errorOutput.includes("resources remain open"));
+      Assert.areEqual(leaked, result.errorOutput.includes("Failing the run"));
+      if (!Object.isNull(failure))
+        Assert.isTrue(result.errorOutput.includes(failure), result.errorOutput);
       Assert.isTrue(summary.includes("## TeamRun Package Test Report"));
       Assert.isTrue(summary.includes("| Total: | 1 |"));
       Assert.areEqual(leaked, summary.includes("### Package test execution failed"));
@@ -146,31 +153,35 @@ export class TestRunEntryTests {
     return this.runEntryArgumentsAsync([packageName, rootDirectory]);
   }
 
-  private runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", summaryPath?: string): Promise<EntryRun> {
-    return new Promise<EntryRun>((resolve, reject) => {
-      const environment = { ...process.env };
-      // Fixture subprocesses must not append their deliberately failing results to the real CI summary.
-      delete environment["GITHUB_STEP_SUMMARY"];
-      if (!Object.isUndefined(summaryPath))
-        environment["GITHUB_STEP_SUMMARY"] = summaryPath;
-      if (Object.isNull(filters))
-        delete environment["CONTEXT_TEST_FILTERS"];
-      else
-        environment["CONTEXT_TEST_FILTERS"] = filters;
+  private async runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", summaryPath?: string): Promise<EntryRun> {
+    const environment = { ...process.env };
+    // Fixture subprocesses must not append their deliberately failing results to the real CI summary.
+    delete environment["GITHUB_STEP_SUMMARY"];
+    if (!Object.isUndefined(summaryPath))
+      environment["GITHUB_STEP_SUMMARY"] = summaryPath;
+    if (Object.isNull(filters))
+      delete environment["CONTEXT_TEST_FILTERS"];
+    else
+      environment["CONTEXT_TEST_FILTERS"] = filters;
 
-      const child = spawn(
-        process.execPath,
-        ["node_modules/@noldova/teamrun-foundation-testing/services/execution/test-run-entry.js", ...arguments_],
-        { env: environment, shell: false, timeout: 5000 });
-
-      const errorOutput: string[] = [];
-      child.stderr.on("data", (t: Buffer) => {
-        errorOutput.push(t.toString());
+    // The entry's stderr goes to a file, as in CI, so the child's open resources are its own and not pipes to this process.
+    const directory = await mkdtemp(join(tmpdir(), "teamrun-entry-output-"));
+    const errorPath = join(directory, "stderr.log");
+    const errorFile = openSync(errorPath, "w");
+    try {
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          ["node_modules/@noldova/teamrun-foundation-testing/services/execution/test-run-entry.js", ...arguments_],
+          { env: environment, shell: false, timeout: 5000, stdio: ["ignore", "ignore", errorFile] });
+        child.on("close", t => resolve(t ?? -1));
+        child.on("error", reject);
       });
-      child.on("close", t => {
-        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty)));
-      });
-      child.on("error", reject);
-    });
+      return new EntryRun(exitCode, await readFile(errorPath, "utf8"));
+    }
+    finally {
+      closeSync(errorFile);
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 }

@@ -145,6 +145,57 @@ export class PseudoTerminalTests {
   }
 
   @TestMethod
+  public async stopsTheWindowsOutputReaderThreadOfAShellThatEndedAndWaitsForIt(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const stopped = Promise.withResolvers<void>();
+    const thread = { terminations: 0, terminate(): Promise<void> { this.terminations += 1; return stopped.promise; } };
+    const reader = { released: 0, _worker: thread, dispose(): void { this.released += 1; } };
+    const fake = Object.assign(new FakePty(1), { _agent: { _conoutSocketWorker: reader } });
+    const pty = new PseudoTerminal(fake, listener, undefined, 5000);
+
+    fake.emitExit(0);
+    let ended = false;
+    const ending = pty.end().then(() => { ended = true; });
+    await Wait.until(() => thread.terminations === 1);
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    Assert.isFalse(ended);
+    stopped.resolve();
+    await ending;
+
+    Assert.isTrue(ended);
+    Assert.areEqual(0, reader.released);
+  }
+
+  @TestMethod
+  public async endsAtOnceWhenTheWindowsOutputReaderHasNoKnownShape(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const fake = Object.assign(new FakePty(1), { _agent: { _conoutSocketWorker: {} } });
+    const pty = new PseudoTerminal(fake, listener, undefined, 5000);
+    const started = Date.now();
+
+    await pty.end();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.isTrue(Date.now() - started < 1000);
+  }
+
+  @TestMethod
+  public async endsWithinTwoSecondsWhenTheWindowsOutputReaderThreadDoesNotStop(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const thread = { terminations: 0, terminate(): Promise<void> { this.terminations += 1; return new Promise<void>(() => undefined); } };
+    const reader = { _worker: thread };
+    const fake = Object.assign(new FakePty(1), { _agent: { _conoutSocketWorker: reader } });
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+    const started = Date.now();
+
+    await pty.end();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.isTrue(Date.now() - started >= 1900);
+    Assert.areEqual(1, thread.terminations);
+  }
+
+  @TestMethod
   public reportsAnExitWithoutACodeWhenThePlatformGivesNone(): void {
     const listener = new RecordingPseudoTerminalListener();
     const fake = new FakePty(0);

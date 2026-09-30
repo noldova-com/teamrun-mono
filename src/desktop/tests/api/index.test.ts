@@ -15,7 +15,7 @@ export class DesktopApiTests {
   public exportsTheCompleteCatalog(): void {
     const expected = ["BridgeGateway", "DesktopInfo", "DesktopSettings", "Resources", "RuntimeConnection", "SenderInfo", "SenderPolicy", "TimedAttacher", "WindowState", "WindowStateStore"];
 
-    expected.push("UpdateSettings", "UpdateService", "ReleaseUpdateInfo");
+    expected.push("UpdateSettings", "UpdateService", "ReleaseUpdateInfo", "UpdateSignatureException", "WindowsSignatureVerifier");
     expected.push("RendererCheckpoint", "UpdateParticipant", "RestartCoordinator", "RestartProcesses", "UpdatePeer");
     Assert.areEqual([...expected].sort().join(","), Object.keys(api).sort().join(","));
   }

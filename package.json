@@ -2,7 +2,8 @@
   "name": "teamrun",
   "version": "0.0.7",
   "teamrun": {
-    "protocolVersion": "0.1"
+    "protocolVersion": "0.1",
+    "windowsPublisher": "CN=Rostislav Rotaru, O=Rostislav Rotaru, C=US"
   },
   "private": true,
   "type": "module",

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { Exception } from "@noldova/teamrun-foundation-exceptions";
 import type { JsonObject, JsonValue } from "@noldova/teamrun-foundation-json";
 import type { AppUpdateCommand, AppUpdateState, Event, IRequestDispatcher, Request, Response, UpdateCheckpointResult } from "@noldova/teamrun-protocol";
 import type { InstallationMember, InstallationRegistry, IRuntimeClientListener, IServerListener, ProcessProbe, RuntimeClient, RuntimeTimings } from "@noldova/teamrun-runtime";
@@ -280,6 +281,50 @@ export declare class ReleaseUpdateInfo {
 }
 
 /**
+ * A downloaded Windows update installer was not installed, because it is not signed by the configured publisher or its signature
+ * could not be checked.
+ */
+export declare class UpdateSignatureException extends Exception {
+  /**
+   * Initializes the exception.
+   * @param message The explanation shown to the user.
+   * @param cause The failure that prevented the check, if any.
+   */
+  public constructor(message: string, cause?: unknown);
+}
+
+/**
+ * Checks a Windows installer's Authenticode signature with Windows PowerShell before TeamRun installs it. Any failure to check refuses the installer.
+ */
+export declare class WindowsSignatureVerifier {
+  /**
+   * Initializes a verifier that runs the given command. The command receives the file in `TEAMRUN_SIGNED_FILE` and the publisher in
+   * `TEAMRUN_SIGNATURE_PUBLISHER`, without `PSModulePath`, and answers `Signed` or `Refused` on standard output.
+   * @param publisher The distinguished name the signer must match, such as `CN=Name, O=Name, C=US`; every named field must be equal.
+   * @param executable Absolute path of the program that checks the signature.
+   * @param args The program's arguments.
+   * @param timeoutMilliseconds How long the check may run before it is stopped and the installer refused.
+   */
+  public constructor(publisher: string, executable: string, args: readonly string[], timeoutMilliseconds: number);
+
+  /**
+   * Creates a verifier that runs Windows PowerShell from the Windows folder, not from `PATH`.
+   * @param publisher The distinguished name the signer must match.
+   * @param systemRoot The Windows folder, from the `SystemRoot` variable.
+   * @returns The verifier.
+   */
+  public static forSystemRoot(publisher: string, systemRoot: string): WindowsSignatureVerifier;
+
+  /**
+   * Resolves when the file has a valid signature whose signer matches the publisher.
+   * @param file The installer to check.
+   * @throws UpdateSignatureException with `Resources.updateSignatureRejected` when the file is unsigned, its signature is not valid or
+   * another publisher signed it, or with `Resources.updateSignatureUnchecked` when the check fails, times out or answers unexpectedly.
+   */
+  public verify(file: string): Promise<void>;
+}
+
+/**
  * Read-only build/feed selection. Development and builds without a feed stay disabled.
  */
 export declare class UpdateSettings {
@@ -301,6 +346,11 @@ export declare class UpdateSettings {
    * Whether a local loopback test feed was explicitly selected.
    */
   public readonly isTestFeed: boolean;
+  /**
+   * The publisher whose signature a Windows update installer must carry, as a distinguished name; every named field must match
+   * the installer's signer. Every feed is checked, including the local test feed.
+   */
+  public readonly windowsPublisher: string;
 
   private constructor();
 
@@ -312,9 +362,12 @@ export declare class UpdateSettings {
    * @param platform Node platform; Windows, macOS and Linux AppImages can install updates.
    * @param architecture Node CPU architecture; x64 and arm64 can install updates.
    * @param inApplicationsFolder Whether a macOS application runs from an Applications folder, where an update can replace it; ignored on other platforms.
+   * @param windowsPublisher The publisher a Windows update installer must be signed by; defaults to `Resources.windowsPublisher`, the value Windows
+   * signing uses.
    * @returns Validated settings. Development builds, installations that cannot update themselves and invalid test feeds are disabled with an explanation.
    */
-  public static fromEnvironment(environment: NodeJS.ProcessEnv, isPackaged: boolean, platform: string, architecture: string, inApplicationsFolder: boolean): UpdateSettings;
+  public static fromEnvironment(environment: NodeJS.ProcessEnv, isPackaged: boolean, platform: string, architecture: string, inApplicationsFolder: boolean,
+    windowsPublisher?: string): UpdateSettings;
 }
 
 /**
@@ -335,9 +388,11 @@ export interface IUpdateBackend {
   check(): Promise<string | null>;
 
   /**
-   * Downloads the retained candidate and verifies its digest before resolving.
+   * Downloads the retained candidate and verifies its digest before resolving; on Windows it also verifies that the installer
+   * is signed by the configured publisher, including an installer reused from an earlier download.
    * @param progress Receives percentages during this operation only.
-   * @throws Error when download or verification fails, including cancellation.
+   * @throws UpdateSignatureException when a Windows installer is not signed by the publisher or its signature cannot be checked.
+   * @throws Error when download or verification otherwise fails, including cancellation.
    */
   download(progress: (percent: number) => void): Promise<void>;
 
@@ -1076,6 +1131,36 @@ export declare class Resources {
    */
   public static readonly updateDownloadFailed: string;
   /**
+   * Explains that a downloaded Windows installer was not installed because TeamRun's publisher did not sign it.
+   */
+  public static readonly updateSignatureRejected: string;
+  /**
+   * Explains that a downloaded Windows installer was not installed because its signature could not be checked.
+   */
+  public static readonly updateSignatureUnchecked: string;
+  public static readonly systemRootVariable: string;
+  public static readonly systemRootMissing: string;
+  /**
+   * Path of Windows PowerShell below the Windows folder.
+   */
+  public static readonly windowsPowerShellSegments: readonly string[];
+  public static readonly signatureArguments: readonly string[];
+  public static readonly signatureMilliseconds: number;
+  public static readonly signatureFileVariable: string;
+  public static readonly signaturePublisherVariable: string;
+  /**
+   * Upper-case name of the variable the signature check removes, so modules of another PowerShell version cannot break Windows PowerShell.
+   */
+  public static readonly powerShellModulePathVariable: string;
+  public static readonly signatureAccepted: string;
+  public static readonly signatureRefused: string;
+  public static readonly utf16Encoding: BufferEncoding;
+  /**
+   * Windows PowerShell script that answers `Signed` when the file's signature is valid and every field of the publisher's name equals
+   * the signer's, and `Refused` otherwise.
+   */
+  public static readonly signatureScript: string;
+  /**
    * Downloaded state explains that installation remains disabled.
    */
   public static readonly updateInstallDeferred: string;
@@ -1092,6 +1177,10 @@ export declare class Resources {
    */
   public static readonly connectionClosed: string;
   public static readonly productVersion: string;
+  /**
+   * The publisher whose signature a Windows update installer must carry before it is installed, as a distinguished name. The build stamps it from the root manifest's `teamrun.windowsPublisher`, the value Windows signing uses.
+   */
+  public static readonly windowsPublisher: string;
   public static readonly applicationName: string;
   public static readonly clientName: string;
   public static readonly invokeChannel: string;

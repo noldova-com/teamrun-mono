@@ -8,7 +8,7 @@
 
 export default class VerificationScope {
   private static readonly FULL_SUMMARY: string = "Full build and test verification selected.";
-  private static readonly DOCUMENTATION_SUMMARY: string = "Only Markdown documentation changed; code builds and tests are not required.";
+  private static readonly SKIPPED_SUMMARY: string = "Code builds and tests are not required.";
 
   public readonly runCode: boolean;
   public readonly reason: string;
@@ -19,6 +19,6 @@ export default class VerificationScope {
   }
 
   public get summary(): string {
-    return `${this.runCode ? VerificationScope.FULL_SUMMARY : VerificationScope.DOCUMENTATION_SUMMARY} ${this.reason}`;
+    return `${this.runCode ? VerificationScope.FULL_SUMMARY : VerificationScope.SKIPPED_SUMMARY} ${this.reason}`;
   }
 }

@@ -197,19 +197,25 @@ export class Resources {
   public static readonly lineFeedByte: number = 0x0a;
   public static readonly terminalCaptureScrollback: number = 1000;
   public static readonly terminalEndMilliseconds: number = 2_000;
+  public static readonly terminalOutputThreadStopMilliseconds: number = 2_000;
+  public static readonly terminalClosedConsoleGraceMultiplier: number = 4;
   public static readonly terminalHighWatermark: number = 1024 * 1024;
   public static readonly terminalLowWatermark: number = 256 * 1024;
   public static readonly forceKillSignal: string = "SIGKILL";
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly ptyAgentField: "_agent" = "_agent";
   public static readonly ptyOutputReaderField: "_conoutSocketWorker" = "_conoutSocketWorker";
+  public static readonly ptyOutputThreadField: "_worker" = "_worker";
   public static readonly disposeMethod: "dispose" = "dispose";
+  public static readonly terminateMethod: "terminate" = "terminate";
   public static readonly normalBufferType: "normal" = "normal";
   public static readonly eraseInDisplayFinal: string = "J";
   public static readonly privatePrefix: string = "?";
   public static readonly fullResetFinal: string = "c";
   public static readonly deviceAttributesFinal: string = "c";
   public static readonly deviceAttributesAnswer: string = "\u001b[?1;2c";
+  public static readonly deviceStatusFinal: string = "n";
+  public static readonly cursorPositionRequest: number = 6;
   public static readonly eraseSavedLinesParameter: number = 3;
   public static readonly blankCell: string = " ";
   public static readonly terminalTermName: string = "xterm-256color";
@@ -348,6 +354,10 @@ export class Resources {
 
   public static formatWindowsEnvironmentExit(exitCode: number | null): string {
     return `Windows PowerShell ended with exit code ${String(exitCode)}.`;
+  }
+
+  public static formatCursorPosition(row: number, column: number): string {
+    return `\u001b[${row};${column}R`;
   }
 
   public static formatUtf8Locale(language: string, region: string): string {

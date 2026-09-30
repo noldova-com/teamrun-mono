@@ -15,8 +15,8 @@ class VerificationScopeTests {
   public static register(): void {
     test("summarizes the selected verification with its reason", () => {
       assert.equal(new VerificationScope(true, "Manual runs verify everything.").summary, "Full build and test verification selected. Manual runs verify everything.");
-      assert.equal(new VerificationScope(false, "Compared with the merge base.").summary,
-        "Only Markdown documentation changed; code builds and tests are not required. Compared with the merge base.");
+      assert.equal(new VerificationScope(false, "Only Markdown documentation changed.").summary,
+        "Code builds and tests are not required. Only Markdown documentation changed.");
     });
   }
 }
