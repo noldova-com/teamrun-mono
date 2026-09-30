@@ -45,8 +45,8 @@ async function dragTab(page: Page, panel: string, over: Locator, target: () => L
   await expect(page.locator(".tr-dock-guide")).toHaveCount(0);
 }
 
-async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thought: string[] }> {
-  const sampling = page.evaluate(() => new Promise<{ answer: string[]; thought: string[] }>(resolve => {
+function startSampling(page: Page): Promise<{ answer: string[]; thought: string[] }> {
+  return page.evaluate(() => new Promise<{ answer: string[]; thought: string[] }>(resolve => {
     const answer: string[] = [];
     const thought: string[] = [];
     let started = false;
@@ -67,8 +67,53 @@ async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thou
     };
     requestAnimationFrame(sample);
   }));
+}
+
+async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thought: string[] }> {
+  const sampling = startSampling(page);
   await page.locator("tr-composer textarea").fill("Stream slowly");
   await page.getByRole("button", { name: "Send", exact: true }).click();
+  return sampling;
+}
+
+function revealedText(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const card = Array.from(document.querySelectorAll<HTMLElement>("tr-message-card")).at(-1);
+    return `${card?.querySelector<HTMLElement>("tr-markdown")?.innerText ?? ""}\n${card?.querySelector<HTMLElement>("tr-activity-block li button span")?.innerText ?? ""}`;
+  });
+}
+
+async function runFramesUntilSettled(page: Page): Promise<void> {
+  let previous = await revealedText(page);
+  for (let quiet = 0, frames = 0; quiet < 20; frames++) {
+    if (frames >= 1000)
+      throw new Error("The reveal did not settle within 1000 frames.");
+    await page.clock.runFor(16);
+    const current = await revealedText(page);
+    quiet = current === previous ? quiet + 1 : 0;
+    previous = current;
+  }
+}
+
+async function sampleStepwiseReply(page: Page, provider: FixtureProvider): Promise<{ answer: string[]; thought: string[] }> {
+  await page.clock.install();
+  let sampled = false;
+  const sampling = startSampling(page).then(samples => {
+    sampled = true;
+    return samples;
+  });
+  await page.locator("tr-composer textarea").fill("Stream stepwise");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const batches = FixtureProvider.batches(FixtureProvider.streamedThought).length + FixtureProvider.batches(FixtureProvider.streamedAnswer).length;
+  for (let index = 0; index < batches; index++) {
+    await provider.releaseBatch();
+    await runFramesUntilSettled(page);
+  }
+  for (let frames = 0; !sampled; frames++) {
+    if (frames >= 1000)
+      throw new Error("The reply did not finish within 1000 frames.");
+    await page.clock.runFor(16);
+  }
   return sampling;
 }
 
@@ -400,8 +445,12 @@ test("reveals a streamed reply in small steps and never shows Markdown symbols",
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).dblclick();
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  const { answer, thought } = await sampleStreamedReply(page);
+  const { answer, thought } = await sampleStepwiseReply(page, desktop.provider);
   const symbols = ["**", "`", "](", "|", "```"];
+  await test.info().attach("reveal-steps", {
+    body: JSON.stringify({ answerSteps: new Set(answer).size, thoughtSteps: new Set(thought).size, frames: answer.length }),
+    contentType: "application/json"
+  });
 
   expect(new Set(answer).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedAnswer).length * 2);
   expect(new Set(thought).size).toBeGreaterThan(FixtureProvider.batches(FixtureProvider.streamedThought).length * 2);
