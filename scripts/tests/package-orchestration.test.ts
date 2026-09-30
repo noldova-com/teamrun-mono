@@ -108,7 +108,7 @@ class PackageOrchestrationTests {
       await new Package().runAsync();
       assert.deepEqual(TrustedSigningModuleFixture.preparations, [0]);
       assert.ok(PackageScriptFixture.messages.includes("Saving the recorded TrustedSigning module..."));
-      assert.ok(PackageScriptFixture.processCommands.at(-1)?.includes("--config.win.signtoolOptions.sign=./scripts/packaging/windows-sign-hook.ts"));
+      assert.ok(PackageScriptFixture.processCommands.at(-1)?.includes("--config.win.signExecutable=true"));
       TrustedSigningModuleFixture.preparations.length = 0;
       PackageOptionsFixture.host = "darwin";
       await new Package().runAsync();
