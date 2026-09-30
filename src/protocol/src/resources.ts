@@ -185,6 +185,7 @@ export class Resources {
   public static readonly rowsField: string = "rows";
   public static readonly shellField: string = "shell";
   public static readonly shellIdField: string = "shellId";
+  public static readonly shellKindField: string = "shellKind";
   public static readonly conptyBuildField: string = "conptyBuild";
   public static readonly exitCodeField: string = "exitCode";
   public static readonly restartCountField: string = "restartCount";

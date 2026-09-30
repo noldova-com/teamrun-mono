@@ -10,6 +10,7 @@ import "@noldova/teamrun-foundation-core";
 import { ArgumentException, ArgumentOutOfRangeException } from "@noldova/teamrun-foundation-exceptions";
 import { JsonReader, type JsonObject } from "@noldova/teamrun-foundation-json";
 
+import { TerminalShellKind } from "../enums/terminal-shell-kind.js";
 import { Resources } from "../resources.js";
 import { TerminalLineRange } from "./terminal-line-range.js";
 import { TerminalSize } from "./terminal-size.js";
@@ -18,6 +19,7 @@ export class TerminalState {
   public readonly id: string;
   public readonly projectId: string | null;
   public readonly shell: string;
+  public readonly shellKind: TerminalShellKind;
   public readonly conptyBuild: number | null;
   public readonly size: TerminalSize;
   public readonly exitCode: number | null;
@@ -29,6 +31,7 @@ export class TerminalState {
     id: string,
     projectId: string | null,
     shell: string,
+    shellKind: TerminalShellKind,
     conptyBuild: number | null,
     size: TerminalSize,
     exitCode: number | null,
@@ -51,6 +54,7 @@ export class TerminalState {
     this.id = id;
     this.projectId = projectId;
     this.shell = shell;
+    this.shellKind = shellKind;
     this.conptyBuild = conptyBuild;
     this.size = size;
     this.exitCode = exitCode;
@@ -67,6 +71,7 @@ export class TerminalState {
       reader.readNonBlankString(Resources.idField),
       reader.readNullableString(Resources.projectIdField),
       reader.readNonBlankString(Resources.shellField),
+      reader.readOneOf(Resources.shellKindField, Object.values(TerminalShellKind)),
       reader.readNullableInteger(Resources.conptyBuildField),
       TerminalSize.fromJson(size.toJson(), size.path),
       reader.readNullableInteger(Resources.exitCodeField),
@@ -80,6 +85,7 @@ export class TerminalState {
       [Resources.idField]: this.id,
       [Resources.projectIdField]: this.projectId,
       [Resources.shellField]: this.shell,
+      [Resources.shellKindField]: this.shellKind,
       [Resources.conptyBuildField]: this.conptyBuild,
       [Resources.sizeField]: this.size.toJson(),
       [Resources.exitCodeField]: this.exitCode,

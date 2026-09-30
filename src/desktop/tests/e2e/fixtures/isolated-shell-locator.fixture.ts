@@ -10,12 +10,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect } from "@playwright/test";
+import { TerminalShellKind } from "@noldova/teamrun-protocol";
 import { type IShellLocator, Shell, type ShellEnvironment, ShellLocator } from "@noldova/teamrun-runtime";
 
 export class IsolatedShellLocator implements IShellLocator {
   private static readonly HISTORY_NAME: string = "command-history";
   private static readonly BASH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nHISTFILESIZE=1000\nHISTCONTROL=\nHISTIGNORE=\nPROMPT_COMMAND="history -w"\n`;
   private static readonly ZSH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nSAVEHIST=1000\nsetopt INC_APPEND_HISTORY\n`;
+
+  private static readonly FIXTURE_SHELL: Shell = new Shell("teamrun-fixture-shell", "Fixture shell", TerminalShellKind.Other, process.execPath,
+    ["-e", "process.stdout.write('teamrun-fixture-shell-ready\\r\\n'); setInterval(() => undefined, 60_000);"]);
 
   private readonly directory: string;
   private readonly locator: IShellLocator;
@@ -28,7 +32,7 @@ export class IsolatedShellLocator implements IShellLocator {
   }
 
   public findAll(environment: ShellEnvironment): readonly Shell[] {
-    return [this.findDefault(environment)];
+    return [this.findDefault(environment), IsolatedShellLocator.FIXTURE_SHELL];
   }
 
   public findDefault(environment: ShellEnvironment): Shell {

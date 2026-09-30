@@ -80,8 +80,8 @@ export class HostedTerminal implements IPseudoTerminalListener {
   }
 
   public get state(): TerminalState {
-    return new TerminalState(this.id, this.projectId, this.shell.name, this.settings.windowsBuild, this.emulator.size, this.exitCode, this.restartCount,
-      this.sequence, this.history.stored);
+    return new TerminalState(this.id, this.projectId, this.shell.name, this.shell.kind, this.settings.windowsBuild, this.emulator.size, this.exitCode,
+      this.restartCount, this.sequence, this.history.stored);
   }
 
   public input(data: string): void {

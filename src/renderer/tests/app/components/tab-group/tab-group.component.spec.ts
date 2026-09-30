@@ -8,7 +8,7 @@
 
 import { TestBed } from "@angular/core/testing";
 
-import { MethodName, TerminalScreen } from "@noldova/teamrun-protocol";
+import { MethodName, TerminalIdParams, TerminalOpenParams, TerminalScreen, TerminalShellKind } from "@noldova/teamrun-protocol";
 
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
@@ -154,13 +154,14 @@ describe("TabGroupComponent", () => {
     expect(tabs().map(t => t.dataset["panel"])).toEqual(["Activity", "Terminal:terminal-1"]);
   });
 
-  it("offers a new terminal in a group that holds terminals, also without a selected project", async () => {
+  it("offers a new terminal with the default shell or a chosen one in a group that holds terminals, also without a selected project", async () => {
     MemoryStorage.install(window);
     const terminalWindow = TerminalWindow.install();
     onTestFinished(() => terminalWindow.restore());
+    let opened = 8;
     const bridge = SampleData.createBridge()
-      .answer(MethodName.TerminalOpen, () => SampleData.terminal("t9").toJson())
-      .answer(MethodName.TerminalScreen, () => new TerminalScreen(SampleData.terminal("t9"), "").toJson());
+      .answer(MethodName.TerminalOpen, () => SampleData.terminal(`t${++opened}`).toJson())
+      .answer(MethodName.TerminalScreen, payload => new TerminalScreen(SampleData.terminal(TerminalIdParams.fromJson(payload).terminalId), "").toJson());
     TestBed.configureTestingModule({ imports: [TabGroupComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const layout = TestBed.inject(LayoutService);
     const shell = TestBed.inject(ShellService);
@@ -181,5 +182,21 @@ describe("TabGroupComponent", () => {
     expect(button()?.disabled).toBe(false);
     button()!.click();
     await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9"]));
+    render(new Panel(PanelKind.Terminal, "t9"));
+    expect(element.querySelector(".tr-tab-active .tr-tab-shell-icon")?.textContent).toBe(Resources.shellKindIcons[TerminalShellKind.PowerShell]);
+
+    element.querySelector<HTMLButtonElement>(".tr-terminal-shells")!.click();
+    const items = (): HTMLButtonElement[] => {
+      fixture.detectChanges();
+      return Array.from(document.querySelectorAll<HTMLButtonElement>(".mat-mdc-menu-panel .tr-terminal-shell"));
+    };
+    await vi.waitFor(() => expect(items().map(t => [t.querySelector("mat-icon")?.textContent,
+      ...Array.from(t.querySelectorAll(".mat-mdc-menu-item-text > span"), s => s.textContent)])).toEqual([
+      [Resources.shellKindIcons[TerminalShellKind.PowerShell], "PowerShell", Resources.defaultShellMark],
+      [Resources.shellKindIcons[TerminalShellKind.CommandPrompt], "Command Prompt"]
+    ]));
+    items()[1]!.click();
+    await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9", "t10"]));
+    expect(bridge.requests.filter(t => t.method === MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t.payload).shellId)).toEqual([null, "cmd"]);
   });
 });

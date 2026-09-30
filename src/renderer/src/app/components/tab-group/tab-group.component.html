@@ -18,6 +18,9 @@ LICENSE file in the root directory of this source tree.
           [matContextMenuTriggerFor]="menu.menu() ?? null"
           (click)="layout.activatePanel(panel)" (pointerdown)="drag.begin(panel, $event)" (auxclick)="onTabAuxClick($event, panel)"
           (keydown)="menu.openFromKeyboard($event, tab)">
+          @if (labels.iconOf(panel); as icon) {
+            <mat-icon class="tr-tab-icon tr-tab-shell-icon" aria-hidden="true">{{ icon }}</mat-icon>
+          }
           <span class="tr-tab-label">{{ labels.of(panel) }}</span>
           <span class="tr-tab-actions">
             <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closePanelLabel" (click)="close($event, panel)"
@@ -35,6 +38,21 @@ LICENSE file in the root directory of this source tree.
           [attr.aria-label]="resources.newTerminalLabel" (click)="terminals.open(group().id)">
           <mat-icon>{{ resources.icons["add"] }}</mat-icon>
         </button>
+        <button mat-icon-button class="tr-small-icon-button tr-terminal-shells" [matTooltip]="resources.chooseShellLabel"
+          [attr.aria-label]="resources.chooseShellLabel" [matMenuTriggerFor]="shellMenu" (menuOpened)="terminals.loadShells()">
+          <mat-icon>{{ resources.icons["expandMore"] }}</mat-icon>
+        </button>
+        <mat-menu #shellMenu="matMenu">
+          @for (shell of terminals.shells(); track shell.id) {
+            <button mat-menu-item class="tr-terminal-shell" (click)="terminals.open(group().id, shell.id)">
+              <mat-icon>{{ resources.shellKindIcons[shell.kind] }}</mat-icon>
+              <span>{{ shell.name }}</span>
+              @if (shell.isDefault) {
+                <span class="tr-muted ml-2">{{ resources.defaultShellMark }}</span>
+              }
+            </button>
+          }
+        </mat-menu>
       }
       @if (group().activePanel; as active) {
         <tr-panel-menu #actions [panel]="active" />

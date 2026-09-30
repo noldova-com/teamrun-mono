@@ -19,6 +19,7 @@ import {
   TerminalOpenParams,
   TerminalOutputPayload,
   TerminalScreen,
+  TerminalShellKind,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -50,7 +51,7 @@ describe("TerminalsService", () => {
   let opened: number;
 
   const stateOf = (id: string, size: TerminalSize = new TerminalSize(80, 24)): TerminalState =>
-    new TerminalState(id, SampleData.project.id, "PowerShell", null, size, null, 0, 0, new TerminalLineRange(0, 0));
+    new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, size, null, 0, 0, new TerminalLineRange(0, 0));
   const requests = (method: string): unknown[] => bridge.requests.filter(t => t.method === method).map(t => t.payload);
   const start = async (): Promise<TerminalsService> => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
@@ -98,6 +99,19 @@ describe("TerminalsService", () => {
     expect(terminals.sessionOf(explorer)).toBeNull();
   });
 
+  it("lists the shells, opens the one chosen and reports a list that cannot be read", async () => {
+    const terminals = await start();
+    expect(terminals.shells()).toEqual(SampleData.shells);
+
+    await terminals.open(null, "cmd");
+    expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, "cmd", new TerminalSize(80, 24)).toJson()]);
+
+    bridge.answer(MethodName.TerminalShells, () => ({ unexpected: true }));
+    await terminals.loadShells();
+    expect(terminals.error()).not.toBeNull();
+    expect(terminals.shells()).toEqual(SampleData.shells);
+  });
+
   it("opens a terminal in the home folder without a selected project and reports a terminal that cannot open", async () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const terminals = TestBed.inject(TerminalsService);
@@ -124,7 +138,7 @@ describe("TerminalsService", () => {
 
     bridge.emit(new Event(EventName.TerminalOutput, new TerminalOutputPayload("t2", 1, "x".repeat(20_000), new TerminalLineRange(0, 0)).toJson()));
     bridge.emit(new Event(EventName.TerminalOutput, new TerminalOutputPayload("gone", 1, "lost", new TerminalLineRange(0, 0)).toJson()));
-    bridge.emit(new Event(EventName.TerminalChanged, new TerminalState("t1", SampleData.project.id, "PowerShell", null, new TerminalSize(80, 24), 3, 0, 1,
+    bridge.emit(new Event(EventName.TerminalChanged, new TerminalState("t1", SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), 3, 0, 1,
       new TerminalLineRange(0, 0)).toJson()));
     await vi.waitFor(() => expect(requests(MethodName.TerminalAcknowledge)).toEqual([new TerminalAcknowledgeParams("t2", 20_000).toJson()]));
     expect(terminals.sessionOf(terminal("t1"))?.state().exitCode).toBe(3);

@@ -1448,6 +1448,10 @@ export declare class Resources {
    */
   public static readonly shellIdField: string;
   /**
+   * Name of a terminal's shell family field: `shellKind`.
+   */
+  public static readonly shellKindField: string;
+  /**
    * Name of a terminal's exit code field: `exitCode`.
    */
   public static readonly exitCodeField: string;
@@ -4962,6 +4966,10 @@ export declare class TerminalState {
    */
   public readonly shell: string;
   /**
+   * The shell's family, which chooses the terminal's icon.
+   */
+  public readonly shellKind: TerminalShellKind;
+  /**
    * The build of the Windows pseudo-console (ConPTY) that runs the shell, or `null` outside Windows. A client that
    * draws the terminal gives it to its emulator, because ConPTY redraws the screen after a resize and builds before
    * 21376 do so differently, so the client's screen wraps lines as the runtime's does.
@@ -4995,6 +5003,7 @@ export declare class TerminalState {
    * @param projectId The id of the `Project` whose folder the shell started in, or `null` for the home folder; a given id
    * must not be blank.
    * @param shell The shell's display name; must not be blank.
+   * @param shellKind The shell's family.
    * @param conptyBuild The Windows build that runs the shell, a positive integer, or `null` outside Windows.
    * @param size The terminal's size.
    * @param exitCode The shell's exit code, an integer, or `null` while it runs.
@@ -5009,6 +5018,7 @@ export declare class TerminalState {
     id: string,
     projectId: string | null,
     shell: string,
+    shellKind: TerminalShellKind,
     conptyBuild: number | null,
     size: TerminalSize,
     exitCode: number | null,
@@ -5018,8 +5028,8 @@ export declare class TerminalState {
 
   /**
    * Reads the state from untrusted JSON.
-   * @param value The untrusted value, expected to carry `id`, the nullable `projectId`, `shell`, the nullable
-   * `conptyBuild`, `size`, the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
+   * @param value The untrusted value, expected to carry `id`, the nullable `projectId`, `shell`, `shellKind`, the
+   * nullable `conptyBuild`, `size`, the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The state.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
@@ -5029,8 +5039,8 @@ export declare class TerminalState {
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `id`, `projectId`, `shell`, `conptyBuild`, `size`, `exitCode`, `restartCount`, `sequence`
-   * and `stored`.
+   * @returns The object with `id`, `projectId`, `shell`, `shellKind`, `conptyBuild`, `size`, `exitCode`, `restartCount`,
+   * `sequence` and `stored`.
    */
   public toJson(): JsonObject;
 }
