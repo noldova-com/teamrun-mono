@@ -210,6 +210,8 @@ export class Resources {
   public static readonly fullResetFinal: string = "c";
   public static readonly deviceAttributesFinal: string = "c";
   public static readonly deviceAttributesAnswer: string = "\u001b[?1;2c";
+  public static readonly deviceStatusFinal: string = "n";
+  public static readonly cursorPositionRequest: number = 6;
   public static readonly eraseSavedLinesParameter: number = 3;
   public static readonly blankCell: string = " ";
   public static readonly terminalTermName: string = "xterm-256color";
@@ -348,6 +350,10 @@ export class Resources {
 
   public static formatWindowsEnvironmentExit(exitCode: number | null): string {
     return `Windows PowerShell ended with exit code ${String(exitCode)}.`;
+  }
+
+  public static formatCursorPosition(row: number, column: number): string {
+    return `\u001b[${row};${column}R`;
   }
 
   public static formatUtf8Locale(language: string, region: string): string {

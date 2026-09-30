@@ -42,6 +42,7 @@ export class TerminalEmulator implements Disposable {
     this.terminal.parser.registerCsiHandler({ prefix: Resources.privatePrefix, final: Resources.eraseInDisplayFinal }, t => this.eraseSaved(t));
     this.terminal.parser.registerEscHandler({ final: Resources.fullResetFinal }, () => this.forgetStored());
     this.terminal.parser.registerCsiHandler({ final: Resources.deviceAttributesFinal }, t => this.answerAttributes(t));
+    this.terminal.parser.registerCsiHandler({ final: Resources.deviceStatusFinal }, t => this.answerCursorPosition(t));
   }
 
   public get size(): TerminalSize {
@@ -139,6 +140,15 @@ export class TerminalEmulator implements Disposable {
       return false;
 
     this.answer(Resources.deviceAttributesAnswer);
+    return true;
+  }
+
+  private answerCursorPosition(params: readonly (number | number[])[]): boolean {
+    if (params.length !== 1 || params[0] !== Resources.cursorPositionRequest)
+      return false;
+
+    const buffer = this.terminal.buffer.active;
+    this.answer(Resources.formatCursorPosition(buffer.cursorY + 1, buffer.cursorX + 1));
     return true;
   }
 }

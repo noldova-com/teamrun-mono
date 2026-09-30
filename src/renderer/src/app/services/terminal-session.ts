@@ -56,6 +56,7 @@ export class TerminalSession {
     terminal.onData(t => this.type(t));
     terminal.onBinary(t => this.type(t));
     terminal.parser.registerCsiHandler({ final: Resources.deviceAttributesFinal }, t => TerminalSession.isAttributesQuery(t));
+    terminal.parser.registerCsiHandler({ final: Resources.deviceStatusFinal }, t => TerminalSession.isCursorPositionQuery(t));
     if (!Object.isNull(state.conptyBuild)) {
       terminal.options.windowsPty = { backend: Resources.conptyBackend, buildNumber: state.conptyBuild };
       terminal.options.reflowCursorLine = true;
@@ -209,5 +210,9 @@ export class TerminalSession {
 
   private static isAttributesQuery(params: readonly (number | number[])[]): boolean {
     return params.length === 0 || (params.length === 1 && params[0] === 0);
+  }
+
+  private static isCursorPositionQuery(params: readonly (number | number[])[]): boolean {
+    return params.length === 1 && params[0] === Resources.cursorPositionRequest;
   }
 }

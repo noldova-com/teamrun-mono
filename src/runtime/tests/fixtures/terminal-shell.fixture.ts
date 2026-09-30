@@ -13,9 +13,12 @@ class TerminalShellFixture {
   private static readonly LINE_END_PATTERN: RegExp = /[\r\n]/;
   private static readonly FLOOD_LINE: string = "0123456789".repeat(10);
   private static readonly ATTRIBUTES_QUERY: string = "\u001b[c";
-  private static readonly ATTRIBUTES_START: string = "[";
   private static readonly ATTRIBUTES_END: string = "c";
-  private static asking: boolean = false;
+  private static readonly CURSOR_QUERY: string = "\u001b[6n";
+  private static readonly CURSOR_END: string = "R";
+  private static readonly REPLY_START: string = "[";
+  private static asking: string | null = null;
+  private static replyEnd: string = "";
   private static reply: string = "";
 
   public static run(): void {
@@ -23,7 +26,7 @@ class TerminalShellFixture {
     process.stdout.write(`ready${TerminalShellFixture.NEW_LINE}`);
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk: string) => {
-      if (TerminalShellFixture.asking) {
+      if (TerminalShellFixture.asking !== null) {
         TerminalShellFixture.collectReply(chunk);
         return;
       }
@@ -61,9 +64,10 @@ class TerminalShellFixture {
         process.stdout.write(`flooded${TerminalShellFixture.NEW_LINE}`);
         break;
       case "attributes":
-        TerminalShellFixture.asking = true;
-        process.stdin.setRawMode(true);
-        process.stdout.write(TerminalShellFixture.ATTRIBUTES_QUERY);
+        TerminalShellFixture.ask(name, TerminalShellFixture.ATTRIBUTES_QUERY, TerminalShellFixture.ATTRIBUTES_END);
+        break;
+      case "cursor":
+        TerminalShellFixture.ask(name, TerminalShellFixture.CURSOR_QUERY, TerminalShellFixture.CURSOR_END);
         break;
       case "ignore-hangup":
         process.on("SIGHUP", () => undefined);
@@ -74,17 +78,25 @@ class TerminalShellFixture {
     }
   }
 
+  private static ask(name: string, query: string, replyEnd: string): void {
+    TerminalShellFixture.asking = name;
+    TerminalShellFixture.replyEnd = replyEnd;
+    process.stdin.setRawMode(true);
+    process.stdout.write(query);
+  }
+
   private static collectReply(chunk: string): void {
     TerminalShellFixture.reply += chunk;
-    const end = TerminalShellFixture.reply.indexOf(TerminalShellFixture.ATTRIBUTES_END);
+    const end = TerminalShellFixture.reply.indexOf(TerminalShellFixture.replyEnd);
     if (end < 0)
       return;
 
-    const answer = TerminalShellFixture.reply.slice(TerminalShellFixture.reply.indexOf(TerminalShellFixture.ATTRIBUTES_START) + 1, end + 1);
-    TerminalShellFixture.asking = false;
+    const answer = TerminalShellFixture.reply.slice(TerminalShellFixture.reply.indexOf(TerminalShellFixture.REPLY_START) + 1, end + 1);
+    const name = TerminalShellFixture.asking;
+    TerminalShellFixture.asking = null;
     TerminalShellFixture.reply = "";
     process.stdin.setRawMode(false);
-    process.stdout.write(`attributes ${answer}${TerminalShellFixture.NEW_LINE}`);
+    process.stdout.write(`${name} ${answer}${TerminalShellFixture.NEW_LINE}`);
   }
 }
 
