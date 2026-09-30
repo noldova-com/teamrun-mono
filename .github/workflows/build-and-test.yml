@@ -79,9 +79,99 @@ jobs:
             echo 'Full build and test verification selected.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  build:
+    name: Build (Linux x64)
+    needs: changes
+    if: needs.changes.outputs.run-code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - name: Check out the revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '26.7.0'
+          architecture: x64
+          package-manager-cache: false
+
+      - name: Verify toolchain versions and architecture
+        run: |
+          node --version
+          npm --version
+          node --print "process.platform + '/' + process.arch"
+          test "$(node --version)" = v26.7.0
+          test "$(npm --version)" = 11.19.0
+          test "$(node --print process.arch)" = x64
+          mkdir -p "$RUNNER_TEMP/teamrun-ci"
+
+      - name: Restore installed dependencies
+        id: dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            node_modules
+            src/renderer/node_modules
+          key: dependencies-${{ runner.os }}-x64-node-26.7.0-npm-11.19.0-${{ hashFiles('package.json', 'package-lock.json', 'src/renderer/package.json', 'src/renderer/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/install.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/install.stderr.log" >&2' EXIT
+          npm ci --no-audit --no-fund > "$RUNNER_TEMP/teamrun-ci/install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/install.stderr.log"
+
+      - name: Install renderer dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        working-directory: src/renderer
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/renderer-install.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/renderer-install.stderr.log" >&2' EXIT
+          npm ci --no-audit --no-fund --timing --logs-dir "$RUNNER_TEMP/teamrun-ci/npm-renderer" > "$RUNNER_TEMP/teamrun-ci/renderer-install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/renderer-install.stderr.log"
+
+      - name: Save installed dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            node_modules
+            src/renderer/node_modules
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
+
+      - name: Build packages and renderer
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/build.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/build.stderr.log" >&2' EXIT
+          npm run build > "$RUNNER_TEMP/teamrun-ci/build.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build.stderr.log"
+
+      - name: Retain the build for the targets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build
+          path: |
+            _packages/
+            _build/renderer/
+            _build/evidence/
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Retain diagnostic logs
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: logs-build-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/teamrun-ci/*.log
+            ${{ runner.temp }}/teamrun-ci/npm-renderer/
+          if-no-files-found: warn
+          retention-days: 7
+
   validate:
     name: Build and test (${{ matrix.target }})
-    needs: changes
+    needs: [changes, build]
     if: needs.changes.outputs.run-code == 'true'
     strategy:
       fail-fast: false
@@ -165,10 +255,15 @@ jobs:
             src/renderer/node_modules
           key: ${{ steps.dependencies.outputs.cache-primary-key }}
 
-      - name: Build packages and renderer
+      - name: Download the build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build
+
+      - name: Install the built packages
         run: |
-          trap 'cat "$RUNNER_TEMP/teamrun-ci/build.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/build.stderr.log" >&2' EXIT
-          npm run build > "$RUNNER_TEMP/teamrun-ci/build.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build.stderr.log"
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/build-install.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/build-install.stderr.log" >&2' EXIT
+          npm install --no-save --ignore-scripts --no-audit --no-fund ./_packages/*.tgz > "$RUNNER_TEMP/teamrun-ci/build-install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build-install.stderr.log"
 
       - name: Prepare Electron runtime
         run: |
@@ -291,7 +386,7 @@ jobs:
 
   validation-result:
     name: Build and test (all targets)
-    needs: [changes, validate]
+    needs: [changes, build, validate]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -300,18 +395,19 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_CODE: ${{ needs.changes.outputs.run-code }}
+          BUILD_RESULT: ${{ needs.build.result }}
           VALIDATION_RESULT: ${{ needs.validate.result }}
         run: |
           set -euo pipefail
-          case "$CHANGES_RESULT:$RUN_CODE:$VALIDATION_RESULT" in
-            success:false:skipped)
-              echo 'Documentation-only change: the code build/test matrix was intentionally skipped.' >> "$GITHUB_STEP_SUMMARY"
+          case "$CHANGES_RESULT:$RUN_CODE:$BUILD_RESULT:$VALIDATION_RESULT" in
+            success:false:skipped:skipped)
+              echo 'Documentation-only change: the code build and the test matrix were intentionally skipped.' >> "$GITHUB_STEP_SUMMARY"
               ;;
-            success:true:success)
-              echo 'Every required build and test target passed.' >> "$GITHUB_STEP_SUMMARY"
+            success:true:success:success)
+              echo 'The build and every required test target passed.' >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
-              echo '::error::Change classification or the required build/test targets did not complete successfully.'
+              echo '::error::Change classification, the build or the required test targets did not complete successfully.'
               exit 1
               ;;
           esac
