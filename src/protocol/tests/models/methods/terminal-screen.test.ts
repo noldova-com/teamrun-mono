@@ -16,6 +16,7 @@ export class TerminalScreenTests {
     id: "terminal-1",
     projectId: "project-1",
     shell: "zsh",
+    shellKind: "Zsh",
     conptyBuild: null,
     size: { columns: 80, rows: 24 },
     exitCode: 0,

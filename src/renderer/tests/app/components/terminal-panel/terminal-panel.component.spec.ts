@@ -16,6 +16,7 @@ import {
   TerminalInputParams,
   TerminalLineRange,
   TerminalScreen,
+  TerminalShellKind,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -44,7 +45,7 @@ describe("TerminalPanelComponent", () => {
   let opened: number;
 
   const stateOf = (id: string, exitCode: number | null = null, sequence: number = 0): TerminalState =>
-    new TerminalState(id, SampleData.project.id, "PowerShell", null, new TerminalSize(80, 24), exitCode, 0, sequence, new TerminalLineRange(0, 0));
+    new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exitCode, 0, sequence, new TerminalLineRange(0, 0));
   const inputs = (): string[] => bridge.requests.filter(t => t.method === MethodName.TerminalInput).map(t => TerminalInputParams.fromJson(t.payload).data);
   const prepare = async (platform: string): Promise<TerminalsService> => {
     bridge.info = { dataDirectory: "D:\\data", productVersion: "0.0.1-test", platform };

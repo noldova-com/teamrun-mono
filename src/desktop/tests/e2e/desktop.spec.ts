@@ -300,6 +300,25 @@ test("opens a terminal in the home folder when no project is selected", async ()
   await expect(terminal.locator(".xterm-rows")).not.toContainText("teamrun-ui-");
 });
 
+test("opens the shell chosen from the menu beside the new terminal button and shows its icon and name on its tab", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const dock = page.locator("tr-tab-group[data-side='Bottom']");
+  await expect(dock.locator("tr-terminal-panel textarea")).toBeFocused();
+
+  await dock.getByRole("button", { name: "Choose a shell", exact: true }).click();
+  await expect(page.getByRole("menuitem")).toHaveText([/Default$/, /Fixture shell$/]);
+  await desktop.capture("terminal-shell-menu");
+  await page.getByRole("menuitem", { name: /Fixture shell/ }).click();
+
+  const tab = dock.locator(".tr-tab[aria-selected='true']");
+  await expect(tab.locator(".tr-tab-label")).toHaveText("Fixture shell");
+  await expect(tab.locator(".tr-tab-shell-icon")).toHaveText("terminal");
+  await expect(dock.locator("tr-terminal-panel .xterm-rows")).toContainText("teamrun-fixture-shell-ready", { timeout: 60_000 });
+  await desktop.capture("terminal-chosen-shell");
+});
+
 test("quits when a window with a pending state save is destroyed", async () => {
   expect(await desktop.destroyWindow()).toBe(0);
 });

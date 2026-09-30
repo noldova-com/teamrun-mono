@@ -8,19 +8,20 @@
 
 import { TestBed } from "@angular/core/testing";
 
-import { MethodName, TerminalScreen } from "@noldova/teamrun-protocol";
+import { MethodName, TerminalScreen, TerminalShellKind } from "@noldova/teamrun-protocol";
 
 import { MemoryStorage } from "../../fixtures/memory-storage";
 import { SampleData } from "../../fixtures/sample-data";
 import { TerminalWindow } from "../../fixtures/terminal-window";
 import { PanelKind } from "../../../src/app/enums/panel-kind";
 import { Panel } from "../../../src/app/models/panel";
+import { Resources } from "../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../src/app/services/bridge.service";
 import { PanelLabels } from "../../../src/app/services/panel-labels.service";
 import { TerminalsService } from "../../../src/app/services/terminals.service";
 
 describe("PanelLabels", () => {
-  it("names a panel by its kind and a terminal by its shell", async () => {
+  it("names a panel by its kind and a terminal by its shell, whose icon it shows", async () => {
     MemoryStorage.install(window);
     const terminalWindow = TerminalWindow.install();
     onTestFinished(() => terminalWindow.restore());
@@ -36,5 +37,8 @@ describe("PanelLabels", () => {
     expect(labels.of(new Panel(PanelKind.Explorer))).toBe("Explorer");
     expect(labels.of(new Panel(PanelKind.Terminal, "t1"))).toBe("PowerShell");
     expect(labels.of(new Panel(PanelKind.Terminal, "ended"))).toBe("Terminal");
+    expect(labels.iconOf(new Panel(PanelKind.Terminal, "t1"))).toBe(Resources.shellKindIcons[TerminalShellKind.PowerShell]);
+    expect(labels.iconOf(new Panel(PanelKind.Terminal, "ended"))).toBeNull();
+    expect(labels.iconOf(new Panel(PanelKind.Explorer))).toBeNull();
   });
 });

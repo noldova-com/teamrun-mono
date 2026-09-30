@@ -19,6 +19,7 @@ import {
   TerminalOpenParams,
   TerminalOutputPayload,
   TerminalScreen,
+  TerminalShell,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -46,6 +47,7 @@ export class TerminalsService {
   private readonly preferences: PreferencesService = inject(PreferencesService);
   private readonly sessionsSignal: WritableSignal<ReadonlyMap<string, TerminalSession>> = signal(new Map());
   private readonly errorSignal: WritableSignal<string | null> = signal(null);
+  private readonly shellsSignal: WritableSignal<readonly TerminalShell[]> = signal([]);
   private readonly palette: Signal<ITheme> = computed(() => TerminalsService.paletteOf(this.theme.active()));
   private placed: ReadonlySet<string> = new Set();
   private lastUsed: string | null = null;
@@ -54,6 +56,7 @@ export class TerminalsService {
 
   public readonly sessions: Signal<ReadonlyMap<string, TerminalSession>> = this.sessionsSignal.asReadonly();
   public readonly error: Signal<string | null> = this.errorSignal.asReadonly();
+  public readonly shells: Signal<readonly TerminalShell[]> = this.shellsSignal.asReadonly();
 
   public constructor() {
     afterRenderEffect(() => {
@@ -75,6 +78,7 @@ export class TerminalsService {
   public async start(): Promise<void> {
     this.unsubscribe ??= this.bridge.subscribe(event => this.apply(event));
     await this.restore();
+    await this.loadShells();
   }
 
   public stop(): void {
@@ -89,10 +93,20 @@ export class TerminalsService {
     return Object.isNull(panel.instance) ? null : this.sessions().get(panel.instance) ?? null;
   }
 
-  public async open(groupId: number | null = null): Promise<void> {
+  public async loadShells(): Promise<void> {
+    await this.perform(async () => {
+      const listed = await this.bridge.call(MethodName.TerminalShells, null);
+      if (!Array.isArray(listed))
+        throw new TypeError(String(listed));
+
+      this.shellsSignal.set(listed.map(t => TerminalShell.fromJson(t)));
+    });
+  }
+
+  public async open(groupId: number | null = null, shellId: string | null = null): Promise<void> {
     const projectId = this.store.selectedProject()?.id ?? null;
     await this.perform(async () => {
-      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, null, this.nextSize()).toJson());
+      const opened = await this.bridge.call(MethodName.TerminalOpen, new TerminalOpenParams(projectId, shellId, this.nextSize()).toJson());
       const session = await this.attach(TerminalState.fromJson(opened));
       session.requestFocus();
       this.place(new Panel(PanelKind.Terminal, session.id), groupId);

@@ -7,7 +7,7 @@
  */
 
 import type { MatTooltipDefaultOptions, TooltipPosition } from "@angular/material/tooltip";
-import { AppUpdateState, AppUpdateStatus, AuthStatus } from "@noldova/teamrun-protocol";
+import { AppUpdateState, AppUpdateStatus, AuthStatus, TerminalShellKind } from "@noldova/teamrun-protocol";
 
 import markDark from "../../../../assets/icons/icon-dark-128.png";
 import markLight from "../../../../assets/icons/icon-light-128.png";
@@ -443,6 +443,8 @@ export class Resources {
   public static readonly panelTabSelector: string = ".tr-tab[data-panel]";
   public static readonly terminalSelector: string = ".tr-terminal";
   public static readonly newTerminalLabel: string = "New terminal";
+  public static readonly chooseShellLabel: string = "Choose a shell";
+  public static readonly defaultShellMark: string = "Default";
   public static readonly restartTerminalLabel: string = "Restart";
   public static readonly defaultTerminalColumns: number = 80;
   public static readonly defaultTerminalRows: number = 24;
@@ -1097,6 +1099,16 @@ export class Resources {
     new ThemeToken("--tr-code", "teamrun.codeBackground", "sideBar.background"),
     new ThemeToken("--tr-code-header", "teamrun.codeHeaderBackground", "editorWidget.background")
   ];
+
+  public static readonly shellKindIcons: Readonly<Record<TerminalShellKind, string>> = {
+    [TerminalShellKind.PowerShell]: "terminal",
+    [TerminalShellKind.CommandPrompt]: "chevron_right",
+    [TerminalShellKind.Bash]: "attach_money",
+    [TerminalShellKind.Zsh]: "percent",
+    [TerminalShellKind.Fish]: "set_meal",
+    [TerminalShellKind.Wsl]: "deployed_code",
+    [TerminalShellKind.Other]: "terminal"
+  };
 
   public static readonly icons: Readonly<Record<string, string>> = {
     image: "image",

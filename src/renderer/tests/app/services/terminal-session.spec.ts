@@ -17,6 +17,7 @@ import {
   TerminalOutputPayload,
   TerminalResizeParams,
   TerminalScreen,
+  TerminalShellKind,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -86,7 +87,7 @@ describe("TerminalSession", () => {
   });
 
   it("follows the Windows pseudo-console only for a terminal that runs in one", () => {
-    const windows = new TerminalState("t2", SampleData.project.id, "PowerShell", 26200, new TerminalSize(80, 24), null, 0, 0, stored);
+    const windows = new TerminalState("t2", SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, 26200, new TerminalSize(80, 24), null, 0, 0, stored);
     const other = new Terminal();
     const onWindows = new TerminalSession(windows, other, new FakeFitAddon(), new FakeWebglAddon(), TestBed.inject(BridgeService));
 

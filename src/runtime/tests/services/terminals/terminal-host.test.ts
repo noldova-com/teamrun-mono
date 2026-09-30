@@ -26,6 +26,7 @@ import {
   TerminalResizeParams,
   TerminalScreen,
   TerminalShell,
+  TerminalShellKind,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -92,6 +93,7 @@ export class TerminalHostTests {
 
       Assert.areEqual("fixture:true,fixture-other:false", shells.map(t => `${t.id}:${String(t.isDefault)}`).join(","));
       Assert.areEqual("Other fixture", opened.shell);
+      Assert.areEqual(TerminalShellKind.Bash, opened.shellKind);
     }
     finally {
       await host.shutdown();

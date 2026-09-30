@@ -31,6 +31,8 @@ import {
   ProjectIdParams,
   RequestedSettings,
   TerminalLineRange,
+  TerminalShell,
+  TerminalShellKind,
   TerminalSize,
   TerminalState
 } from "@noldova/teamrun-protocol";
@@ -45,6 +47,10 @@ export class SampleData {
     new ProviderAccount("a1", "codex", "Work", "D:\\profiles\\codex", AuthStatus.LoggedIn, null, "1.0", SampleData.timestamp, null, SampleData.timestamp);
   public static readonly project: Project = new Project("p1", "repo", "D:\\repo", SampleData.timestamp);
   public static readonly otherProject: Project = new Project("p2", "other", "D:\\other", SampleData.timestamp);
+  public static readonly shells: readonly TerminalShell[] = [
+    new TerminalShell("pwsh", "PowerShell", TerminalShellKind.PowerShell, true),
+    new TerminalShell("cmd", "Command Prompt", TerminalShellKind.CommandPrompt, false)
+  ];
   public static readonly conversation: Conversation = new Conversation("c1", "p1", "First", SampleData.timestamp, SampleData.timestamp);
   public static readonly userMessage: Message =
     new Message("m1", "c1", 0, MessageAuthor.User, null, MessageStatus.Completed, [SampleData.detail(0, DetailKind.Text, "hello")], null, SampleData.timestamp, null,
@@ -83,6 +89,7 @@ export class SampleData {
       .answer(MethodName.ConversationListMembers, () => [])
       .answer(MethodName.ProjectList, () => [SampleData.project.toJson()])
       .answer(MethodName.TerminalList, () => [])
+      .answer(MethodName.TerminalShells, () => SampleData.shells.map(t => t.toJson()))
       .answer(MethodName.ConversationList, payload => ProjectIdParams.fromJson(payload).projectId === SampleData.project.id ? [SampleData.conversation.toJson()] : [])
       .answer(MethodName.MessageList, () => [SampleData.userMessage.toJson(), SampleData.reply.toJson()])
       .answer(MethodName.MessageListOpen, () => [])
@@ -93,7 +100,7 @@ export class SampleData {
   }
 
   public static terminal(id: string, sequence: number = 0, exitCode: number | null = null, restartCount: number = 0): TerminalState {
-    return new TerminalState(id, SampleData.project.id, "PowerShell", null, new TerminalSize(80, 24), exitCode, restartCount, sequence,
+    return new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exitCode, restartCount, sequence,
       new TerminalLineRange(0, 0));
   }
 
