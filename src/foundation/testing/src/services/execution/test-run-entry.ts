@@ -29,6 +29,7 @@ export class TestRunEntry {
   public async runAsync(): Promise<void> {
     const testProjectArguments = process.argv.slice(2);
     const summary = new GitHubSummaryWriter(process.env[Resources.gitHubSummaryVariable]);
+    this.keepCoverageFromChildren();
 
     try {
       const filters = this.parseFilters(process.env[TestRunEntry.FILTERS_VARIABLE]);
@@ -64,6 +65,16 @@ export class TestRunEntry {
       summary.writeFailure(failure);
       process.exit(Resources.failedExitCode);
     }, Resources.testShutdownGraceMilliseconds).unref();
+  }
+
+  // Node read the coverage folder at start and still writes this process's report; a child killed while writing its own
+  // would leave a broken report that fails the gate, so children get the folder only from a test that waits for them.
+  private keepCoverageFromChildren(): void {
+    const directory = process.env[Resources.coverageVariable];
+    if (!Object.isUndefined(directory)) {
+      process.env[Resources.coverageDirectoryVariable] = directory;
+      delete process.env[Resources.coverageVariable];
+    }
   }
 
   private parseFilters(text: string | undefined): string[] {

@@ -10,7 +10,7 @@ import fs, { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
-import { Assert, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, CoverageEnvironment, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { ErrorCode, MethodName, ProtocolVersion } from "@noldova/teamrun-protocol";
 import { ConnectionException, Endpoint, LaunchException, LockFile, ProcessProbe, RuntimeBuildMismatchException, RuntimeEntry, RuntimeLauncher,
   RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
@@ -23,6 +23,7 @@ import { Wait } from "../fixtures/wait.fixture.js";
 @TestClass
 export class RuntimeLauncherTests {
   private static readonly timings: RuntimeTimings = new RuntimeTimings(2000, 5000, 15000, 50);
+  private static readonly environment: NodeJS.ProcessEnv = CoverageEnvironment.forChild(process.env);
 
   @TestMethod
   public async refusesAnotherBuildWithoutConnectingOrReplacingItsLock(): Promise<void> {
@@ -36,7 +37,8 @@ export class RuntimeLauncherTests {
       "C:\\Other\\TeamRun.exe");
     RuntimeLauncherTests.writeLock(settings, lock);
     const original = readFileSync(settings.lockPath, "utf8");
-    const launcher = new RuntimeLauncher(settings, process.execPath, directory.resolve("must-not-launch.js"), [], process.env, RuntimeLauncherTests.timings);
+    const launcher = new RuntimeLauncher(settings, process.execPath, directory.resolve("must-not-launch.js"), [], RuntimeLauncherTests.environment,
+      RuntimeLauncherTests.timings);
 
     const checked = Assert.throws(() => launcher.assertSameBuild(), RuntimeBuildMismatchException);
     const refused = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), RuntimeBuildMismatchException);
@@ -53,7 +55,7 @@ export class RuntimeLauncherTests {
   public async leavesARuntimeOfAnotherBuildServingItsClients(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
     const client = await launcher.attach("original", new RecordingClientListener());
     const lock = launcher.readLiveLock();
@@ -80,7 +82,7 @@ export class RuntimeLauncherTests {
   public async startsARuntimeProcessThenAttachesToIt(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
     const first = new RecordingClientListener();
     const second = new RecordingClientListener();
@@ -110,7 +112,7 @@ export class RuntimeLauncherTests {
   public async replacesAStaleLockOfAnotherBuildWhoseProcessIdIsAliveButThatNoRuntimeHolds(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
     const staleLock = new RuntimeLock(process.pid, Endpoint.tcp(1), "token", ProtocolVersion.current, "0.0.1", "2026-09-10T00:00:00.000Z", "another-build");
     RuntimeLauncherTests.writeLock(settings, staleLock);
@@ -133,20 +135,22 @@ export class RuntimeLauncherTests {
     const exiting = directory.resolve("exit.js");
     mkdirSync(directory.path, { recursive: true });
     writeFileSync(exiting, "process.exit(0);\n");
-    const launcher = new RuntimeLauncher(settings, process.execPath, exiting, [], process.env, new RuntimeTimings(500, 500, 1500, 50));
+    const launcher = new RuntimeLauncher(settings, process.execPath, exiting, [], RuntimeLauncherTests.environment, new RuntimeTimings(500, 500, 1500, 50));
 
     const failure = await Assert.throwsAsync(() => launcher.attach("client", new RecordingClientListener()), LaunchException);
 
     Assert.areEqual("The runtime could not be started: The runtime did not publish its endpoint in time.", failure.message);
-    Assert.throws(() => new RuntimeLauncher(settings, " ", RuntimeEntry.entryPath, [], process.env, RuntimeLauncherTests.timings), ArgumentException);
-    Assert.throws(() => new RuntimeLauncher(settings, process.execPath, "", [], process.env, RuntimeLauncherTests.timings), ArgumentException);
+    Assert.throws(() => new RuntimeLauncher(settings, " ", RuntimeEntry.entryPath, [], RuntimeLauncherTests.environment, RuntimeLauncherTests.timings),
+      ArgumentException);
+    Assert.throws(() => new RuntimeLauncher(settings, process.execPath, "", [], RuntimeLauncherTests.environment, RuntimeLauncherTests.timings),
+      ArgumentException);
   }
 
   @TestMethod
   public async reportsARefusedHelloInsteadOfStartingAnotherRuntime(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-launch", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
     const client = await launcher.attach("starter", new RecordingClientListener());
     const lock = launcher.readLiveLock();
@@ -172,7 +176,7 @@ export class RuntimeLauncherTests {
   public async reportsAProcessCreationFailureInsteadOfAnUnhandledError(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", 400);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["invalid\0argument"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["invalid\0argument"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
 
     const error = await Assert.throwsAsync(async () => {
@@ -190,7 +194,7 @@ export class RuntimeLauncherTests {
   public async reportsMissingLinuxPrerequisitesBeforeWaitingForAnEndpoint(): Promise<void> {
     using directory = new TemporaryDirectory();
     const settings = RuntimeSettings.forPlatform(process.platform, directory.resolve("data"), "0.0.1-test", null);
-    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], process.env,
+    const launcher = new RuntimeLauncher(settings, process.execPath, RuntimeEntry.entryPath, ["--providers", "none"], RuntimeLauncherTests.environment,
       RuntimeLauncherTests.timings);
     const originalAccess = fs.accessSync;
     try {

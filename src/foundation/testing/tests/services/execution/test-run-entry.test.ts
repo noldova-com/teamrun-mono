@@ -14,7 +14,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { Assert, TestClass, TestData, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, CoverageEnvironment, TestClass, TestData, TestMethod } from "@noldova/teamrun-foundation-testing";
 
 import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
 
@@ -22,6 +22,7 @@ import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
 export class TestRunEntryTests {
   @TestMethod
   @TestData("finishesCleanly", 0, null)
+  @TestData("keepsTheCoverageFolderOutOfItsEnvironment", 0, null)
   @TestData("passesButLeaksATimer", 1, "resources remain open: Timeout")
   @TestData("failsAndLeaksATimer", 1, "resources remain open: Timeout")
   @TestData("passesButLeaksAWorkerThread", 1, "Node names no open resource; a worker thread or a native handle keeps it alive")
@@ -154,7 +155,7 @@ export class TestRunEntryTests {
   }
 
   private async runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", summaryPath?: string): Promise<EntryRun> {
-    const environment = { ...process.env };
+    const environment = CoverageEnvironment.forChild(process.env);
     // Fixture subprocesses must not append their deliberately failing results to the real CI summary.
     delete environment["GITHUB_STEP_SUMMARY"];
     if (!Object.isUndefined(summaryPath))
@@ -166,6 +167,8 @@ export class TestRunEntryTests {
 
     // The entry's stderr goes to a file, as in CI, so the child's open resources are its own and not pipes to this process.
     const directory = await mkdtemp(join(tmpdir(), "teamrun-entry-output-"));
+    // The entry is measured through this child, which exits on its own; the timeout only guards against a hang.
+    environment["NODE_V8_COVERAGE"] ??= join(directory, "coverage");
     const errorPath = join(directory, "stderr.log");
     const errorFile = openSync(errorPath, "w");
     try {
@@ -173,7 +176,7 @@ export class TestRunEntryTests {
         const child = spawn(
           process.execPath,
           ["node_modules/@noldova/teamrun-foundation-testing/services/execution/test-run-entry.js", ...arguments_],
-          { env: environment, shell: false, timeout: 5000, stdio: ["ignore", "ignore", errorFile] });
+          { env: environment, shell: false, timeout: 30_000, stdio: ["ignore", "ignore", errorFile] });
         child.on("close", t => resolve(t ?? -1));
         child.on("error", reject);
       });
