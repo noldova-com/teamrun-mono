@@ -8,7 +8,7 @@
 
 import Script from "./script.ts";
 
-class TestPackage extends Script {
+export default class TestPackage extends Script {
   private static readonly TYPECHECK_ARGUMENTS: readonly string[] = ["--project", "scripts/tsconfig.json"];
   private static readonly COVERAGE_ARGUMENTS: readonly string[] = [
     "--test", "--experimental-test-coverage", "--test-coverage-include-all", "--test-coverage-exclude=scripts/tests/**",
@@ -25,7 +25,6 @@ class TestPackage extends Script {
     "scripts/tests/packaging/windows-installer-policy.test.ts", "scripts/tests/packaging/app-image-launcher.test.ts"
   ];
   private static readonly SIGNING_ARGUMENTS: readonly string[] = [
-    "--test-concurrency=1",
     "--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
     "--test-coverage-include=scripts/packaging/windows-sign-hook.ts",
     "scripts/tests/packaging/trusted-signing-module.test.ts", "scripts/tests/packaging/windows-sign-hook.test.ts"

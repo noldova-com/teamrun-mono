@@ -35,13 +35,16 @@ class WindowsSignHookTests {
     test("the hook signs the given file with the module saved under the working directory", async t => {
       const originalDirectory = process.cwd();
       const originalModulePath = process.env["PSModulePath"];
+      const originalUserProfile = process.env["USERPROFILE"];
       const root = await mkdtemp(path.join(tmpdir(), "teamrun-sign-hook-"));
       t.after(async () => {
         process.chdir(originalDirectory);
         if (originalModulePath === undefined) delete process.env["PSModulePath"]; else process.env["PSModulePath"] = originalModulePath;
+        if (originalUserProfile === undefined) delete process.env["USERPROFILE"]; else process.env["USERPROFILE"] = originalUserProfile;
         await rm(root, { recursive: true, force: true });
       });
       process.chdir(root);
+      process.env["USERPROFILE"] = root;
       const modules = await PowerShellGalleryFixture.writeAsync(path.join(root, "gallery-fixture"), "0.5.8");
       process.env["PSModulePath"] = PowerShellGalleryFixture.modulePath(modules);
       await new TrustedSigningModule().prepareAsync();

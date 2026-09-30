@@ -144,7 +144,13 @@ class PackageOrchestrationTests {
         PackageScriptFixture.compilerCommands.length = 0;
         PackageScriptFixture.processCommands.length = 0;
         t.mock.property(process, "platform", platform);
-        await import(`../test-package.ts?${platform}`);
+        try {
+          if (platform === "linux")
+            await import("../test-package.ts");
+          else
+            await new (await import("../test-package.ts")).default().runAsync();
+        }
+        finally { t.mock.restoreAll(); }
         assert.deepEqual(PackageScriptFixture.compilerCommands, [["--project", "scripts/tsconfig.json"]]);
         const commands = PackageScriptFixture.processCommands;
         assert.equal(commands.length, platform === "win32" ? 3 : 2);
@@ -159,7 +165,7 @@ class PackageOrchestrationTests {
         const signing = commands.filter(command => command.some(t => t.includes("trusted-signing-module") || t.includes("windows-sign-hook")));
         if (platform === "win32") {
           assert.deepEqual(signing, [commands[1]]);
-          for (const argument of ["--test-concurrency=1", "--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
+          for (const argument of ["--test-coverage-include=scripts/packaging/trusted-signing-module.ts",
             "--test-coverage-include=scripts/packaging/windows-sign-hook.ts", "scripts/tests/packaging/trusted-signing-module.test.ts",
             "scripts/tests/packaging/windows-sign-hook.test.ts"])
             assert.ok(commands[1]?.includes(argument), argument);

@@ -120,7 +120,7 @@ npm run test:package
 npm run package
 ```
 
-`npm run test:package` needs PowerShell 7 (`pwsh`) on the path: it runs the Windows signing commands against a fixture module in a disposable folder, without the PowerShell Gallery, credentials or the user's module folders.
+On Windows, `npm run test:package` needs PowerShell 7 (`pwsh`) on the path: it runs the Windows signing commands against a fixture module in a disposable folder, without the PowerShell Gallery, credentials or the user's module folders. Each of these tests gives the `pwsh` it starts its own `USERPROFILE`, so PowerShell keeps its start-up and module caches in that folder rather than sharing them with parallel tests. Other platforms do not run these tests.
 
 Packaging defaults to the host OS and CPU. Select `--platform windows|linux|mac` and `--arch x64|arm64` explicitly when needed; a different CPU may be packaged on the same OS, but execution still requires the native target. Use `--dir` for an unpacked application. Outputs are isolated under `_build/package/<platform>-<arch>`:
 
