@@ -40,7 +40,7 @@ export class ElectronUpdateBackendTests {
       const unsigned = directory.resolve("unsigned");
       Assert.areEqual([Resources.updateSignatureRejected, Resources.updateSignatureRejected].join("|"), (await ElectronUpdateBackendTests.run(directory, [
         { dataDirectory: otherPublisher, feedUrl: feed("signed"), publisher: Resources.windowsPublisher },
-        { dataDirectory: unsigned, feedUrl: feed("unsigned"), publisher: Authenticode.nodeSigner }])).join("|"));
+        { dataDirectory: unsigned, feedUrl: feed("unsigned"), publisher: Authenticode.smallSigner }])).join("|"));
       Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, otherPublisher)).join());
       Assert.areEqual("", (await ElectronUpdateBackendTests.pendingInstallers(directory, unsigned)).join());
     });
@@ -51,7 +51,7 @@ export class ElectronUpdateBackendTests {
     await ElectronUpdateBackendTests.withFeed(async (directory, feed) => {
       const data = directory.resolve("data");
       Assert.areEqual("", (await ElectronUpdateBackendTests.run(directory, [
-        { dataDirectory: data, feedUrl: feed("signed"), publisher: Authenticode.nodeSigner }])).join("|"));
+        { dataDirectory: data, feedUrl: feed("signed"), publisher: Authenticode.smallSigner }])).join("|"));
       Assert.areEqual(ElectronUpdateBackendTests.INSTALLER, (await ElectronUpdateBackendTests.pendingInstallers(directory, data)).join());
       Assert.areEqual(Resources.updateSignatureRejected, (await ElectronUpdateBackendTests.run(directory, [
         { dataDirectory: data, feedUrl: feed("signed"), publisher: Resources.windowsPublisher }])).join("|"));
@@ -62,7 +62,7 @@ export class ElectronUpdateBackendTests {
   private static async withFeed(body: (directory: TemporaryDirectory, feed: (name: string) => string) => Promise<void>): Promise<void> {
     Assert.isTrue(existsSync(ElectronUpdateBackendTests.BINARY), "Prepare the development binary with npm run desktop -- --prepare-only.");
     using directory = new TemporaryDirectory();
-    const server = await ElectronUpdateBackendTests.serve(new Map([["signed", await readFile(process.execPath)], ["unsigned", Buffer.from("not signed")]]));
+    const server = await ElectronUpdateBackendTests.serve(new Map([["signed", await readFile(Authenticode.smallSignedFile)], ["unsigned", Buffer.from("not signed")]]));
     try {
       await body(directory, name => `http://127.0.0.1:${(server.address() as AddressInfo).port}/${name}/`);
     }
