@@ -38,6 +38,7 @@ import { Resources } from "../../../src/app/resources";
 import { TEAMRUN_BRIDGE } from "../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../src/app/services/chat-store.service";
 import { LayoutService } from "../../../src/app/services/layout.service";
+import { PreferencesService } from "../../../src/app/services/preferences.service";
 import { TerminalsService } from "../../../src/app/services/terminals.service";
 
 describe("TerminalsService", () => {
@@ -83,7 +84,7 @@ describe("TerminalsService", () => {
     const layout = TestBed.inject(LayoutService);
 
     await terminals.open();
-    expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, null, new TerminalSize(80, 24)).toJson()]);
+    expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, "pwsh", new TerminalSize(80, 24)).toJson()]);
     expect(layout.dock(DockSide.Bottom).panels).toEqual([activity, terminal("t1")]);
     expect(layout.dock(DockSide.Bottom).collapsed).toBe(false);
     expect([...terminals.sessions().keys()]).toEqual(["t1"]);
@@ -102,6 +103,7 @@ describe("TerminalsService", () => {
   it("lists the shells, opens the one chosen and reports a list that cannot be read", async () => {
     const terminals = await start();
     expect(terminals.shells()).toEqual(SampleData.shells);
+    expect(terminals.defaultShell()?.id).toBe("pwsh");
 
     await terminals.open(null, "cmd");
     expect(requests(MethodName.TerminalOpen)).toEqual([new TerminalOpenParams(SampleData.project.id, "cmd", new TerminalSize(80, 24)).toJson()]);
@@ -110,6 +112,25 @@ describe("TerminalsService", () => {
     await terminals.loadShells();
     expect(terminals.error()).not.toBeNull();
     expect(terminals.shells()).toEqual(SampleData.shells);
+  });
+
+  it("opens new terminals with the chosen default shell while it is installed, and with the platform's otherwise", async () => {
+    const terminals = await start();
+    const preferences = TestBed.inject(PreferencesService);
+
+    preferences.setDefaultShellId("cmd");
+    expect(terminals.defaultShell()?.id).toBe("cmd");
+    await terminals.open();
+    preferences.setDefaultShellId("uninstalled");
+    expect(terminals.defaultShell()?.id).toBe("pwsh");
+    await terminals.open();
+    bridge.answer(MethodName.TerminalShells, () => []);
+    await terminals.loadShells();
+    expect(terminals.defaultShell()).toBeNull();
+    await terminals.open();
+
+    expect(requests(MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t).shellId)).toEqual(["cmd", "pwsh", null]);
+    expect(requests(MethodName.TerminalShells)).toHaveLength(3);
   });
 
   it("opens a terminal in the home folder without a selected project and reports a terminal that cannot open", async () => {
@@ -124,6 +145,8 @@ describe("TerminalsService", () => {
     bridge.fail(MethodName.TerminalOpen, ErrorCode.NotFound, "The terminal's folder does not exist.");
     await terminals.open();
     expect(requests(MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t).projectId)).toEqual([null, SampleData.project.id]);
+    expect(requests(MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t).shellId)).toEqual(["pwsh", "pwsh"]);
+    expect(requests(MethodName.TerminalShells)).toHaveLength(1);
     expect(terminals.error()).toBe("The terminal's folder does not exist.");
     terminals.dismissError();
     expect(terminals.error()).toBeNull();

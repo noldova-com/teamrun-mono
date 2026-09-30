@@ -29,6 +29,7 @@ export class Preferences {
   public readonly dateTimeFormat: string;
   public readonly openMode: OpenMode;
   public readonly imageOpenMode: ImageOpenMode;
+  public readonly defaultShellId: string | null;
 
   public constructor(
     theme: string,
@@ -43,7 +44,8 @@ export class Preferences {
     timeFormat: string = Resources.defaultTimeFormat,
     dateTimeFormat: string = Resources.defaultDateTimeFormat,
     openMode: OpenMode = OpenMode.DoubleClick,
-    imageOpenMode: ImageOpenMode = ImageOpenMode.Popup) {
+    imageOpenMode: ImageOpenMode = ImageOpenMode.Popup,
+    defaultShellId: string | null = null) {
     this.theme = theme;
     this.interfaceFont = interfaceFont;
     this.codeFont = codeFont;
@@ -57,6 +59,7 @@ export class Preferences {
     this.dateTimeFormat = dateTimeFormat;
     this.openMode = openMode;
     this.imageOpenMode = imageOpenMode;
+    this.defaultShellId = defaultShellId;
   }
 
   public static createDefault(): Preferences {
@@ -91,7 +94,8 @@ export class Preferences {
       Preferences.readOptionalString(record[Resources.timeFormatField]) ?? defaults.timeFormat,
       Preferences.readOptionalString(record[Resources.dateTimeFormatField]) ?? defaults.dateTimeFormat,
       Preferences.readChoice(record[Resources.openModeField], Object.values(OpenMode), defaults.openMode),
-      Preferences.readChoice(record[Resources.imageOpenModeField], Object.values(ImageOpenMode), defaults.imageOpenMode));
+      Preferences.readChoice(record[Resources.imageOpenModeField], Object.values(ImageOpenMode), defaults.imageOpenMode),
+      Preferences.readOptionalString(record[Resources.defaultShellIdField]));
   }
 
   public toJson(): Record<string, unknown> {
@@ -112,7 +116,8 @@ export class Preferences {
       [Resources.timeFormatField]: this.timeFormat,
       [Resources.dateTimeFormatField]: this.dateTimeFormat,
       [Resources.openModeField]: this.openMode,
-      [Resources.imageOpenModeField]: this.imageOpenMode
+      [Resources.imageOpenModeField]: this.imageOpenMode,
+      [Resources.defaultShellIdField]: this.defaultShellId
     };
   }
 
@@ -130,7 +135,8 @@ export class Preferences {
       changes.timeFormat ?? this.timeFormat,
       changes.dateTimeFormat ?? this.dateTimeFormat,
       changes.openMode ?? this.openMode,
-      changes.imageOpenMode ?? this.imageOpenMode);
+      changes.imageOpenMode ?? this.imageOpenMode,
+      changes.defaultShellId ?? this.defaultShellId);
   }
 
   private static readTheme(value: unknown, fallback: string): string {

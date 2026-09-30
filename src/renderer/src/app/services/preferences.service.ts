@@ -39,6 +39,7 @@ export class PreferencesService {
   public readonly dateTimeFormat: Signal<string> = computed(() => this.current().dateTimeFormat);
   public readonly openMode: Signal<OpenMode> = computed(() => this.current().openMode);
   public readonly imageOpenMode: Signal<ImageOpenMode> = computed(() => this.current().imageOpenMode);
+  public readonly defaultShellId: Signal<string | null> = computed(() => this.current().defaultShellId);
   public readonly clock: Signal<ClockChoice> =
     computed(() => this.current().timeFormat.includes(Resources.meridiemToken) ? ClockChoice.TwelveHour : ClockChoice.TwentyFourHour);
 
@@ -110,6 +111,10 @@ export class PreferencesService {
 
   public setDefaultComposer(defaultComposer: ComposerSettings | null): void {
     this.update(current => current.with({ defaultComposer }));
+  }
+
+  public setDefaultShellId(defaultShellId: string): void {
+    this.update(current => current.with({ defaultShellId }));
   }
 
   public composerFor(conversationId: string): ComposerSettings | null {

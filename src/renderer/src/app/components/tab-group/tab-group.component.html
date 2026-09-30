@@ -47,7 +47,7 @@ LICENSE file in the root directory of this source tree.
             <button mat-menu-item class="tr-terminal-shell" (click)="terminals.open(group().id, shell.id)">
               <mat-icon>{{ resources.shellKindIcons[shell.kind] }}</mat-icon>
               <span>{{ shell.name }}</span>
-              @if (shell.isDefault) {
+              @if (shell.id === terminals.defaultShell()?.id) {
                 <span class="tr-muted ml-2">{{ resources.defaultShellMark }}</span>
               }
             </button>

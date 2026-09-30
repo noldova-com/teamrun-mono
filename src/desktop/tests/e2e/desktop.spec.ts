@@ -319,6 +319,26 @@ test("opens the shell chosen from the menu beside the new terminal button and sh
   await desktop.capture("terminal-chosen-shell");
 });
 
+test("opens new terminals with the default shell chosen in Settings", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.locator(".tr-settings-nav").getByText("Terminal", { exact: true }).click();
+  const select = page.getByRole("combobox", { name: "Default shell" });
+  await expect(select).not.toHaveText("");
+  await select.click();
+  await page.getByRole("option", { name: "Fixture shell", exact: true }).click();
+  await expect(select).toHaveText("Fixture shell");
+  await desktop.capture("terminal-settings");
+
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const dock = page.locator("tr-tab-group[data-side='Bottom']");
+  await expect(dock.locator(".tr-tab[aria-selected='true'] .tr-tab-label")).toHaveText("Fixture shell");
+  await expect(dock.locator("tr-terminal-panel .xterm-rows")).toContainText("teamrun-fixture-shell-ready", { timeout: 60_000 });
+  await dock.getByRole("button", { name: "Choose a shell", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: /Default/ })).toHaveText(/Fixture shell/);
+});
+
 test("quits when a window with a pending state save is destroyed", async () => {
   expect(await desktop.destroyWindow()).toBe(0);
 });

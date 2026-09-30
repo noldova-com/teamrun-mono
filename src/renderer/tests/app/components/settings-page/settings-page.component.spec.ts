@@ -8,6 +8,8 @@
 
 import { TestBed } from "@angular/core/testing";
 
+import { MethodName } from "@noldova/teamrun-protocol";
+
 import { ClockChoice } from "../../../../src/app/enums/clock-choice";
 import { SettingsSection } from "../../../../src/app/enums/settings-section";
 import { ShortcutAction } from "../../../../src/app/enums/shortcut-action";
@@ -17,6 +19,7 @@ import { TEAMRUN_BRIDGE } from "../../../../src/app/services/bridge.service";
 import { ChatStore } from "../../../../src/app/services/chat-store.service";
 import { NavigationService } from "../../../../src/app/services/navigation.service";
 import { PreferencesService } from "../../../../src/app/services/preferences.service";
+import { TerminalsService } from "../../../../src/app/services/terminals.service";
 import { MemoryStorage } from "../../../fixtures/memory-storage";
 import { SampleData } from "../../../fixtures/sample-data";
 import { SettingsPageComponent } from "../../../../src/app/components/settings-page/settings-page.component";
@@ -66,6 +69,7 @@ describe("SettingsPageComponent", () => {
       [SettingsSection.Appearance, Resources.themeLabel],
       [SettingsSection.Providers, SampleData.account.label],
       [SettingsSection.Teammates, Resources.noTeammates],
+      [SettingsSection.Terminal, Resources.defaultShellLabel],
       [SettingsSection.Gallery, Resources.galleryHint],
       [SettingsSection.About, Resources.licensesTitle]
     ];
@@ -114,5 +118,33 @@ describe("SettingsPageComponent", () => {
     expect(element.textContent).toContain(SampleData.codex.displayName);
     expect(bridge.methods.filter(t => t === "ProviderModelCatalog").length).toBeGreaterThan(0);
     store.dispose();
+  });
+
+  it("chooses the default shell from the installed shells", async () => {
+    MemoryStorage.install(window);
+    const bridge = SampleData.createBridge();
+    TestBed.configureTestingModule({ imports: [SettingsPageComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    TestBed.inject(NavigationService).openSettings(SettingsSection.Terminal);
+    const fixture = TestBed.createComponent(SettingsPageComponent);
+    const element = fixture.nativeElement as HTMLElement;
+    const select = (): HTMLElement => element.querySelector<HTMLElement>(".tr-default-shell-select")!;
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(select().textContent?.trim()).toBe("PowerShell");
+    });
+
+    select().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const options = Array.from(document.querySelectorAll<HTMLElement>("mat-option"));
+    expect(options.map(t => t.textContent?.trim())).toEqual(["PowerShell", "Command Prompt"]);
+    options[1]!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(PreferencesService).defaultShellId()).toBe("cmd");
+    expect(TestBed.inject(TerminalsService).defaultShell()?.id).toBe("cmd");
+    expect(select().getAttribute("aria-label")).toBe(Resources.defaultShellLabel);
+    expect(bridge.methods.filter(t => t === MethodName.TerminalShells)).toHaveLength(1);
   });
 });

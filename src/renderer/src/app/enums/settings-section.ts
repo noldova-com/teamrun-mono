@@ -11,6 +11,7 @@ export enum SettingsSection {
   Appearance = "Appearance",
   Providers = "Providers",
   Teammates = "Teammates",
+  Terminal = "Terminal",
   Shortcuts = "Shortcuts",
   Gallery = "Gallery",
   About = "About"
