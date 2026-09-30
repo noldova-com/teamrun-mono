@@ -167,7 +167,6 @@ export class TestRunEntryTests {
 
     // The entry's stderr goes to a file, as in CI, so the child's open resources are its own and not pipes to this process.
     const directory = await mkdtemp(join(tmpdir(), "teamrun-entry-output-"));
-    // The entry is measured through this child, which exits on its own; the timeout only guards against a hang.
     environment["NODE_V8_COVERAGE"] ??= join(directory, "coverage");
     const errorPath = join(directory, "stderr.log");
     const errorFile = openSync(errorPath, "w");

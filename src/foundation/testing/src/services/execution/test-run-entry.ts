@@ -67,8 +67,6 @@ export class TestRunEntry {
     }, Resources.testShutdownGraceMilliseconds).unref();
   }
 
-  // Node read the coverage folder at start and still writes this process's report; a child killed while writing its own
-  // would leave a broken report that fails the gate, so children get the folder only from a test that waits for them.
   private keepCoverageFromChildren(): void {
     const directory = process.env[Resources.coverageVariable];
     if (!Object.isUndefined(directory)) {
