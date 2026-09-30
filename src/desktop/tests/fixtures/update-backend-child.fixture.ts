@@ -29,8 +29,11 @@ class UpdateBackendChild {
       const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: item.feedUrl }, true, process.platform, process.arch, true, item.publisher);
       const backend = new ElectronUpdateBackend(settings, item.dataDirectory);
       let refusal: string | null = null;
+      const started = performance.now();
+      let checked = started;
       try {
         const version = await backend.check();
+        checked = performance.now();
         if (version !== "99.0.0") throw new Error(`Unexpected update version: ${version}`);
         await backend.download(() => undefined);
       }
@@ -39,7 +42,7 @@ class UpdateBackendChild {
         refusal = error.message;
       }
       finally { backend.dispose(); }
-      console.log(JSON.stringify({ refusal }));
+      console.log(JSON.stringify({ refusal, readyMs: Math.round(started), checkMs: Math.round(checked - started), downloadMs: Math.round(performance.now() - checked) }));
     }
   }
 }

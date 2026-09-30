@@ -91,6 +91,7 @@ export class ElectronUpdateBackendTests {
   }
 
   private static async run(directory: TemporaryDirectory, cases: readonly IUpdateCase[]): Promise<readonly (string | null)[]> {
+    const started = performance.now();
     const environment: NodeJS.ProcessEnv = { ...process.env, LOCALAPPDATA: directory.resolve("local"), TEAMRUN_TEST_USER_DATA: directory.resolve("user-data"),
       TEAMRUN_TEST_CASES: JSON.stringify(cases) };
     delete environment["ELECTRON_RUN_AS_NODE"];
@@ -108,6 +109,7 @@ export class ElectronUpdateBackendTests {
       child.once("exit", exitCode => { clearTimeout(timer); done(exitCode); });
     });
     Assert.areEqual(0, code, errors);
+    console.error(`[timing #235] electron run of ${cases.length} case(s): ${Math.round(performance.now() - started)} ms; ${output.trim().split(/\r?\n/).filter(t => t.startsWith("{")).join(" ")}`);
     return output.split(/\r?\n/).filter(t => t.startsWith("{")).map(t => (JSON.parse(t) as { refusal: string | null }).refusal);
   }
 
