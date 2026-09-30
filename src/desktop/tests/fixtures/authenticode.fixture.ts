@@ -8,16 +8,26 @@
 
 import { execFileSync } from "node:child_process";
 import { open } from "node:fs/promises";
-import { win32 } from "node:path";
+import { resolve, win32 } from "node:path";
 
 import { Resources } from "@noldova/teamrun-desktop";
 
 export class Authenticode {
-  private static nodeSignerValue: string | null = null;
+  public static readonly smallSignedFile: string = resolve("node_modules", "node-pty", "prebuilds", "win32-x64", "conpty", "conpty.dll");
+  private static readonly signers: Map<string, string> = new Map();
 
   public static get nodeSigner(): string {
-    Authenticode.nodeSignerValue ??= Authenticode.signer(process.execPath);
-    return Authenticode.nodeSignerValue;
+    return Authenticode.cachedSigner(process.execPath);
+  }
+
+  public static get smallSigner(): string {
+    return Authenticode.cachedSigner(Authenticode.smallSignedFile);
+  }
+
+  private static cachedSigner(file: string): string {
+    const signer = Authenticode.signers.get(file) ?? Authenticode.signer(file);
+    Authenticode.signers.set(file, signer);
+    return signer;
   }
 
   public static get systemRoot(): string {
