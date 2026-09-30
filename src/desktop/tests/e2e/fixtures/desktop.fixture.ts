@@ -31,6 +31,7 @@ export class DesktopFixture {
   private static readonly EXIT_MILLISECONDS: number = 10_000;
   private static readonly PNG_WIDTH_OFFSET: number = 16;
   private static readonly PNG_HEIGHT_OFFSET: number = 20;
+  private static readonly SCROLL_ATTEMPTS: number = 8;
   private static readonly WINDOW_POSITION_VARIABLE: string = "TEAMRUN_UI_TEST_WINDOW_POSITION";
   private static readonly WINDOW_POSITION_PATTERN: RegExp = /^(-?\d+),(-?\d+)$/;
 
@@ -110,8 +111,12 @@ export class DesktopFixture {
   }
 
   public async scrollTerminalToStart(): Promise<void> {
+    await this.dragTerminalScrollbarToStart();
+    await expect(this.page.locator("tr-terminal-panel .xterm .scrollbar.vertical .slider")).toHaveCSS("top", "0px");
+  }
+
+  private async dragTerminalScrollbarToStart(): Promise<void> {
     const scrollbar = this.page.locator("tr-terminal-panel .xterm .scrollbar.vertical");
-    const slider = scrollbar.locator(".slider");
     await expect.poll(() => scrollbar.evaluate(element => {
       const parent = element.parentElement;
       return parent !== null && element.clientHeight === parent.clientHeight;
@@ -139,7 +144,20 @@ export class DesktopFixture {
         await this.page.mouse.up();
       }
     }
-    await expect(slider).toHaveCSS("top", "0px");
+  }
+
+  public async scrollTerminalToEarliest(text: RegExp): Promise<void> {
+    const rows = this.page.locator("tr-terminal-panel .xterm-rows");
+    const slider = this.page.locator("tr-terminal-panel .xterm .scrollbar.vertical .slider");
+    const shows = async (): Promise<boolean> => text.test((await rows.textContent()) ?? "");
+    for (let attempt = 0; attempt < DesktopFixture.SCROLL_ATTEMPTS; attempt++) {
+      if (await shows())
+        return;
+      await this.dragTerminalScrollbarToStart();
+      await expect.poll(async () => await shows() || await slider.evaluate(t => t.style.top) !== "0px",
+        { message: "The terminal must show the line or load an earlier page after a scroll to the start" }).toBe(true);
+    }
+    throw new Error(`"${text}" did not appear within ${DesktopFixture.SCROLL_ATTEMPTS} scrolls to the start.`);
   }
 
   public async capture(name: string): Promise<Buffer> {

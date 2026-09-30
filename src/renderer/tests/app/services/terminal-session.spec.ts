@@ -14,13 +14,18 @@ import {
   TerminalAcknowledgeParams,
   TerminalExit,
   TerminalInputParams,
+  TerminalLine,
+  TerminalLinePage,
   TerminalLineRange,
+  TerminalLinesParams,
   TerminalOutputPayload,
   TerminalResizeParams,
   TerminalScreen,
   TerminalShellKind,
   TerminalSize,
-  TerminalState
+  TerminalState,
+  TerminalTextRun,
+  TerminalTextStyle
 } from "@noldova/teamrun-protocol";
 
 import { FakeFitAddon } from "../../fixtures/fake-fit-addon";
@@ -28,6 +33,7 @@ import { FakeWebglAddon } from "../../fixtures/fake-webgl-addon";
 import type { FakeTeamRunBridge } from "../../fixtures/fake-teamrun-bridge";
 import { SampleData } from "../../fixtures/sample-data";
 import { TerminalWindow } from "../../fixtures/terminal-window";
+import { Resources } from "../../../src/app/resources";
 import { BridgeService, TEAMRUN_BRIDGE } from "../../../src/app/services/bridge.service";
 import { TerminalSession } from "../../../src/app/services/terminal-session";
 
@@ -57,7 +63,7 @@ describe("TerminalSession", () => {
   beforeEach(() => {
     bridge = SampleData.createBridge();
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
-    terminal = new Terminal();
+    terminal = new Terminal({ scrollback: Resources.terminalScrollback });
     fit = new FakeFitAddon();
     webgl = new FakeWebglAddon();
     session = new TerminalSession(SampleData.terminal("t1"), terminal, fit, webgl, TestBed.inject(BridgeService));
@@ -238,5 +244,106 @@ describe("TerminalSession", () => {
     expect(terminalWindow.copied).toEqual(["hello"]);
     first.remove();
     second.remove();
+  });
+
+  describe("stored lines", () => {
+    const screenRows = Array.from({ length: 30 }, (_t, index) => `row ${index + 1}`);
+    let store: string[];
+    let range: TerminalLineRange;
+    let screens: number;
+
+    const stateWith = (sequence: number): TerminalState =>
+      new TerminalState("t1", SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), null, 0, sequence, range);
+    const pageRequests = (): [number, number][] =>
+      requests(MethodName.TerminalLines).map(t => TerminalLinesParams.fromJson(t)).map(t => [t.start, t.limit]);
+    const start = async (count: number): Promise<void> => {
+      store = Array.from({ length: count }, (_t, index) => `stored ${index}`);
+      range = new TerminalLineRange(0, count);
+      session.load(new TerminalScreen(stateWith(10), screenRows.join("\r\n")));
+      await parsed();
+    };
+    const scrollToTop = async (expectedLines: number): Promise<void> => {
+      terminal.scrollToLine(0);
+      await vi.waitFor(() => expect(lines().length).toBe(expectedLines));
+    };
+
+    beforeEach(() => {
+      screens = 0;
+      bridge
+        .answer(MethodName.TerminalLines, payload => {
+          const params = TerminalLinesParams.fromJson(payload);
+          const first = Math.min(Math.max(params.start, range.start), range.end);
+          return new TerminalLinePage(first, store.slice(first, Math.min(first + params.limit, range.end))
+            .map(t => new TerminalLine(t, false, [new TerminalTextRun(t.length, 3, -1, TerminalTextStyle.Bold)])), range).toJson();
+        })
+        .answer(MethodName.TerminalScreen, () => new TerminalScreen(stateWith(10 + ++screens), screenRows.join("\r\n")).toJson());
+    });
+
+    it("loads the stored lines page by page when scrolled to the top, keeping the top line in place", async () => {
+      await start(1300);
+      expect(terminal.buffer.active.viewportY).toBe(6);
+
+      await scrollToTop(530);
+      expect(lines().slice(0, 2)).toEqual(["stored 800", "stored 801"]);
+      expect(terminal.buffer.active.viewportY).toBe(500);
+      expect(terminal.buffer.active.getLine(0)?.getCell(0)?.getFgColor()).toBe(3);
+      await scrollToTop(1030);
+      await scrollToTop(1330);
+      terminal.scrollToLine(0);
+      await parsed();
+
+      expect(pageRequests()).toEqual([[800, 500], [300, 500], [0, 300]]);
+      expect(lines().length).toBe(1330);
+      expect([lines()[0], lines()[1299], lines()[1300], lines().at(-1)]).toEqual(["stored 0", "stored 1299", "row 1", "row 30"]);
+    });
+
+    it("forgets loaded lines below a raised start and reads the rest from there", async () => {
+      await start(1300);
+      await scrollToTop(530);
+      await scrollToTop(1030);
+      range = new TerminalLineRange(700, 1300);
+      session.receiveState(stateWith(20));
+
+      await scrollToTop(630);
+      terminal.scrollToLine(0);
+      await parsed();
+
+      expect(pageRequests()).toEqual([[800, 500], [300, 500], [700, 100]]);
+      expect(lines()[0]).toBe("stored 700");
+      expect(lines().length).toBe(630);
+    });
+
+    it("leaves the screen behind beyond twelve pages, holds new output, and brings the screen back when scrolled down", async () => {
+      await start(6500);
+      for (let page = 1; page <= 13; page++)
+        await scrollToTop(page < 13 ? 500 * page + 30 : 6000);
+
+      expect([lines()[0], lines().at(-1)]).toEqual(["stored 0", "stored 5999"]);
+      session.receiveOutput(new TerminalOutputPayload("t1", 40, "ignored\r\n", range));
+      await parsed();
+      expect(lines().length).toBe(6000);
+
+      terminal.scrollToLine(terminal.buffer.active.baseY);
+      await vi.waitFor(() => expect(lines().length).toBe(6030));
+
+      expect([lines()[0], lines()[5999], lines()[6000], lines().at(-1)]).toEqual(["stored 500", "stored 6499", "row 1", "row 30"]);
+      expect(terminal.buffer.active.viewportY).toBe(5500 - 24);
+      session.receiveOutput(new TerminalOutputPayload("t1", 41, "\r\ndrawn", range));
+      await parsed();
+      expect(lines().at(-1)).toBe("drawn");
+    });
+
+    it("comes back to a fresh screen at the bottom when the person types while the screen is left behind", async () => {
+      await start(6500);
+      for (let page = 1; page <= 13; page++)
+        await scrollToTop(page < 13 ? 500 * page + 30 : 6000);
+
+      terminal.input("ls\r");
+      await vi.waitFor(() => expect(lines().slice(-30)).toEqual(screenRows));
+
+      expect(requests(MethodName.TerminalInput)).toEqual([new TerminalInputParams("t1", "ls\r").toJson()]);
+      expect(terminal.buffer.active.viewportY).toBe(terminal.buffer.active.baseY);
+      expect(terminal.buffer.active.baseY).toBeGreaterThan(0);
+    });
   });
 });
