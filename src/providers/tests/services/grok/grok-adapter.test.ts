@@ -38,7 +38,7 @@ export class GrokAdapterTests {
   public async retriesCancellationCleanupAndReportsCleanupFailures(): Promise<void> {
     await using host = new GrokTestHost();
     const terminator = new ControlledProcessTerminator(process.platform);
-    const environment = { ...process.env, TEAMRUN_FAKE_GROK_STAY_OPEN: "1", TEAMRUN_FAKE_GROK_IGNORE_CANCEL: "1" };
+    const environment = { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1", TEAMRUN_FAKE_GROK_IGNORE_CANCEL: "1" };
     const adapter = host.createAdapter(environment, host.command, terminator);
     const controller = new AbortController();
     const listener = new RecordingTurnListener();
@@ -63,7 +63,7 @@ export class GrokAdapterTests {
   @TestMethod
   public async supportsUnknownSessionMetadataAndShutdownDuringWork(): Promise<void> {
     await using host = new GrokTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_NO_METADATA: "1" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_NO_METADATA: "1" });
     const result = await adapter.runTurn(host.request("complete"), new RecordingTurnListener(), new AbortController().signal);
     Assert.areEqual(TurnOutcome.Completed, result.outcome);
     Assert.isNull(result.observed.model);
@@ -78,7 +78,7 @@ export class GrokAdapterTests {
     cancelled.onStarted = () => controller.abort();
     Assert.areEqual(TurnOutcome.Interrupted, (await adapter.runTurn(host.request("complete"), cancelled, controller.signal)).outcome);
     const account = new ProviderAccount("a", "grok", "Dedicated", host.directory.resolve("profile"), AuthStatus.Unknown, null, null, null, null, "t");
-    const loggedOut = host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_INIT: "loggedOut" });
+    const loggedOut = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_INIT: "loggedOut" });
     const request = new TurnRequest(account, host.directory.path, "complete", new RequestedSettings("grok", null, null), null);
     Assert.areEqual(TurnOutcome.Failed, (await loggedOut.runTurn(request, new RecordingTurnListener(), new AbortController().signal)).outcome);
   }
@@ -93,9 +93,10 @@ export class GrokAdapterTests {
     Assert.isFalse(models[0]?.supportsImages ?? true);
     const account = new ProviderAccount("a", "grok", "Dedicated", host.directory.resolve("profile"), AuthStatus.Unknown, null, null, null, null, "t");
     Assert.areEqual(AuthStatus.LoggedIn, (await adapter.checkSignIn(account)).authStatus);
-    Assert.areEqual(AuthStatus.LoggedOut, (await host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_INIT: "loggedOut" }).checkSignIn(account)).authStatus);
-    Assert.areEqual(AuthStatus.Error, (await host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_SIGNIN_FAIL: "1" }).checkSignIn(account)).authStatus);
-    Assert.areEqual(AuthStatus.Error, (await host.createAdapter(process.env, null).checkSignIn(account)).authStatus);
+    Assert.areEqual(AuthStatus.LoggedOut,
+      (await host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_INIT: "loggedOut" }).checkSignIn(account)).authStatus);
+    Assert.areEqual(AuthStatus.Error, (await host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_SIGNIN_FAIL: "1" }).checkSignIn(account)).authStatus);
+    Assert.areEqual(AuthStatus.Error, (await host.createAdapter(host.environment, null).checkSignIn(account)).authStatus);
     await Assert.throwsAsync(() => adapter.forkSession(new ForkRequest(null, host.directory.path, "s", "t", new RequestedSettings("grok", null, null))), Error);
     Assert.isFalse(adapter.descriptor.supportsFork);
     Assert.areEqual(host.tracker.tracked.length, host.tracker.untracked.length);
@@ -140,7 +141,7 @@ export class GrokAdapterTests {
   @TestData(true)
   public async cancelsAndStopsEvenWhenTheAgentIgnoresCancellation(ignore: boolean): Promise<void> {
     await using host = new GrokTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_IGNORE_CANCEL: ignore ? "1" : "0" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_IGNORE_CANCEL: ignore ? "1" : "0" });
     const controller = new AbortController();
     const listener = new RecordingTurnListener();
     const run = adapter.runTurn(host.request("cancel"), listener, controller.signal);
@@ -158,9 +159,9 @@ export class GrokAdapterTests {
     for (const request of [host.request("exit"), host.request("reject"), host.request("limit"), host.request("complete", "missing"),
       host.request("complete", null, "unavailable"), host.request("complete", null, "grok-test", "unsupported")])
       Assert.areEqual(TurnOutcome.Failed, (await adapter.runTurn(request, new RecordingTurnListener(), new AbortController().signal)).outcome);
-    const loggedOut = host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_INIT: "loggedOut" });
+    const loggedOut = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_INIT: "loggedOut" });
     Assert.areEqual(TurnOutcome.Failed, (await loggedOut.runTurn(host.request("complete"), new RecordingTurnListener(), new AbortController().signal)).outcome);
-    const missing = host.createAdapter(process.env, new ProcessCommand("teamrun-missing-grok", []));
+    const missing = host.createAdapter(host.environment, new ProcessCommand("teamrun-missing-grok", []));
     await Assert.throwsAsync(() => missing.listModels(null), Error);
   }
 
@@ -173,7 +174,7 @@ export class GrokAdapterTests {
       [new MessageAttachment("image.png", "image/png", 13, path)]);
     Assert.areEqual(TurnOutcome.Failed, (await host.createAdapter().runTurn(request, new RecordingTurnListener(), new AbortController().signal)).outcome);
     const listener = new RecordingTurnListener();
-    const result = await host.createAdapter({ ...process.env, TEAMRUN_FAKE_GROK_INIT: "images" }).runTurn(request, listener, new AbortController().signal);
+    const result = await host.createAdapter({ ...host.environment, TEAMRUN_FAKE_GROK_INIT: "images" }).runTurn(request, listener, new AbortController().signal);
     Assert.areEqual(TurnOutcome.Completed, result.outcome);
     Assert.isTrue(listener.details.some(t => t.text.includes(Buffer.from("fixture-image").toString("base64"))));
   }

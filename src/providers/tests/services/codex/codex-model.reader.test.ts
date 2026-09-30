@@ -16,7 +16,7 @@ export class CodexModelReaderTests {
   @TestMethod
   public async followsModelPagesWithoutDuplicatingRepeatedModels(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_MODEL_PAGES: JSON.stringify([
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_MODEL_PAGES: JSON.stringify([
       { data: [{ model: "first", hidden: false }], nextCursor: "1" },
       { data: [{ model: "first", hidden: false }, { model: "second", hidden: false }], nextCursor: null }
     ]) });
@@ -31,9 +31,9 @@ export class CodexModelReaderTests {
   public async preservesDiscoveredCapabilitiesAndUnknownFields(): Promise<void> {
     using host = new CodexTestHost();
     const adapter = host.createAdapter();
-    const older = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [{ model: "future", hidden: false }], nextCursor: null }) });
-    const invalid = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [{ model: "bad", hidden: false, supportedReasoningEfforts: "high" }] }) });
-    const looping = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [], nextCursor: "repeat" }) });
+    const older = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [{ model: "future", hidden: false }], nextCursor: null }) });
+    const invalid = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [{ model: "bad", hidden: false, supportedReasoningEfforts: "high" }] }) });
+    const looping = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_MODELS: JSON.stringify({ data: [], nextCursor: "repeat" }) });
     try {
       const models = await adapter.listModels(null);
       Assert.areEqual(1, models.length);

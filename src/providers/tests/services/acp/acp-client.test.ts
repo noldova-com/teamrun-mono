@@ -22,7 +22,7 @@ export class AcpClientTests {
     await using host = new GrokTestHost();
     const terminator = new ControlledProcessTerminator(process.platform);
     terminator.ignores = true;
-    const client = new AcpClient(host.command, { ...process.env, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, terminator, host.timings, host.tracker);
     client.start();
     let watchdog: NodeJS.Timeout | undefined;
     try {
@@ -71,7 +71,7 @@ export class AcpClientTests {
     await using host = new GrokTestHost();
     const terminator = new ControlledProcessTerminator(process.platform);
     terminator.failures = 1;
-    const client = new AcpClient(host.command, { ...process.env, TEAMRUN_FAKE_GROK_STAY_OPEN: "1", TEAMRUN_FAKE_GROK_INIT: mode }, host.directory.path, terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1", TEAMRUN_FAKE_GROK_INIT: mode }, host.directory.path, terminator, host.timings, host.tracker);
     client.start();
     try {
       await Assert.throwsAsync(() => client.request("initialize", {}), Error);
@@ -83,7 +83,7 @@ export class AcpClientTests {
   @TestMethod
   public async failsPendingRequestsWhenTheAgentClosesItsInputPipe(): Promise<void> {
     await using host = new GrokTestHost();
-    const client = new AcpClient(host.command, { ...process.env, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, host.terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, host.terminator, host.timings, host.tracker);
     client.start();
     try {
       await client.request("fixture/close-input", {});
@@ -95,10 +95,10 @@ export class AcpClientTests {
   @TestMethod
   public async boundsRequestsAndClosesPendingWork(): Promise<void> {
     await using host = new GrokTestHost();
-    const client = new AcpClient(host.command, process.env, host.directory.path, host.terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, host.environment, host.directory.path, host.terminator, host.timings, host.tracker);
     await Assert.throwsAsync(() => client.request("initialize", {}), Error);
     await client.stop();
-    const active = new AcpClient(host.command, { ...process.env, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, host.terminator, host.timings, host.tracker);
+    const active = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1" }, host.directory.path, host.terminator, host.timings, host.tracker);
     active.start();
     try {
       Assert.throws(() => active.start(), Error);
@@ -121,7 +121,7 @@ export class AcpClientTests {
   @TestData("hang")
   public async rejectsBrokenOrSilentAgents(mode: string): Promise<void> {
     await using host = new GrokTestHost();
-    const client = new AcpClient(host.command, { ...process.env, TEAMRUN_FAKE_GROK_INIT: mode }, host.directory.path, host.terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_INIT: mode }, host.directory.path, host.terminator, host.timings, host.tracker);
     client.start();
     try { await Assert.throwsAsync(() => client.request("initialize", {}, 1000), Error); }
     finally { await client.stop(); }
@@ -130,7 +130,7 @@ export class AcpClientTests {
   @TestMethod
   public async rejectsUnownedReverseRequestsAndIgnoresUnmatchedReplies(): Promise<void> {
     await using host = new GrokTestHost();
-    const client = new AcpClient(host.command, process.env, host.directory.path, host.terminator, host.timings, host.tracker);
+    const client = new AcpClient(host.command, host.environment, host.directory.path, host.terminator, host.timings, host.tracker);
     client.start();
     try {
       await client.request("fixture/reverse", {});
