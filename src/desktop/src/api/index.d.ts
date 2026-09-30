@@ -44,7 +44,8 @@ export interface IRestartProcesses {
 }
 
 /**
- * Waits for acknowledged process exit and reopens desktops without a shell.
+ * Waits for acknowledged process exit and reopens desktops without a shell interpreting their arguments. On Linux a reopened desktop
+ * starts without the current desktop's open files and sockets, through the runtime package's `ProcessLaunchCommand`.
  */
 export declare class RestartProcesses implements IRestartProcesses {
   /**
@@ -66,6 +67,7 @@ export declare class RestartProcesses implements IRestartProcesses {
   /**
    * Starts a desktop for the saved data directory.
    * @param dataDirectory Previously checkpointed directory.
+   * @throws ProcessLaunchException if Linux lacks the launch prerequisites (`/bin/bash`, `/proc/self/fd`).
    * @throws Error if the executable cannot spawn.
    */
   public reopen(dataDirectory: string): Promise<void>;
@@ -1480,6 +1482,7 @@ export declare class RuntimeConnection implements IRuntimeClientListener {
    * @param request The request.
    * @returns The runtime's response.
    * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
+   * @throws ProcessLaunchException when Linux lacks the prerequisites for starting the runtime.
    * @throws LaunchException when the runtime cannot be started.
    * @throws ConnectionException when closed, when the runtime cannot be reached, or when it does not answer in time.
    */

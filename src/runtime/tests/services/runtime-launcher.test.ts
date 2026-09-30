@@ -12,8 +12,8 @@ import { syncBuiltinESMExports } from "node:module";
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
 import { Assert, CoverageEnvironment, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { ErrorCode, MethodName, ProtocolVersion } from "@noldova/teamrun-protocol";
-import { ConnectionException, Endpoint, LaunchException, LockFile, ProcessProbe, RuntimeBuildMismatchException, RuntimeEntry, RuntimeLauncher,
-  RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
+import { ConnectionException, Endpoint, LaunchException, LockFile, ProcessLaunchException, ProcessProbe, RuntimeBuildMismatchException, RuntimeEntry,
+  RuntimeLauncher, RuntimeLock, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
 
 import { RecordingClientListener } from "../fixtures/recording-client-listener.fixture.js";
 import { RawServer } from "../fixtures/raw-server.fixture.js";
@@ -207,7 +207,7 @@ export class RuntimeLauncherTests {
         };
         syncBuiltinESMExports();
 
-        const error = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), LaunchException);
+        const error = await Assert.throwsAsync(() => launcher.attach("test", new RecordingClientListener()), ProcessLaunchException);
 
         Assert.isTrue(error.message.includes(path), error.message);
         Assert.areEqual(cause, error.cause);

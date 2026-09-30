@@ -366,6 +366,18 @@ export declare class InvalidOperationException extends Exception {
 }
 
 /**
+ * A program could not be started without its parent's descriptors, because a Linux launch prerequisite is unavailable.
+ */
+export declare class ProcessLaunchException extends Exception {
+  /**
+   * Initializes the exception with the reason as its message.
+   * @param reason Which prerequisite is missing and how to restore it.
+   * @param options The underlying filesystem failure.
+   */
+  public constructor(reason: string, options?: ExceptionOptions);
+}
+
+/**
  * The runtime process could not be started or did not publish its endpoint in time.
  */
 export declare class LaunchException extends Exception {
@@ -1180,25 +1192,25 @@ export declare class Resources {
    */
   public static readonly spawnEvent: string;
   /**
-   * The Linux shell used to close inherited descriptors before runtime execution.
+   * The Linux shell used to close inherited descriptors before a launched program runs.
    */
-  public static readonly runtimeLaunchShell: string;
+  public static readonly processLaunchShell: string;
   /**
    * The Linux descriptor directory that must be readable and searchable before launch.
    */
-  public static readonly runtimeLaunchDescriptors: string;
+  public static readonly processLaunchDescriptors: string;
   /**
    * Explains how to restore the required Linux launch shell.
    */
-  public static readonly runtimeLaunchShellUnavailable: string;
+  public static readonly processLaunchShellUnavailable: string;
   /**
    * Explains how to restore access to the Linux descriptor directory.
    */
-  public static readonly runtimeLaunchDescriptorsUnavailable: string;
+  public static readonly processLaunchDescriptorsUnavailable: string;
   /**
    * Fixed shell options and program; the destination executable and arguments follow them.
    */
-  public static readonly runtimeLaunchShellArguments: readonly string[];
+  public static readonly processLaunchShellArguments: readonly string[];
   public static readonly dataDirectoryRequired: string;
   public static readonly stoppedByIdle: string;
   public static readonly stoppedBySignal: string;
@@ -2108,16 +2120,17 @@ export declare class RuntimeEntry {
 }
 
 /**
- * The command for starting a runtime, with inherited descriptor cleanup on Linux.
+ * The command for starting a program that outlives or runs apart from its parent, such as a runtime or a reopened desktop, without
+ * the parent's open files and sockets: on Linux it closes inherited descriptors above standard input, output and error first.
  */
-export declare class RuntimeLaunchCommand extends ProcessCommand {
+export declare class ProcessLaunchCommand extends ProcessCommand {
   /**
    * Checks Linux prerequisites and creates the platform's launch command without executing it.
    * @param platform The host platform, as `process.platform`.
-   * @param executablePath The executable that runs the runtime.
+   * @param executablePath The program to start.
    * @param args The arguments, preserved literally and copied into the command.
    * @throws ArgumentException when the executable path is blank.
-   * @throws LaunchException when Linux lacks executable `/bin/bash` or readable, searchable `/proc/self/fd`.
+   * @throws ProcessLaunchException when Linux lacks executable `/bin/bash` or readable, searchable `/proc/self/fd`.
    */
   public constructor(platform: string, executablePath: string, args: readonly string[]);
 }
@@ -2161,8 +2174,8 @@ export declare class RuntimeLauncher {
    * @returns The connected client.
    * @throws ConnectionException when the runtime refuses the hello.
    * @throws RuntimeBuildMismatchException when a live runtime of another build holds the data directory.
-   * @throws LaunchException when Linux launch prerequisites are unavailable, process creation fails,
-   * or no runtime becomes reachable within the launch timeout.
+   * @throws ProcessLaunchException when Linux launch prerequisites are unavailable.
+   * @throws LaunchException when process creation fails or no runtime becomes reachable within the launch timeout.
    * @remarks A runtime of another build is left running; it is never killed or replaced while its work may be active.
    * The lock of another build is replaced only when no runtime holds the data directory's ownership.
    */

@@ -17,7 +17,7 @@ import { ConnectionException } from "../exceptions/connection.exception.js";
 import { LaunchException } from "../exceptions/launch.exception.js";
 import { RuntimeBuildMismatchException } from "../exceptions/runtime-build-mismatch.exception.js";
 import type { IRuntimeClientListener } from "../interfaces/i-runtime-client-listener.js";
-import { RuntimeLaunchCommand } from "../models/runtime-launch-command.js";
+import { ProcessLaunchCommand } from "../models/process-launch-command.js";
 import type { RuntimeLock } from "../models/runtime-lock.js";
 import type { RuntimeSettings } from "../models/runtime-settings.js";
 import type { RuntimeTimings } from "../models/runtime-timings.js";
@@ -92,7 +92,7 @@ export class RuntimeLauncher {
     ];
     if (!Object.isNull(this.settings.idleGraceMilliseconds))
       args.push(Resources.idleGraceArgument, String(this.settings.idleGraceMilliseconds));
-    const command = new RuntimeLaunchCommand(process.platform, this.executablePath, args);
+    const command = new ProcessLaunchCommand(process.platform, this.executablePath, args);
     try {
       const child = spawn(command.executable, command.arguments, { detached: true, stdio: "ignore", windowsHide: true, env: this.environment });
       await once(child, Resources.spawnEvent);

@@ -14,18 +14,18 @@ import { syncBuiltinESMExports } from "node:module";
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
 import { Assert, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { ProcessCommand } from "@noldova/teamrun-providers";
-import { LaunchException, RuntimeLaunchCommand } from "@noldova/teamrun-runtime";
+import { ProcessLaunchCommand, ProcessLaunchException } from "@noldova/teamrun-runtime";
 
 import { RuntimeDescriptorProbe } from "../fixtures/runtime-descriptor-probe.fixture.js";
 import { TemporaryDirectory } from "../fixtures/temporary-directory.fixture.js";
 
 @TestClass
-export class RuntimeLaunchCommandTests {
+export class ProcessLaunchCommandTests {
   @TestMethod
   public preservesDirectCommandsOnWindowsAndMac(): void {
     for (const platform of ["win32", "darwin"]) {
       const args = ["entry with spaces.js", "--data-dir", "quoted ' \" $value"];
-      const command = new RuntimeLaunchCommand(platform, "executable with spaces", args);
+      const command = new ProcessLaunchCommand(platform, "executable with spaces", args);
       args.push("later mutation");
 
       Assert.areEqual("executable with spaces", command.executable);
@@ -55,19 +55,19 @@ export class RuntimeLaunchCommandTests {
     syncBuiltinESMExports();
     try {
       const args = ["entry with spaces.js", "$(printf not-a-command)", ""];
-      const command = new RuntimeLaunchCommand("linux", "executable with spaces", args);
+      const command = new ProcessLaunchCommand("linux", "executable with spaces", args);
       args.push("later mutation");
 
       deepStrictEqual(checked, ["/bin/bash", "/proc/self/fd", "enumerate"]);
       Assert.areEqual("/bin/bash", command.executable);
       deepStrictEqual(command.arguments.slice(0, 4), ["--noprofile", "--norc", "-p", "-c"]);
-      deepStrictEqual(command.arguments.slice(5), ["teamrun-runtime", "executable with spaces", "entry with spaces.js", "$(printf not-a-command)", ""]);
+      deepStrictEqual(command.arguments.slice(5), ["teamrun-launch", "executable with spaces", "entry with spaces.js", "$(printf not-a-command)", ""]);
       for (failedOperation of ["/bin/bash", "/proc/self/fd", "enumerate"]) {
-        const error = Assert.throws(() => new RuntimeLaunchCommand("linux", process.execPath, []), LaunchException);
+        const error = Assert.throws(() => new ProcessLaunchCommand("linux", process.execPath, []), ProcessLaunchException);
         const reason = failedOperation === "/bin/bash"
-          ? "Linux runtime startup requires executable Bash at /bin/bash. Install Bash or restore its execute permissions."
-          : "Linux runtime startup requires access to /proc/self/fd. Ensure procfs is mounted at /proc and this process can read and traverse its descriptor directory.";
-        Assert.areEqual(`The runtime could not be started: ${reason}`, error.message);
+          ? "Starting a program on Linux requires executable Bash at /bin/bash. Install Bash or restore its execute permissions."
+          : "Starting a program on Linux requires access to /proc/self/fd. Ensure procfs is mounted at /proc and this process can read and traverse its descriptor directory.";
+        Assert.areEqual(reason, error.message);
         Assert.areEqual(failure, error.cause);
       }
     }
@@ -81,13 +81,13 @@ export class RuntimeLaunchCommandTests {
   @TestMethod
   public refusesABlankDestinationOnEveryPlatform(): void {
     for (const platform of ["win32", "darwin", "linux"])
-      Assert.throws(() => new RuntimeLaunchCommand(platform, " ", []), ArgumentException);
+      Assert.throws(() => new ProcessLaunchCommand(platform, " ", []), ArgumentException);
   }
 
   @TestMethod
   public doesNotInterpretTheDestinationAsAnExecOption(): void {
     using directory = new TemporaryDirectory();
-    const command = new RuntimeLaunchCommand("linux", "-l", []);
+    const command = new ProcessLaunchCommand("linux", "-l", []);
 
     const result = spawnSync(command.executable, command.arguments,
       { encoding: "utf8", timeout: 10_000, env: { ...process.env, PATH: directory.path } });
@@ -113,7 +113,7 @@ export class RuntimeLaunchCommandTests {
     stdio[4096] = descriptor;
     try {
       const direct = new ProcessCommand(executable, args);
-      const isolated = new RuntimeLaunchCommand("linux", executable, args);
+      const isolated = new ProcessLaunchCommand("linux", executable, args);
       for (const command of [direct, isolated]) {
         const result = spawnSync(command.executable, command.arguments,
           { encoding: "utf8", timeout: 10_000, stdio, env: { ...process.env, BASH_ENV: startup, TEAMRUN_STARTUP_MARKER: marker } });
@@ -130,6 +130,6 @@ export class RuntimeLaunchCommandTests {
 }
 
 if (process.platform !== "linux") {
-  Skip("Descriptor cleanup uses Linux /proc and Bash.")(RuntimeLaunchCommandTests.prototype.doesNotInterpretTheDestinationAsAnExecOption);
-  Skip("Descriptor cleanup uses Linux /proc and Bash.")(RuntimeLaunchCommandTests.prototype.closesLowAndHighInheritedDescriptorsWithoutInterpretingArgumentsOrStartupFiles);
+  Skip("Descriptor cleanup uses Linux /proc and Bash.")(ProcessLaunchCommandTests.prototype.doesNotInterpretTheDestinationAsAnExecOption);
+  Skip("Descriptor cleanup uses Linux /proc and Bash.")(ProcessLaunchCommandTests.prototype.closesLowAndHighInheritedDescriptorsWithoutInterpretingArgumentsOrStartupFiles);
 }
