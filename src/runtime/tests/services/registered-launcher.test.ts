@@ -8,7 +8,7 @@
 
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, CoverageEnvironment, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { MethodName } from "@noldova/teamrun-protocol";
 import { InstallationRegistry, InstallationRole, ProcessProbe, RuntimeClient, RuntimeTimings } from "@noldova/teamrun-runtime";
 import { TemporaryDirectory } from "../fixtures/temporary-directory.fixture.js";
@@ -24,7 +24,7 @@ export class RegisteredLauncherTests {
     const data = directory.resolve("data");
     registry.linkDataDirectory(data);
     const child = spawn(process.execPath, [fileURLToPath(new URL("../fixtures/registered-launcher-child.fixture.js", import.meta.url)), data], {
-      env: { ...process.env, HOME: directory.path, USERPROFILE: directory.path, APPIMAGE: process.execPath },
+      env: { ...CoverageEnvironment.forChild(process.env), HOME: directory.path, USERPROFILE: directory.path, APPIMAGE: process.execPath },
       stdio: ["pipe", "pipe", "pipe"], windowsHide: true
     });
     let stderr = "";

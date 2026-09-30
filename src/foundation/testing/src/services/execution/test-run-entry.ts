@@ -29,6 +29,7 @@ export class TestRunEntry {
   public async runAsync(): Promise<void> {
     const testProjectArguments = process.argv.slice(2);
     const summary = new GitHubSummaryWriter(process.env[Resources.gitHubSummaryVariable]);
+    this.keepCoverageFromChildren();
 
     try {
       const filters = this.parseFilters(process.env[TestRunEntry.FILTERS_VARIABLE]);
@@ -64,6 +65,14 @@ export class TestRunEntry {
       summary.writeFailure(failure);
       process.exit(Resources.failedExitCode);
     }, Resources.testShutdownGraceMilliseconds).unref();
+  }
+
+  private keepCoverageFromChildren(): void {
+    const directory = process.env[Resources.coverageVariable];
+    if (!Object.isUndefined(directory)) {
+      process.env[Resources.coverageDirectoryVariable] = directory;
+      delete process.env[Resources.coverageVariable];
+    }
   }
 
   private parseFilters(text: string | undefined): string[] {

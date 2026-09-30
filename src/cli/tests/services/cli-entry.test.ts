@@ -8,7 +8,7 @@
 
 import { spawn } from "node:child_process";
 
-import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, CoverageEnvironment, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { CliEntry } from "@noldova/teamrun-cli";
 import { MethodName } from "@noldova/teamrun-protocol";
 import { LockFile, ProcessProbe, RuntimeClient, RuntimeSettings, RuntimeTimings } from "@noldova/teamrun-runtime";
@@ -69,7 +69,8 @@ export class CliEntryTests {
 
   private static execute(args: readonly string[], input: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [CliEntry.entryPath, ...args], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+      const child = spawn(process.execPath, [CliEntry.entryPath, ...args],
+        { env: CoverageEnvironment.forChild(process.env), windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
       let stdout = "";
       let stderr = "";
       let timedOut = false;

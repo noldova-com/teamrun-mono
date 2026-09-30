@@ -33,6 +33,7 @@ export { TestMethodResult } from "../models/results/test-method-result.js";
 export { TestRunResult } from "../models/results/test-run-result.js";
 export { Assert } from "../services/assertions/assert.js";
 export { CoverageAnalyzer } from "../services/coverage/coverage-analyzer.js";
+export { CoverageEnvironment } from "../services/coverage/coverage-environment.js";
 export { SourceMap } from "../services/coverage/source-map.js";
 export { TestDiscovery } from "../services/discovery/test-discovery.js";
 export { TestExecutor } from "../services/execution/test-executor.js";

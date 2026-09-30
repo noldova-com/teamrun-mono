@@ -11,6 +11,8 @@ export class Resources {
   public static readonly failedExitCode: number = 1;
   public static readonly testShutdownGraceMilliseconds: number = 1000;
   public static readonly gitHubSummaryVariable: string = "GITHUB_STEP_SUMMARY";
+  public static readonly coverageVariable: string = "NODE_V8_COVERAGE";
+  public static readonly coverageDirectoryVariable: string = "CONTEXT_COVERAGE_DIRECTORY";
   public static readonly summaryDetailLimit: number = 20_000;
   public static readonly summaryEncoding: BufferEncoding = "utf8";
   public static readonly summaryNewline: string = "\n";

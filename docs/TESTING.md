@@ -76,6 +76,8 @@ If bootstrap work cannot yet be measured because the build or testing infrastruc
 
 Measure against the complete executable production inventory for the selected gate, including files that no test loads. An unloaded file is uncovered. Missing coverage, invalid ranges, malformed reports or unusable required source maps fail coverage analysis rather than yielding a smaller passing inventory. Paths and package identities remain unambiguous across operating systems and installation locations.
 
+Coverage measures the test process. The runner keeps the coverage folder out of the environment that tests hand to child processes, because a child killed while writing its report leaves a broken report that fails the gate; a test that needs a child measured builds its environment with Foundation Testing's `CoverageEnvironment.forChild`, which hands the folder back, and waits for that child to exit on its own.
+
 During the Node bootstrap, the coverage adapter consumes the selected runtime's coverage and the build's source maps; its accepted formats and mapping behavior must be verified against the pinned toolchain. A source change requires fresh production artifacts and matching maps before its coverage can be trusted. Source or package drift invalidates the result.
 
 Report covered/executable file counts and percentage against the tested source identity. Raw coverage block totals are per-run diagnostics, not reproducible revision fingerprints. Preserve uncertainty or discrepancies rather than changing historical observations to match a later run.

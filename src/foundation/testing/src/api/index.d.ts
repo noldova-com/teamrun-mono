@@ -885,6 +885,18 @@ export declare class CoverageReportWriter {
  * Reads the V8 coverage reports written by a test-run child process and
  * computes the uncovered line ranges of the production files.
  */
+export declare class CoverageEnvironment {
+  /**
+   * Builds the environment for a child process a test wants measured. The test run keeps its coverage folder out of
+   * `process.env` (as `CONTEXT_COVERAGE_DIRECTORY`) because a child killed while writing its report breaks the gate,
+   * so only a test that waits for its child to exit on its own hands the folder back through this method.
+   * @param base The environment to copy, usually `process.env`.
+   * @returns A copy of `base` with `NODE_V8_COVERAGE` set to the run's coverage folder, or without it when the run
+   * measures no coverage.
+   */
+  public static forChild(base: Readonly<Record<string, string | undefined>>): Record<string, string | undefined>;
+}
+
 export declare class CoverageAnalyzer {
   /**
    * Analyzes every report in the coverage directory against the complete
