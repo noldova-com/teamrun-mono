@@ -21,6 +21,8 @@ export class FixtureProvider implements IProviderAdapter {
     + "```ts\nlet x = 1;\n```\n\nAll done, with a last sentence that takes a moment.";
   public static readonly streamInterval: number = 100;
   private static readonly streamSizes: readonly number[] = [7, 31, 4, 58, 12, 3, 44, 20, 9, 60, 5, 30];
+  private readonly releases: (() => void)[] = [];
+  private awaken: (() => void) | null = null;
   public readonly descriptor = new ProviderDescriptor("codex", "Fixture provider", ["low"], true, true);
   public readonly requests: TurnRequest[] = [];
 
@@ -51,9 +53,23 @@ export class FixtureProvider implements IProviderAdapter {
       await FixtureProvider.stream(listener, signal, DetailKind.Reasoning, "fixture-thought", FixtureProvider.streamedThought);
       await FixtureProvider.stream(listener, signal, DetailKind.Text, "fixture-answer", FixtureProvider.streamedAnswer);
     }
+    else if (request.prompt.includes("Stream stepwise")) {
+      await this.streamStepwise(listener, signal, DetailKind.Reasoning, "fixture-thought", FixtureProvider.streamedThought);
+      await this.streamStepwise(listener, signal, DetailKind.Text, "fixture-answer", FixtureProvider.streamedAnswer);
+    }
     else
       listener.onDetail(new TurnDetail(DetailKind.Text, "Fixture reply completed.", null, null));
     return new TurnResult(signal.aborted ? TurnOutcome.Interrupted : TurnOutcome.Completed, session, observed, null);
+  }
+
+  /**
+   * Lets a "Stream stepwise" turn send its next batch; the promise resolves once that batch has been handed to the runtime.
+   */
+  public releaseBatch(): Promise<void> {
+    return new Promise<void>(delivered => {
+      this.releases.push(delivered);
+      this.awaken?.();
+    });
   }
 
   public static batches(text: string): readonly string[] {
@@ -80,6 +96,22 @@ export class FixtureProvider implements IProviderAdapter {
         return;
       listener.onDetail(new TurnDetail(kind, batch, null, id));
       await new Promise<void>(resolve => setTimeout(resolve, FixtureProvider.streamInterval));
+    }
+  }
+
+  private async streamStepwise(listener: ITurnListener, signal: AbortSignal, kind: DetailKind, id: string, text: string): Promise<void> {
+    for (const batch of FixtureProvider.batches(text)) {
+      while (this.releases.length === 0 && !signal.aborted)
+        await new Promise<void>(resolve => {
+          this.awaken = resolve;
+          signal.addEventListener("abort", () => resolve(), { once: true });
+        });
+      this.awaken = null;
+      if (signal.aborted)
+        return;
+      const delivered = this.releases.shift();
+      listener.onDetail(new TurnDetail(kind, batch, null, id));
+      delivered?.();
     }
   }
 }
