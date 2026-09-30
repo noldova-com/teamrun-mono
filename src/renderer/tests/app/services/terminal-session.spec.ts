@@ -12,6 +12,7 @@ import { Terminal } from "@xterm/xterm";
 import {
   MethodName,
   TerminalAcknowledgeParams,
+  TerminalExit,
   TerminalInputParams,
   TerminalLineRange,
   TerminalOutputPayload,
@@ -120,9 +121,9 @@ describe("TerminalSession", () => {
     expect(terminal.buffer.active.getLine(terminal.buffer.active.baseY)?.translateToString(true)).toBe("new");
     expect(terminal.options.disableStdin).toBe(false);
 
-    session.receiveState(SampleData.terminal("t1", 4, 2, 1));
+    session.receiveState(SampleData.terminal("t1", 4, new TerminalExit(2), 1));
     session.receiveState(SampleData.terminal("t1", 4, null, 1));
-    expect(session.state().exitCode).toBe(2);
+    expect(session.state().exit?.code).toBe(2);
     expect(terminal.options.disableStdin).toBe(true);
   });
 

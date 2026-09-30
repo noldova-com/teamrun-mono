@@ -14,6 +14,7 @@ import {
   EventName,
   MethodName,
   TerminalAcknowledgeParams,
+  TerminalExit,
   TerminalIdParams,
   TerminalLineRange,
   TerminalOpenParams,
@@ -161,11 +162,11 @@ describe("TerminalsService", () => {
 
     bridge.emit(new Event(EventName.TerminalOutput, new TerminalOutputPayload("t2", 1, "x".repeat(20_000), new TerminalLineRange(0, 0)).toJson()));
     bridge.emit(new Event(EventName.TerminalOutput, new TerminalOutputPayload("gone", 1, "lost", new TerminalLineRange(0, 0)).toJson()));
-    bridge.emit(new Event(EventName.TerminalChanged, new TerminalState("t1", SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), 3, 0, 1,
-      new TerminalLineRange(0, 0)).toJson()));
+    bridge.emit(new Event(EventName.TerminalChanged, new TerminalState("t1", SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null,
+      new TerminalSize(80, 24), new TerminalExit(3), 0, 1, new TerminalLineRange(0, 0)).toJson()));
     await vi.waitFor(() => expect(requests(MethodName.TerminalAcknowledge)).toEqual([new TerminalAcknowledgeParams("t2", 20_000).toJson()]));
-    expect(terminals.sessionOf(terminal("t1"))?.state().exitCode).toBe(3);
-    expect(terminals.sessionOf(terminal("t2"))?.state().exitCode).toBeNull();
+    expect(terminals.sessionOf(terminal("t1"))?.state().exit?.code).toBe(3);
+    expect(terminals.sessionOf(terminal("t2"))?.state().exit).toBeNull();
 
     layout.closePanel(terminal("t1"));
     TestBed.tick();

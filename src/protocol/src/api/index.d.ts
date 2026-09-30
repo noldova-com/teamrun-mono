@@ -1452,9 +1452,13 @@ export declare class Resources {
    */
   public static readonly shellKindField: string;
   /**
-   * Name of a terminal's exit code field: `exitCode`.
+   * Name of the field carrying how a terminal's shell ended: `exit`.
    */
-  public static readonly exitCodeField: string;
+  public static readonly exitField: string;
+  /**
+   * Name of a terminal exit's code field: `code`.
+   */
+  public static readonly codeField: string;
   /**
    * Name of a terminal's restart count field: `restartCount`.
    */
@@ -4945,6 +4949,42 @@ export declare class TerminalLineRange {
 }
 
 /**
+ * How a terminal's shell ended: with its exit code, or without one when the platform reported the end before the
+ * code, which the Windows pseudo-console does when the runtime is busy.
+ * @remarks
+ * Instances are immutable. `fromJson` validates untrusted input and reports the offending field's path; `toJson`
+ * renders the canonical wire shape.
+ */
+export declare class TerminalExit {
+  /**
+   * The shell's exit code, an integer, or `null` when the platform did not report it.
+   */
+  public readonly code: number | null;
+
+  /**
+   * Initializes the exit.
+   * @param code The shell's exit code, an integer, or `null` when the platform did not report it.
+   * @throws ArgumentOutOfRangeException when `code` is neither an integer nor `null`.
+   */
+  public constructor(code: number | null);
+
+  /**
+   * Reads the exit from untrusted JSON.
+   * @param value The untrusted value, expected to carry the nullable `code`.
+   * @param path Path to report for the value; the root path `$` by default.
+   * @returns The exit.
+   * @throws JsonException when `code` is missing or invalid; the exception names the field's path.
+   */
+  public static fromJson(value: unknown, path?: string): TerminalExit;
+
+  /**
+   * Renders the JSON object `fromJson` accepts.
+   * @returns The object with `code`.
+   */
+  public toJson(): JsonObject;
+}
+
+/**
  * What the runtime reports about one terminal: which shell runs where, its size, whether the shell exited, and how far
  * its events and stored lines have come. `TerminalList`, `TerminalOpen` and `TerminalRestart` answer with it, and
  * `TerminalChanged` carries it.
@@ -4980,9 +5020,9 @@ export declare class TerminalState {
    */
   public readonly size: TerminalSize;
   /**
-   * The shell's exit code, or `null` while it runs.
+   * How the shell ended, or `null` while it runs.
    */
-  public readonly exitCode: number | null;
+  public readonly exit: TerminalExit | null;
   /**
    * How many times the shell was started again; 0 until the first restart.
    */
@@ -5006,13 +5046,13 @@ export declare class TerminalState {
    * @param shellKind The shell's family.
    * @param conptyBuild The Windows build that runs the shell, a positive integer, or `null` outside Windows.
    * @param size The terminal's size.
-   * @param exitCode The shell's exit code, an integer, or `null` while it runs.
+   * @param exit How the shell ended, or `null` while it runs.
    * @param restartCount How many times the shell was started again; a non-negative integer.
    * @param sequence The sequence of the last event this state includes; a non-negative integer.
    * @param stored The lines stored so far.
    * @throws ArgumentException when `id`, `projectId` or `shell` is blank.
-   * @throws ArgumentOutOfRangeException when `conptyBuild` is not a positive integer, `exitCode` is not an integer or a
-   * count is negative or not an integer.
+   * @throws ArgumentOutOfRangeException when `conptyBuild` is not a positive integer or a count is negative or not an
+   * integer.
    */
   public constructor(
     id: string,
@@ -5021,7 +5061,7 @@ export declare class TerminalState {
     shellKind: TerminalShellKind,
     conptyBuild: number | null,
     size: TerminalSize,
-    exitCode: number | null,
+    exit: TerminalExit | null,
     restartCount: number,
     sequence: number,
     stored: TerminalLineRange);
@@ -5029,7 +5069,7 @@ export declare class TerminalState {
   /**
    * Reads the state from untrusted JSON.
    * @param value The untrusted value, expected to carry `id`, the nullable `projectId`, `shell`, `shellKind`, the
-   * nullable `conptyBuild`, `size`, the nullable `exitCode`, `restartCount`, `sequence` and `stored`.
+   * nullable `conptyBuild`, `size`, the nullable `exit`, `restartCount`, `sequence` and `stored`.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The state.
    * @throws JsonException when a field is missing or invalid; the exception names the field's path.
@@ -5039,7 +5079,7 @@ export declare class TerminalState {
 
   /**
    * Renders the JSON object `fromJson` accepts.
-   * @returns The object with `id`, `projectId`, `shell`, `shellKind`, `conptyBuild`, `size`, `exitCode`, `restartCount`,
+   * @returns The object with `id`, `projectId`, `shell`, `shellKind`, `conptyBuild`, `size`, `exit`, `restartCount`,
    * `sequence` and `stored`.
    */
   public toJson(): JsonObject;

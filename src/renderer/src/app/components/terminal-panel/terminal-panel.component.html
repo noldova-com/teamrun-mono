@@ -7,10 +7,10 @@ LICENSE file in the root directory of this source tree.
 -->
 
 <div #screen class="tr-terminal-screen min-h-0 flex-1"></div>
-@let code = exitCode();
-@if (code !== null) {
+@let ended = exit();
+@if (ended !== null) {
   <div class="tr-terminal-exit flex shrink-0 items-center gap-3 px-3 py-1" role="status">
-    <span class="tr-muted flex-1">{{ resources.formatTerminalExit(code) }}</span>
+    <span class="tr-muted flex-1">{{ ended.code === null ? resources.terminalExitedWithoutCode : resources.formatTerminalExit(ended.code) }}</span>
     <button mat-button (click)="restart()">{{ resources.restartTerminalLabel }}</button>
   </div>
 }

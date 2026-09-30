@@ -65,7 +65,8 @@ export class Test extends Script {
     try {
       await this.executeProcessAsync(process.execPath, [Test.SOURCE_MAPS_OPTION, Test.TEST_ENTRY_PATH, ...testProjectArguments], process.cwd(), false, environment);
     }
-    catch {
+    catch (error) {
+      this.writeLog(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     }
 
