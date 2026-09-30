@@ -90,11 +90,7 @@ export class ElectronUpdateBackendTests {
     return server;
   }
 
-  private static run(directory: TemporaryDirectory, cases: readonly IUpdateCase[]): Promise<readonly (string | null)[]> {
-    return Authenticode.timed(`electron run of ${cases.length} case(s)`, () => ElectronUpdateBackendTests.runChild(directory, cases));
-  }
-
-  private static async runChild(directory: TemporaryDirectory, cases: readonly IUpdateCase[]): Promise<readonly (string | null)[]> {
+  private static async run(directory: TemporaryDirectory, cases: readonly IUpdateCase[]): Promise<readonly (string | null)[]> {
     const environment: NodeJS.ProcessEnv = { ...process.env, LOCALAPPDATA: directory.resolve("local"), TEAMRUN_TEST_USER_DATA: directory.resolve("user-data"),
       TEAMRUN_TEST_CASES: JSON.stringify(cases) };
     delete environment["ELECTRON_RUN_AS_NODE"];
@@ -112,7 +108,6 @@ export class ElectronUpdateBackendTests {
       child.once("exit", exitCode => { clearTimeout(timer); done(exitCode); });
     });
     Assert.areEqual(0, code, errors);
-    console.error(`[timing #193] electron child: ${output.split(/\r?\n/).filter(t => t.startsWith("{")).join(" ")}`);
     return output.split(/\r?\n/).filter(t => t.startsWith("{")).map(t => (JSON.parse(t) as { refusal: string | null }).refusal);
   }
 
