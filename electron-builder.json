@@ -32,7 +32,13 @@
     ],
     "artifactName": "TeamRun-windows-${arch}.${ext}",
     "icon": "assets/icons/icon-dark.ico",
-    "signExecutable": false
+    "signExecutable": false,
+    "signtoolOptions": {
+      "sign": "./scripts/packaging/windows-sign-hook.ts",
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
+    }
   },
   "mac": {
     "target": [
