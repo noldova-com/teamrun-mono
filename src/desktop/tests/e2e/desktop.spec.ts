@@ -328,6 +328,27 @@ test("retains terminal output after a narrow resize, widening and a window reloa
   await desktop.capture("terminal-after-resize-reload");
 });
 
+test("scrolls through a terminal's stored output after a reload, oldest line first", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await page.keyboard.type("node -e \"for (let i = 1; i <= 1500; i++) console.log('teamrun-stored-line ' + i)\"");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText("teamrun-stored-line 1500", { timeout: 60_000 });
+  await expect.poll(async () => (await desktop.terminalState()).stored.end).toBeGreaterThan(0);
+
+  await page.reload();
+  await expect(terminal.locator(".xterm-rows")).toContainText("teamrun-stored-line 1500");
+  await desktop.scrollTerminalToEarliest(/teamrun-stored-line 1(?!\d)/);
+  const text = (await terminal.locator(".xterm-rows").textContent()) ?? "";
+
+  expect(text.search(/teamrun-stored-line 1(?!\d)/)).toBeGreaterThanOrEqual(0);
+  expect(text.search(/teamrun-stored-line 1(?!\d)/)).toBeLessThan(text.search(/teamrun-stored-line 2(?!\d)/));
+  await desktop.capture("terminal-stored-scroll");
+});
+
 test("opens a terminal in the home folder when no project is selected", async () => {
   const page = desktop.page;
   const project = page.locator("tr-sidebar div").filter({ has: page.getByRole("button", { name: "project", exact: true }) }).last();

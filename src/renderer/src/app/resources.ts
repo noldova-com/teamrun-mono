@@ -7,7 +7,7 @@
  */
 
 import type { MatTooltipDefaultOptions, TooltipPosition } from "@angular/material/tooltip";
-import { AppUpdateState, AppUpdateStatus, AuthStatus, TerminalShellKind } from "@noldova/teamrun-protocol";
+import { AppUpdateState, AppUpdateStatus, AuthStatus, TerminalShellKind, TerminalTextStyle } from "@noldova/teamrun-protocol";
 
 import markDark from "../../../../assets/icons/icon-dark-128.png";
 import markLight from "../../../../assets/icons/icon-light-128.png";
@@ -448,9 +448,12 @@ export class Resources {
   public static readonly defaultShellMark: string = "Default";
   public static readonly restartTerminalLabel: string = "Restart";
   public static readonly terminalExitedWithoutCode: string = "The shell exited without an exit code.";
+  public static readonly storedPageNotAdjacent: string = "A page of stored lines joins the lines already loaded.";
   public static readonly defaultTerminalColumns: number = 80;
   public static readonly defaultTerminalRows: number = 24;
-  public static readonly terminalScrollback: number = 1000;
+  public static readonly terminalScrollback: number = 10_000;
+  public static readonly terminalStoredPageSize: number = 500;
+  public static readonly terminalStoredPages: number = 12;
   public static readonly terminalLineHeight: number = 1.3;
   public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
   public static readonly conptyBackend: "conpty" = "conpty";
@@ -460,7 +463,20 @@ export class Resources {
   public static readonly transparentBackgrounds: readonly string[] = ["", "transparent", "rgba(0, 0, 0, 0)"];
   public static readonly terminalRestartReset: string = "\u001b[?1047l\u001b[!p\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?2004l\r";
   public static readonly terminalLineFeed: string = "\n";
+  public static readonly terminalLineBreak: string = "\r\n";
   public static readonly terminalHome: string = "\u001b[H";
+  public static readonly terminalResetAttributes: string = "\u001b[0m";
+  public static readonly terminalPaletteSize: number = 256;
+  public static readonly terminalRgbColor: number = 0x1000000;
+  public static readonly sgrReset: number = 0;
+  public static readonly sgrForeground: number = 38;
+  public static readonly sgrBackground: number = 48;
+  public static readonly sgrPaletteColor: number = 5;
+  public static readonly sgrRgbColor: number = 2;
+  public static readonly terminalStyleParameters: readonly (readonly [TerminalTextStyle, number])[] = [
+    [TerminalTextStyle.Bold, 1], [TerminalTextStyle.Dim, 2], [TerminalTextStyle.Italic, 3], [TerminalTextStyle.Underline, 4], [TerminalTextStyle.Blink, 5],
+    [TerminalTextStyle.Inverse, 7], [TerminalTextStyle.Invisible, 8], [TerminalTextStyle.Strikethrough, 9], [TerminalTextStyle.Overline, 53]
+  ];
   public static readonly dropGroupData: string = "dropGroup";
   public static readonly dropEdgeData: string = "dropEdge";
   public static readonly dropGroupSelector: string = "[data-drop-group]";
@@ -1226,6 +1242,10 @@ export class Resources {
 
   public static formatTerminalExit(exitCode: number): string {
     return `The shell exited with code ${exitCode}.`;
+  }
+
+  public static formatSgr(parameters: readonly number[]): string {
+    return `\u001b[${parameters.join(";")}m`;
   }
 
   public static formatFontLoad(size: number, family: string): string {
