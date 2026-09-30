@@ -69,7 +69,7 @@ class TrustedSigningModuleTests {
       await module.prepareAsync();
       await mkdir("win-unpacked");
       await module.signFileAsync(path.join("win-unpacked", "TeamRun.exe"));
-      const file = path.join(TrustedSigningModuleTests.root, "win-unpacked", "TeamRun.exe");
+      const file = path.resolve("win-unpacked", "TeamRun.exe");
       const record: unknown = JSON.parse(await readFile(file + PowerShellGalleryFixture.signingRecordExtension, "utf8"));
       assert.deepEqual(record, {
         Endpoint: "https://wus3.codesigning.azure.net/",
