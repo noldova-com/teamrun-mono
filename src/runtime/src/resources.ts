@@ -197,13 +197,17 @@ export class Resources {
   public static readonly lineFeedByte: number = 0x0a;
   public static readonly terminalCaptureScrollback: number = 1000;
   public static readonly terminalEndMilliseconds: number = 2_000;
+  public static readonly terminalOutputThreadStopMilliseconds: number = 2_000;
+  public static readonly terminalClosedConsoleGraceMultiplier: number = 4;
   public static readonly terminalHighWatermark: number = 1024 * 1024;
   public static readonly terminalLowWatermark: number = 256 * 1024;
   public static readonly forceKillSignal: string = "SIGKILL";
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly ptyAgentField: "_agent" = "_agent";
   public static readonly ptyOutputReaderField: "_conoutSocketWorker" = "_conoutSocketWorker";
+  public static readonly ptyOutputThreadField: "_worker" = "_worker";
   public static readonly disposeMethod: "dispose" = "dispose";
+  public static readonly terminateMethod: "terminate" = "terminate";
   public static readonly normalBufferType: "normal" = "normal";
   public static readonly eraseInDisplayFinal: string = "J";
   public static readonly privatePrefix: string = "?";

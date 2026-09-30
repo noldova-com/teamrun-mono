@@ -238,6 +238,10 @@ export class Resources {
   }
 
   public static formatUnclosedTestResources(resources: readonly string[]): string {
+    if (resources.length === 0)
+      return `Tests finished but the process did not exit within ${Resources.testShutdownGraceMilliseconds} ms and Node names no open resource; ` +
+        "a worker thread or a native handle keeps it alive. Failing the run.\n";
+
     return `Tests finished but resources remain open: ${resources.join(", ")}. Failing the run.\n`;
   }
 

@@ -22,6 +22,7 @@ export class PseudoTerminal {
   private readonly graceMilliseconds: number;
   private readonly subscriptions: readonly IDisposable[];
   private readonly exit: PromiseWithResolvers<void> = Promise.withResolvers<void>();
+  private released: Promise<void> = Promise.resolve();
   private killed: boolean = false;
   private exited: boolean = false;
 
@@ -70,17 +71,21 @@ export class PseudoTerminal {
   }
 
   public async end(): Promise<void> {
-    if (this.exited)
-      return;
-
-    if (!this.killed) {
-      this.pty.resume();
-      this.kill();
+    if (!this.exited) {
+      if (!this.killed) {
+        this.pty.resume();
+        this.kill();
+      }
+      if (!await this.exitsWithin(this.graceMilliseconds)) {
+        if (Object.isUndefined(this.forceSignal))
+          await this.exitsWithin(this.graceMilliseconds * Resources.terminalClosedConsoleGraceMultiplier);
+        else {
+          this.pty.kill(this.forceSignal);
+          await this.exitsWithin(this.graceMilliseconds);
+        }
+      }
     }
-    if (await this.exitsWithin(this.graceMilliseconds) || Object.isUndefined(this.forceSignal))
-      return;
-    this.pty.kill(this.forceSignal);
-    await this.exitsWithin(this.graceMilliseconds);
+    await this.released;
   }
 
   private async exitsWithin(milliseconds: number): Promise<boolean> {
@@ -109,17 +114,39 @@ export class PseudoTerminal {
       subscription.dispose();
     if (!this.killed)
       this.kill();
-    this.releaseOutputReader();
+    this.released = this.releaseOutputReader();
     this.exit.resolve();
     this.listener.onExit(this, Number.isInteger(exitCode) ? exitCode : null);
   }
 
-  private releaseOutputReader(): void {
+  private releaseOutputReader(): Promise<void> {
     const pty: object = this.pty;
     const agent: unknown = Resources.ptyAgentField in pty ? pty[Resources.ptyAgentField] : undefined;
     const reader: unknown = Object.isObject(agent) && Resources.ptyOutputReaderField in agent ? agent[Resources.ptyOutputReaderField] : undefined;
-    const dispose: unknown = Object.isObject(reader) && Resources.disposeMethod in reader ? reader[Resources.disposeMethod] : undefined;
+    if (!Object.isObject(reader))
+      return Promise.resolve();
+
+    const thread: unknown = Resources.ptyOutputThreadField in reader ? reader[Resources.ptyOutputThreadField] : undefined;
+    const terminate: unknown = Object.isObject(thread) && Resources.terminateMethod in thread ? thread[Resources.terminateMethod] : undefined;
+    if (Object.isFunction(terminate))
+      return this.stopsWithin(Promise.resolve(terminate.call(thread)).then(() => undefined));
+    const dispose: unknown = Resources.disposeMethod in reader ? reader[Resources.disposeMethod] : undefined;
     if (Object.isFunction(dispose))
       dispose.call(reader);
+    return Promise.resolve();
+  }
+
+  private async stopsWithin(stopped: Promise<void>): Promise<void> {
+    let timer: NodeJS.Timeout | null = null;
+    const elapsed = new Promise<void>(resolve => {
+      timer = setTimeout(resolve, Resources.terminalOutputThreadStopMilliseconds);
+    });
+    try {
+      await Promise.race([stopped, elapsed]);
+    }
+    finally {
+      if (!Object.isNull(timer))
+        clearTimeout(timer);
+    }
   }
 }

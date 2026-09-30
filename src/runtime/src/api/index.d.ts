@@ -2624,8 +2624,9 @@ export declare class TerminalEnvironment {
  * shell, reports output and the shell's end, and ends the shell on request. It asks `node-pty` to end the shell exactly
  * once, on request or after the shell ended by itself, because on Windows every request closes the pseudo-console
  * while `node-pty` still has its record of the shell, and closing it twice corrupts the runtime's heap. Asking closes
- * the shell's input, and on Windows the end releases the thread `node-pty` keeps reading the pseudo-console's output.
- * `node-pty` offers no public way to release that thread and otherwise keeps it until more output arrives, which never
+ * the shell's input, and on Windows the end stops the thread `node-pty` keeps reading the pseudo-console's output and
+ * waits until it has stopped: `node-pty` reports the end only once that output has all arrived, so nothing is lost.
+ * `node-pty` offers no public way to stop that thread and otherwise keeps it until more output arrives, which never
  * happens after an exit (microsoft/node-pty#887); reaching it is the exception the coding standards record.
  */
 export declare class PseudoTerminal {
@@ -2691,8 +2692,13 @@ export declare class PseudoTerminal {
   /**
    * Ends the shell: asks it to end (a hangup outside Windows) and waits; where a signal forces a shell, it then sends
    * the signal and waits again. It reads the output again first, because the Windows pseudo-console cannot end a shell
-   * while its output waits to be read. A second call while the shell is still ending only waits.
-   * @returns A promise that settles when the shell has ended or the last wait has passed; `hasExited` tells which.
+   * while its output waits to be read. Where no signal can force the shell, closing the pseudo-console is the force, so
+   * it keeps waiting four more times the grace for the exit `node-pty` reports once the console's output has closed;
+   * `node-pty` sends that close only after the shell's first output, so a shell ended right after starting takes its
+   * start-up time to end. A second call while the shell is still ending only waits. After the shell has ended, on
+   * Windows it also waits, at most two seconds, until the released output thread has stopped.
+   * @returns A promise that settles when the shell has ended and its output thread has stopped, or when the last wait
+   * has passed; `hasExited` tells whether the shell ended.
    */
   public end(): Promise<void>;
 }
