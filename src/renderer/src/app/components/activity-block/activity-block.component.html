@@ -21,8 +21,12 @@ LICENSE file in the root directory of this source tree.
           <div class="flex items-start gap-2">
             <span class="tr-step-spacer shrink-0" aria-hidden="true"></span>
             <div class="min-w-0 flex-1">
-              <pre class="tr-raised tr-mono my-1 max-h-64 overflow-auto whitespace-pre-wrap break-words p-2"
-                [class.tr-error]="isError(entry)">{{ isExpanded(entry) ? body : preview(body) }}</pre>
+              @if (entry.detail.kind === reasoningKind) {
+                <p class="tr-thinking tr-muted my-1 whitespace-pre-wrap">{{ isExpanded(entry) ? body : preview(body) }}</p>
+              } @else {
+                <pre class="tr-raised tr-mono my-1 max-h-64 overflow-auto whitespace-pre-wrap break-words p-2"
+                  [class.tr-error]="isError(entry)">{{ isExpanded(entry) ? body : preview(body) }}</pre>
+              }
               @if (hasMore(body)) {
                 <button mat-button class="tr-step-more" type="button" (click)="expand(entry)">
                   {{ isExpanded(entry) ? resources.showLessLabel : resources.showMoreLabel }}

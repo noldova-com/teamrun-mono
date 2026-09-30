@@ -47,6 +47,7 @@ export class ActivityBlockComponent implements OnInit {
   protected readonly resources: typeof Resources = Resources;
   protected readonly formatter: Formatter = inject(Formatter);
   protected readonly commandKind: DetailKind = DetailKind.Command;
+  protected readonly reasoningKind: DetailKind = DetailKind.Reasoning;
 
   public constructor() {
     effect(() => this.follow(this.entries(), this.streaming(), !this.motion.reduced()));

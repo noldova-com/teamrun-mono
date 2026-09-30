@@ -132,7 +132,12 @@ describe("ActivityBlockComponent", () => {
       expect(titles(fixture)[1]).toBe("");
       frames(fixture, 300);
       expect(titles(fixture)).toEqual(["Title line", "A second thought"]);
-      expect(element.querySelector("pre")?.textContent).toBe("Body line one\nBody line two");
+      const body = element.querySelector<HTMLElement>(".tr-thinking");
+      expect(body?.textContent).toBe("Body line one\nBody line two");
+      expect(body?.tagName).toBe("P");
+      expect(body?.classList.contains("tr-muted")).toBe(true);
+      expect(["tr-mono", "tr-raised", "max-h-64", "overflow-auto"].filter(t => body?.classList.contains(t))).toEqual([]);
+      expect(element.querySelector("pre")).toBeNull();
     });
 
     it("draws each step of a thought within its frame", () => {

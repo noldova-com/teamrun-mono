@@ -1449,6 +1449,12 @@ tr-settings-page {
   margin: 0;
 }
 
+.tr-thinking {
+  font-size: var(--tr-text-message);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
 .tr-interim {
   border-left: 2px solid var(--tr-border);
   color: var(--tr-text-muted);
