@@ -13,6 +13,7 @@ export enum EventName {
   MessageUpdated = "MessageUpdated",
   DetailAppended = "DetailAppended",
   DetailUpdated = "DetailUpdated",
+  ReplyThinking = "ReplyThinking",
   ApprovalCreated = "ApprovalCreated",
   ApprovalUpdated = "ApprovalUpdated",
   ProviderAccountUpdated = "ProviderAccountUpdated",

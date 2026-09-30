@@ -189,6 +189,7 @@ export class ClaudeAdapterTests {
     Assert.isTrue(append?.startsWith("The project's CLAUDE.md") ?? false);
     Assert.isTrue(append?.includes("Rules.\nAgent rules.\n@../outside.md\n@missing.md\n@ spaced") ?? false);
     Assert.areEqual(400, options?.maxTurns);
+    Assert.areEqual(JSON.stringify({ "thinking-display": "summarized" }), JSON.stringify(options?.extraArgs));
     Assert.isTrue(existsSync(host.directory.resolve("turn-profile")));
     Assert.areEqual("allow", (query.steps[1] as ToolAskStep).result?.behavior);
     Assert.areEqual("deny", (query.steps[2] as ToolAskStep).result?.behavior);

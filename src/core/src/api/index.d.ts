@@ -183,6 +183,12 @@ export interface ITurnListener {
   onDetail(detail: TurnDetail): void;
 
   /**
+   * Reports that the provider is thinking without sending text a reply can show, such as a thinking progress frame.
+   * Called as often as the provider reports progress; the listener decides what to show.
+   */
+  onThinking(): void;
+
+  /**
    * Asks for the user's decision on a request the provider made and resolves with the chosen
    * option's id; the adapter keeps the turn waiting meanwhile. Rejects when the reply is cancelled.
    * @param ask What the provider asks.
@@ -2477,6 +2483,11 @@ export declare class ReplyRun implements ITurnListener {
    * @inheritdoc
    */
   public onDetail(detail: TurnDetail): void;
+
+  /**
+   * @inheritdoc
+   */
+  public onThinking(): void;
 
   /**
    * @inheritdoc

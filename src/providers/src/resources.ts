@@ -206,6 +206,8 @@ export class Resources {
   public static readonly maximumToolResultLength: number = 6000;
   public static readonly maximumInputKeys: number = 4;
   public static readonly claudeMaximumTurns: number = 400;
+  public static readonly claudeThinkingDisplayArgument: string = "thinking-display";
+  public static readonly claudeSummarizedThinkingDisplay: string = "summarized";
   public static readonly projectInstructionsFileName: string = "CLAUDE.md";
   public static readonly importPrefix: string = "@";
   public static readonly maximumInstructionsLength: number = 65_536;
@@ -367,6 +369,7 @@ export class Resources {
   public static readonly userMessageType: "user" = "user";
   public static readonly resultMessageType: "result" = "result";
   public static readonly initSubtype: "init" = "init";
+  public static readonly thinkingTokensSubtype: "thinking_tokens" = "thinking_tokens";
   public static readonly successSubtype: "success" = "success";
   public static readonly textBlockType: "text" = "text";
   public static readonly thinkingBlockType: "thinking" = "thinking";

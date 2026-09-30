@@ -12,7 +12,9 @@ import { By } from "@angular/platform-browser";
 import { MatDialog } from "@angular/material/dialog";
 import { MatTooltip } from "@angular/material/tooltip";
 
-import { Conversation, ConversationRewindResult, DetailKind, Message, MessageDetail, MessageIdParams, MessageStatus, MethodName } from "@noldova/teamrun-protocol";
+import {
+  Conversation, ConversationRewindResult, DetailEventPayload, DetailKind, Event, EventName, Message, MessageDetail, MessageIdParams, MessageStatus, MethodName
+} from "@noldova/teamrun-protocol";
 
 import { SampleData } from "../../../fixtures/sample-data";
 import { VisibleText } from "../../../fixtures/visible-text";
@@ -121,6 +123,31 @@ describe("MessageCardComponent", () => {
     finally {
       vi.useRealTimers();
     }
+  });
+
+  it("says Thinking… while the provider thinks without text, keeping the spinner and Stop, until the next detail arrives", async () => {
+    const running = SampleData.withStatus(SampleData.reply, MessageStatus.Running, []);
+    const bridge = SampleData.createBridge().answer(MethodName.MessageListOpen, () => [running.toJson()]);
+    TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
+    const store = TestBed.inject(ChatStore);
+    await store.initialize();
+    const fixture = TestBed.createComponent(MessageCardComponent);
+    fixture.componentRef.setInput("message", running);
+    const status = (): HTMLElement => {
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(".tr-reply-status")!;
+    };
+
+    expect(status().textContent).toContain("Working for");
+    bridge.emit(new Event(EventName.ReplyThinking, new MessageIdParams(running.id).toJson()));
+    expect(status().textContent).toContain(Resources.thinkingLabel);
+    expect(status().textContent).not.toContain("Working for");
+    expect(status().querySelector("mat-spinner")).not.toBeNull();
+    expect(status().textContent).toContain(Resources.cancelLabel);
+    expect(status().querySelector("[aria-live]")).toBeNull();
+    bridge.emit(new Event(EventName.DetailAppended, new DetailEventPayload(running.id, SampleData.detail(0, DetailKind.Reasoning, "Planning")).toJson()));
+    expect(status().textContent).toContain("Working for");
+    store.dispose();
   });
 
   it("keeps completion timing for a reply with no tool activity, without an empty activity toggle", () => {

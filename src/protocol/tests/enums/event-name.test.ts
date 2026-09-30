@@ -17,6 +17,7 @@ export class EventNameTests {
     Assert.areEqual("MessageUpdated", EventName.MessageUpdated);
     Assert.areEqual("DetailAppended", EventName.DetailAppended);
     Assert.areEqual("DetailUpdated", EventName.DetailUpdated);
+    Assert.areEqual("ReplyThinking", EventName.ReplyThinking);
     Assert.areEqual("ApprovalCreated", EventName.ApprovalCreated);
     Assert.areEqual("ApprovalUpdated", EventName.ApprovalUpdated);
     Assert.areEqual("ProviderAccountUpdated", EventName.ProviderAccountUpdated);

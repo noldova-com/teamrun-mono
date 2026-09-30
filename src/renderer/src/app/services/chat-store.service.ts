@@ -109,6 +109,7 @@ export class ChatStore {
   private readonly errorSignal: WritableSignal<string | null> = signal(null);
   private readonly focusMessageIdSignal: WritableSignal<string | null> = signal(null);
   private readonly workingSignal: WritableSignal<ReadonlyMap<string, Message>> = signal(new Map());
+  private readonly thinkingSignal: WritableSignal<ReadonlySet<string>> = signal(new Set());
   private selectionGeneration: number = 0;
   private pageGeneration: number = 0;
   private requestedConversationId: string | null = null;
@@ -148,6 +149,7 @@ export class ChatStore {
     ChatStore.newestFirst([...this.conversationsByProjectSignal().values()].flat()).slice(0, Resources.recentCount));
   public readonly pendingApprovals: Signal<readonly Approval[]> = computed(() => this.approvalsSignal().filter(t => t.status === ApprovalStatus.Pending));
   public readonly workingReplies: Signal<readonly Message[]> = computed(() => [...this.workingSignal().values()]);
+  public readonly thinkingReplies: Signal<ReadonlySet<string>> = this.thinkingSignal.asReadonly();
   public readonly runningReply: Signal<Message | null> = computed(() => {
     const replies = [...this.workingSignal().values()].filter(t => t.conversationId === this.selectedConversationId())
       .sort((a, b) => a.sequence - b.sequence);
@@ -318,7 +320,14 @@ export class ChatStore {
       case EventName.DetailUpdated: {
         const payload = DetailEventPayload.fromJson(event.payload);
         this.captureEvent(event, JSON.stringify([EventName.DetailUpdated, payload.messageId, payload.detail.sequence]));
+        this.stopThinking(payload.messageId);
         this.applyDetail(payload);
+        break;
+      }
+      case EventName.ReplyThinking: {
+        const messageId = MessageIdParams.fromJson(event.payload).messageId;
+        if (this.workingSignal().has(messageId))
+          this.thinkingSignal.update(ids => new Set(ids).add(messageId));
         break;
       }
       case EventName.ApprovalCreated:
@@ -740,8 +749,20 @@ export class ChatStore {
       await this.loadMessages(first.id);
   }
 
+  private stopThinking(messageId: string): void {
+    if (!this.thinkingSignal().has(messageId))
+      return;
+    this.thinkingSignal.update(ids => {
+      const next = new Set(ids);
+      next.delete(messageId);
+      return next;
+    });
+  }
+
   private trackWorking(message: Message): void {
     const active = ChatStore.activeStatuses.includes(message.status);
+    if (!active)
+      this.stopThinking(message.id);
     if (!active && !this.workingSignal().has(message.id))
       return;
     this.workingSignal.update(map => {

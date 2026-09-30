@@ -94,7 +94,7 @@ export class CodexTurn implements INotificationHandler, IServerRequestHandler {
 
     switch (method) {
       case Resources.itemStartedNotification:
-        this.report(this.itemReader.readStarted(params.readObject(Resources.itemField)));
+        this.handleStarted(params.readObject(Resources.itemField));
         break;
       case Resources.itemCompletedNotification:
         this.stream.flush();
@@ -133,6 +133,13 @@ export class CodexTurn implements INotificationHandler, IServerRequestHandler {
 
   private belongsToThread(params: JsonReader): boolean {
     return params.hasField(Resources.threadIdField) && params.readValue(Resources.threadIdField) === this.threadId;
+  }
+
+  private handleStarted(item: JsonReader): void {
+    if (item.readNonBlankString(Resources.typeField) === Resources.reasoningItemType)
+      this.listener.onThinking();
+    else
+      this.report(this.itemReader.readStarted(item));
   }
 
   private report(detail: TurnDetail | null): void {

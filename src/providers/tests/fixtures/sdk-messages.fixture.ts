@@ -14,6 +14,7 @@ import type {
   SDKResultMessage,
   SDKStatusMessage,
   SDKSystemMessage,
+  SDKThinkingTokensMessage,
   SDKUserMessage
 } from "@anthropic-ai/claude-agent-sdk";
 import type {
@@ -155,6 +156,10 @@ export class SdkMessages {
 
   public static status(sessionId: string): SDKStatusMessage {
     return { type: "system", subtype: "status", status: "compacting", uuid: SdkMessages.ZERO_UUID, session_id: sessionId };
+  }
+
+  public static thinkingTokens(sessionId: string, estimated: number): SDKThinkingTokensMessage {
+    return { type: "system", subtype: "thinking_tokens", estimated_tokens: estimated, estimated_tokens_delta: 20, uuid: SdkMessages.ZERO_UUID, session_id: sessionId };
   }
 
   public static success(sessionId: string, result: string): SDKResultMessage {
