@@ -76,43 +76,38 @@ async function sampleStreamedReply(page: Page): Promise<{ answer: string[]; thou
   return sampling;
 }
 
-function revealedText(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const card = Array.from(document.querySelectorAll<HTMLElement>("tr-message-card")).at(-1);
-    return `${card?.querySelector<HTMLElement>("tr-markdown")?.innerText ?? ""}\n${card?.querySelector<HTMLElement>("tr-activity-block li button span")?.innerText ?? ""}`;
-  });
-}
-
-async function runFramesUntilSettled(page: Page): Promise<void> {
-  let previous = await revealedText(page);
-  for (let quiet = 0, frames = 0; quiet < 20; frames++) {
-    if (frames >= 1000)
-      throw new Error("The reveal did not settle within 1000 frames.");
-    await page.clock.runFor(16);
-    const current = await revealedText(page);
-    quiet = current === previous ? quiet + 1 : 0;
-    previous = current;
-  }
+function settle(page: Page): Promise<void> {
+  return page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const revealed = (): string => {
+      const card = Array.from(document.querySelectorAll<HTMLElement>("tr-message-card")).at(-1);
+      return `${card?.querySelector<HTMLElement>("tr-markdown")?.innerText ?? ""}\n${card?.querySelector<HTMLElement>("tr-activity-block li button span")?.innerText ?? ""}`;
+    };
+    let previous = revealed();
+    let quiet = 0;
+    let frames = 0;
+    const check = (): void => {
+      const current = revealed();
+      quiet = current === previous ? quiet + 1 : 0;
+      previous = current;
+      if (quiet >= 20)
+        resolve();
+      else if (++frames >= 1000)
+        reject(new Error("The reveal did not settle within 1000 frames."));
+      else
+        requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
 }
 
 async function sampleStepwiseReply(page: Page, provider: FixtureProvider): Promise<{ answer: string[]; thought: string[] }> {
-  await page.clock.install();
-  let sampled = false;
-  const sampling = startSampling(page).then(samples => {
-    sampled = true;
-    return samples;
-  });
+  const sampling = startSampling(page);
   await page.locator("tr-composer textarea").fill("Stream stepwise");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   const batches = FixtureProvider.batches(FixtureProvider.streamedThought).length + FixtureProvider.batches(FixtureProvider.streamedAnswer).length;
   for (let index = 0; index < batches; index++) {
     await provider.releaseBatch();
-    await runFramesUntilSettled(page);
-  }
-  for (let frames = 0; !sampled; frames++) {
-    if (frames >= 1000)
-      throw new Error("The reply did not finish within 1000 frames.");
-    await page.clock.runFor(16);
+    await settle(page);
   }
   return sampling;
 }
