@@ -8,7 +8,7 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import electronUpdater, { type AppUpdater, type CancellationToken, type NsisUpdater, type ProgressInfo } from "electron-updater";
@@ -20,11 +20,13 @@ import type { IUpdateBackend } from "../interfaces/i-update-backend.js";
 import type { UpdateSettings } from "../models/update-settings.js";
 import { Resources } from "../resources.js";
 import { ReleaseUpdateProvider } from "./release-update-provider.js";
+import { WindowsSignatureVerifier } from "./windows-signature-verifier.js";
 
 export class ElectronUpdateBackend implements IUpdateBackend {
   private readonly settings: UpdateSettings;
   private readonly dataDirectory: string;
   private updater: AppUpdater | null = null;
+  private verifier: WindowsSignatureVerifier | null = null;
   private cancellation: CancellationToken | null = null;
   private disposed: boolean = false;
 
@@ -48,7 +50,9 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     const listener = (value: ProgressInfo): void => progress(value.percent);
     updater.on(Resources.updateProgressEvent, listener);
     try {
-      await updater.downloadUpdate(token);
+      const files = await updater.downloadUpdate(token);
+      if (!Object.isNull(this.verifier))
+        await ElectronUpdateBackend.verifyDownloads(this.verifier, files);
     }
     finally {
       updater.removeListener(Resources.updateProgressEvent, listener);
@@ -103,13 +107,13 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     const directory = join(this.dataDirectory, Resources.electronDirectoryName);
     const path = join(directory, Resources.updateConfigFileName);
     const cacheId = createHash(Resources.updateHashAlgorithm).update(this.dataDirectory).digest(Resources.updateHashEncoding);
-    const config = { updaterCacheDirName: `${Resources.updateCachePrefix}${cacheId}` };
+    const config = { updaterCacheDirName: `${Resources.updateCachePrefix}${cacheId}`, publisherName: [this.settings.windowsPublisher] };
     await mkdir(directory, { recursive: true });
     await writeFile(path, JSON.stringify(config), Resources.utf8Encoding);
     if (this.disposed)
       throw new Error(Resources.updatesFeedMissing);
 
-    const updater = process.platform === Resources.windowsPlatform ? ElectronUpdateBackend.createWindowsUpdater()
+    const updater = process.platform === Resources.windowsPlatform ? this.createWindowsUpdater()
       : process.platform === Resources.macPlatform ? new electronUpdater.MacUpdater() : new electronUpdater.AppImageUpdater();
     updater.logger = null;
     updater.autoDownload = false;
@@ -124,10 +128,30 @@ export class ElectronUpdateBackend implements IUpdateBackend {
     return updater;
   }
 
-  private static createWindowsUpdater(): NsisUpdater {
+  private createWindowsUpdater(): NsisUpdater {
+    const systemRoot = process.env[Resources.systemRootVariable];
+    if (Object.isUndefined(systemRoot))
+      throw new Error(Resources.systemRootMissing);
+    const verifier = WindowsSignatureVerifier.forSystemRoot(this.settings.windowsPublisher, systemRoot);
     const updater = new electronUpdater.NsisUpdater();
     updater.installDirectory = dirname(process.execPath);
+    updater.verifyUpdateCodeSignature = async (_publishers, file) => {
+      await verifier.verify(file);
+      return null;
+    };
+    this.verifier = verifier;
     return updater;
+  }
+
+  private static async verifyDownloads(verifier: WindowsSignatureVerifier, files: readonly string[]): Promise<void> {
+    for (const file of files)
+      try {
+        await verifier.verify(file);
+      }
+      catch (error) {
+        await rm(file, { force: true });
+        throw error;
+      }
   }
 
   private static restartAppImage(appImage: string): void {

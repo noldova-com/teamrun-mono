@@ -9,6 +9,7 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+import Config from "../config.ts";
 import PackageException from "./package.exception.ts";
 
 export default class PackageOptions {
@@ -51,7 +52,7 @@ export default class PackageOptions {
   private static readonly SIGNED_OPTIONS: readonly string[] = ["--config.forceCodeSigning=true"];
   private static readonly SIGNED_WINDOWS_OPTIONS: readonly string[] = [
     "--config.win.signExecutable=true",
-    "--config.win.azureSignOptions.publisherName=Rostislav Rotaru",
+    `--config.win.azureSignOptions.publisherName=${Config.WINDOWS_PUBLISHER}`,
     "--config.win.azureSignOptions.endpoint=https://wus3.codesigning.azure.net/",
     "--config.win.azureSignOptions.codeSigningAccountName=noldova-signing",
     "--config.win.azureSignOptions.certificateProfileName=TeamRun"

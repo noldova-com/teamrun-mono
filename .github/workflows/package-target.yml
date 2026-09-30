@@ -171,12 +171,17 @@ jobs:
           if [ "$PACKAGE_SIGNED" = true ] && [ "$PACKAGE_PLATFORM" = windows ]; then
             executables=("_build/package/windows-$PACKAGE_ARCHITECTURE/TeamRun-windows-$PACKAGE_ARCHITECTURE.exe" "_build/package/windows-$PACKAGE_ARCHITECTURE/"win*-unpacked/TeamRun.exe)
             test "${#executables[@]}" -eq 2 && test -f "${executables[0]}" && test -f "${executables[1]}"
-            SIGNED_FILES="${executables[*]}" powershell -NoProfile -NonInteractive -Command '
+            WINDOWS_PUBLISHER="$(node --print 'require("./package.json").teamrun.windowsPublisher')" SIGNED_FILES="${executables[*]}" powershell -NoProfile -NonInteractive -Command '
+              $ErrorActionPreference = "Stop"
+              $flags = [System.Security.Cryptography.X509Certificates.X500DistinguishedNameFlags]::UseNewLines
+              $publisher = [System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($env:WINDOWS_PUBLISHER).Decode($flags) -split "\r?\n"
               $failed = $false
               foreach ($file in $env:SIGNED_FILES -split " ") {
                 $signature = Get-AuthenticodeSignature -LiteralPath $file
-                "{0}: {1}; signer {2}; timestamped {3}" -f $file, $signature.Status, $signature.SignerCertificate.Subject, ($null -ne $signature.TimeStamperCertificate)
-                if ($signature.Status -ne "Valid" -or $null -eq $signature.TimeStamperCertificate) { $failed = $true }
+                $subject = if ($null -eq $signature.SignerCertificate) { @() } else { $signature.SignerCertificate.SubjectName.Decode($flags) -split "\r?\n" }
+                $published = @($publisher | Where-Object { $subject -cnotcontains $_ }).Count -eq 0
+                "{0}: {1}; signer {2}; timestamped {3}; publisher {4}" -f $file, $signature.Status, $signature.SignerCertificate.Subject, ($null -ne $signature.TimeStamperCertificate), $published
+                if ($signature.Status -ne "Valid" -or $null -eq $signature.TimeStamperCertificate -or -not $published) { $failed = $true }
               }
               if ($failed) { exit 1 }' >> "$RUNNER_TEMP/teamrun-package/package.stdout.log" 2>> "$RUNNER_TEMP/teamrun-package/package.stderr.log"
           fi

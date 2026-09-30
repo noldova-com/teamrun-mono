@@ -80,6 +80,29 @@ export class Resources {
   public static readonly updatesFeedInvalid: string = "The local update test feed must be an HTTP loopback URL without credentials, a query or a fragment.";
   public static readonly updateCheckFailed: string = "Could not check for updates. Check the connection to the update server and try again.";
   public static readonly updateDownloadFailed: string = "The update could not be downloaded or verified. Try downloading it again.";
+  public static readonly updateSignatureRejected: string = "The downloaded update is not signed by TeamRun's publisher, so TeamRun did not install it.";
+  public static readonly updateSignatureUnchecked: string =
+    "TeamRun could not check the downloaded update's signature, so it did not install it. New versions are published on GitHub.";
+  public static readonly systemRootVariable: string = "SystemRoot";
+  public static readonly systemRootMissing: string = "Windows did not provide the SystemRoot variable, so TeamRun cannot find Windows PowerShell.";
+  public static readonly windowsPowerShellSegments: readonly string[] = ["System32", "WindowsPowerShell", "v1.0", "powershell.exe"];
+  public static readonly signatureArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
+  public static readonly signatureMilliseconds: number = 60_000;
+  public static readonly signatureFileVariable: string = "TEAMRUN_SIGNED_FILE";
+  public static readonly signaturePublisherVariable: string = "TEAMRUN_SIGNATURE_PUBLISHER";
+  public static readonly powerShellModulePathVariable: string = "PSMODULEPATH";
+  public static readonly signatureAccepted: string = "Signed";
+  public static readonly signatureRefused: string = "Refused";
+  public static readonly utf16Encoding: BufferEncoding = "utf16le";
+  public static readonly signatureScript: string = [
+    "$ErrorActionPreference = 'Stop'",
+    "$flags = [System.Security.Cryptography.X509Certificates.X500DistinguishedNameFlags]::UseNewLines",
+    `$publisher = [System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($env:${Resources.signaturePublisherVariable}).Decode($flags) -split '\\r?\\n'`,
+    `$signature = Get-AuthenticodeSignature -LiteralPath $env:${Resources.signatureFileVariable}`,
+    "$subject = if ($null -eq $signature.SignerCertificate) { @() } else { $signature.SignerCertificate.SubjectName.Decode($flags) -split '\\r?\\n' }",
+    "$signed = $signature.Status -eq 'Valid' -and @($publisher | Where-Object { $subject -cnotcontains $_ }).Count -eq 0",
+    `[Console]::Out.WriteLine($(if ($signed) { '${Resources.signatureAccepted}' } else { '${Resources.signatureRefused}' }))`
+  ].join("\n");
   public static readonly updateInstallDeferred: string = "Download verified. Installation is not enabled in this test build; restart will not install it.";
 
   public static formatUpdateTarget(platform: string, architecture: string): string {
@@ -97,6 +120,7 @@ export class Resources {
   public static readonly imageReadMode: string = "r";
   public static readonly connectionClosed: string = "The desktop runtime connection is closed.";
   public static readonly productVersion: string = "__VERSION__";
+  public static readonly windowsPublisher: string = "__WINDOWS_PUBLISHER__";
   public static readonly applicationName: string = "TeamRun";
   public static readonly clientName: string = "teamrun-desktop";
   public static readonly invokeChannel: string = "teamrun:invoke";

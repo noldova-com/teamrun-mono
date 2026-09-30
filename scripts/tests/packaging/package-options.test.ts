@@ -11,6 +11,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import configuration from "../../../electron-builder.json" with { type: "json" };
+import rootManifest from "../../../package.json" with { type: "json" };
 import PackageOptions from "../../packaging/package-options.ts";
 import PackageException from "../../packaging/package.exception.ts";
 import PackagedManifest from "../../packaging/packaged-manifest.ts";
@@ -95,7 +96,7 @@ class PackageOptionsTests {
       new PackageOptions([], "darwin", "arm64").assertSigningEnvironment({});
       assert.ok(windows.createBuilderArguments().includes("--config.forceCodeSigning=true"));
       assert.ok(windows.createBuilderArguments().includes("--config.win.signExecutable=true"));
-      for (const option of ["publisherName=Rostislav Rotaru", "endpoint=https://wus3.codesigning.azure.net/", "codeSigningAccountName=noldova-signing",
+      for (const option of [`publisherName=${rootManifest.teamrun.windowsPublisher}`, "endpoint=https://wus3.codesigning.azure.net/", "codeSigningAccountName=noldova-signing",
         "certificateProfileName=TeamRun"])
         assert.ok(windows.createBuilderArguments().includes(`--config.win.azureSignOptions.${option}`), option);
       assert.ok(!new PackageOptions([], "win32", "x64").createBuilderArguments().some(t => t.includes("azureSignOptions")));

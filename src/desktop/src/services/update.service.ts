@@ -9,6 +9,7 @@
 import "@noldova/teamrun-foundation-core";
 import { AppUpdateCommand, AppUpdateState, AppUpdateStatus } from "@noldova/teamrun-protocol";
 
+import { UpdateSignatureException } from "../exceptions/update-signature.exception.js";
 import type { IUpdateBackend } from "../interfaces/i-update-backend.js";
 import type { UpdateSettings } from "../models/update-settings.js";
 import type { IUpdateRestart } from "../interfaces/i-update-restart.js";
@@ -113,8 +114,8 @@ export class UpdateService {
       this.setState(AppUpdateStatus.Downloaded, version, Resources.fullUpdateProgress,
         this.allowInstallation && !Object.isNull(this.restart) ? Resources.updateInstallReady : Resources.updateInstallDeferred);
     }
-    catch {
-      this.setState(AppUpdateStatus.Error, version, null, Resources.updateDownloadFailed);
+    catch (error) {
+      this.setState(AppUpdateStatus.Error, version, null, error instanceof UpdateSignatureException ? error.message : Resources.updateDownloadFailed);
     }
     return this.current;
   }

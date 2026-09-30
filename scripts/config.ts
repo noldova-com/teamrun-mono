@@ -15,11 +15,14 @@ export default class Config {
   public static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
   public static readonly PROTOCOL_VERSION_PLACEHOLDER: string = "__PROTOCOL_VERSION__";
   public static readonly BUILD_PLACEHOLDER: string = "__BUILD__";
+  public static readonly WINDOWS_PUBLISHER_PLACEHOLDER: string = "__WINDOWS_PUBLISHER__";
   public static readonly RESOURCES_FILE_NAME: string = "resources.js";
-  private static readonly ROOT_MANIFEST: { version: string; teamrun: { protocolVersion: string } } = JSON.parse(readFileSync(Config.PACKAGE_MANIFEST_FILE_NAME, "utf8"));
+  private static readonly ROOT_MANIFEST: { version: string; teamrun: { protocolVersion: string; windowsPublisher: string } } =
+    JSON.parse(readFileSync(Config.PACKAGE_MANIFEST_FILE_NAME, "utf8"));
   public static readonly VERSION: string = Config.ROOT_MANIFEST.version;
   public static readonly PRODUCT_NAME: string = "TeamRun";
   public static readonly PROTOCOL_VERSION: string = Config.ROOT_MANIFEST.teamrun.protocolVersion;
+  public static readonly WINDOWS_PUBLISHER: string = Config.ROOT_MANIFEST.teamrun.windowsPublisher;
   public static readonly BUILD_FOLDER: string = "_build/dist";
   public static readonly TEST_BUILD_FOLDER: string = "_build/tests";
   public static readonly COVERAGE_FOLDER: string = "_build/coverage";
