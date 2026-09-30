@@ -19,7 +19,7 @@ export class TerminalLinePageTests {
       { text: "one", wrapped: false, runs: [{ length: 3, foreground: -1, background: -1, style: 0 }] },
       { text: "", wrapped: false, runs: [] }
     ],
-    stored: { start: 10, end: 12 }
+    stored: { start: 10, end: 12, dropped: 4 }
   };
 
   @TestMethod
@@ -62,7 +62,7 @@ export class TerminalLinePageTests {
 
   @TestMethod
   public rejectsInvalidValuesWithTheirPath(): void {
-    const json = { start: 0, lines: [{ text: 5, wrapped: false, runs: [] }], stored: { start: 0, end: 1 } };
+    const json = { start: 0, lines: [{ text: 5, wrapped: false, runs: [] }], stored: { start: 0, end: 1, dropped: 0 } };
 
     const exception = Assert.throws(() => TerminalLinePage.fromJson(json), JsonException);
 

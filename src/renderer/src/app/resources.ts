@@ -7,7 +7,7 @@
  */
 
 import type { MatTooltipDefaultOptions, TooltipPosition } from "@angular/material/tooltip";
-import { AppUpdateState, AppUpdateStatus, AuthStatus, TerminalShellKind, TerminalTextStyle } from "@noldova/teamrun-protocol";
+import { AppUpdateState, AppUpdateStatus, AuthStatus, Resources as ProtocolResources, TerminalShellKind, TerminalTextStyle } from "@noldova/teamrun-protocol";
 
 import markDark from "../../../../assets/icons/icon-dark-128.png";
 import markLight from "../../../../assets/icons/icon-light-128.png";
@@ -236,6 +236,7 @@ export class Resources {
   };
   public static readonly imageOpenModeHint: string = "Show images in a popup or in a separate tab beside your conversations.";
   public static readonly imageOpenModeField: string = "imageOpenMode";
+  public static readonly terminalOutputLimitField: string = "terminalOutputLimit";
   public static readonly defaultShellIdField: string = "defaultShellId";
   public static readonly imageOpenModeLabels: Readonly<Record<ImageOpenMode, string>> = {
     [ImageOpenMode.Popup]: "Popup",
@@ -449,6 +450,7 @@ export class Resources {
   public static readonly restartTerminalLabel: string = "Restart";
   public static readonly terminalExitedWithoutCode: string = "The shell exited without an exit code.";
   public static readonly storedPageNotAdjacent: string = "A page of stored lines joins the lines already loaded.";
+  public static readonly terminalNoteAttributes: string = "\u001b[2;3m";
   public static readonly defaultTerminalColumns: number = 80;
   public static readonly defaultTerminalRows: number = 24;
   public static readonly terminalScrollback: number = 10_000;
@@ -718,6 +720,14 @@ export class Resources {
   public static readonly terminalTitle: string = "Terminal";
   public static readonly defaultShellLabel: string = "Default shell";
   public static readonly defaultShellHint: string = "What a new terminal runs. The menu beside + in a terminal dock opens any other shell.";
+  public static readonly terminalOutputLimitLabel: string = "Output kept per terminal";
+  public static readonly terminalOutputLimitHint: string =
+    "How much of a terminal's output you can scroll back through. Beyond it the oldest lines are dropped. Applies to terminals opened afterwards.";
+  public static readonly terminalOutputLimitUnit: string = "MB";
+  public static readonly terminalOutputLimitInvalid: string = "Enter a whole number from 10 to 10,000.";
+  public static readonly defaultTerminalOutputLimit: number = ProtocolResources.defaultTerminalStoredLimit / ProtocolResources.terminalStoredLimitUnit;
+  public static readonly minimumTerminalOutputLimit: number = ProtocolResources.minimumTerminalStoredLimit / ProtocolResources.terminalStoredLimitUnit;
+  public static readonly maximumTerminalOutputLimit: number = ProtocolResources.maximumTerminalStoredLimit / ProtocolResources.terminalStoredLimitUnit;
   public static readonly shortcutsTitle: string = "Shortcuts";
   public static readonly shortcutsText: string =
     "The shortcuts work wherever the focus is, except while a dialog or a menu is open. On a Mac, Cmd stands in for Ctrl.";
@@ -1333,6 +1343,10 @@ export class Resources {
   public static formatActivitySummary(parts: readonly string[]): string {
     const joined = parts.join(", ");
     return joined.charAt(0).toUpperCase() + joined.slice(1);
+  }
+
+  public static formatDroppedLines(count: number): string {
+    return count === 1 ? "1 older line was dropped" : `${count.toLocaleString("en-US")} older lines were dropped`;
   }
 
   public static formatSteps(count: number): string {

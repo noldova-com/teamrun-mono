@@ -385,6 +385,36 @@ test("opens the shell chosen from the menu beside the new terminal button and sh
   await desktop.capture("terminal-chosen-shell");
 });
 
+test("drops a terminal's oldest stored output beyond the limit set in Settings and says so at the top", async () => {
+  const page = desktop.page;
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.locator(".tr-settings-nav").getByText("Terminal", { exact: true }).click();
+  const limit = page.getByRole("spinbutton", { name: "Output kept per terminal" });
+  await limit.fill("10");
+  await limit.press("Tab");
+  await desktop.capture("terminal-output-limit");
+
+  await page.getByRole("button", { name: "Conversation A", exact: true }).click();
+  await page.keyboard.press("Control+Shift+Backquote");
+  const terminal = page.locator("tr-tab-group[data-side='Bottom'] tr-terminal-panel");
+  await expect(terminal.locator("textarea")).toBeFocused();
+  await page.keyboard.type("node -e \"const c = t => t.split('').map((x, j) => '\\x1b[3' + (j % 7 + 1) + 'm' + x).join('') + '\\x1b[0m'; for (let i = 1; i <= 3600; i++) console.log(c('teamrun-capped-line-' + i + '-' + 'x'.repeat(76)))\"");
+  await page.keyboard.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText("teamrun-capped-line-3600-", { timeout: 120_000 });
+  await expect.poll(async () => (await desktop.terminalState()).stored.dropped, { timeout: 30_000 }).toBeGreaterThan(0);
+
+  await page.reload();
+  await expect(terminal.locator(".xterm-rows")).toContainText("teamrun-capped-line-3600-");
+  await desktop.scrollTerminalToEarliest(/older lines were dropped/);
+  const text = (await terminal.locator(".xterm-rows").textContent()) ?? "";
+  const stored = (await desktop.terminalState()).stored;
+
+  expect(stored.start).toBe(stored.dropped);
+  expect(text.indexOf(`${stored.dropped.toLocaleString("en-US")} older lines were dropped`)).toBe(0);
+  expect(text).toMatch(/older lines were dropped[\s\S]*teamrun-capped-line-\d+-/);
+  await desktop.capture("terminal-dropped-lines");
+});
+
 test("opens new terminals with the default shell chosen in Settings", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Settings", exact: true }).click();

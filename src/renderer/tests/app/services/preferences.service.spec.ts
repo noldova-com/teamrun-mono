@@ -55,6 +55,7 @@ describe("PreferencesService", () => {
     service.setDefaultComposer(new ComposerSettings("codex", "gpt-5", "high", null));
     service.rememberComposer("c1", new ComposerSettings("claude", null, null, "a1", "alice"));
     service.setDefaultShellId("cmd");
+    service.setTerminalOutputLimit(250);
     TestBed.tick();
 
     expect(document.documentElement.style.getPropertyValue(Resources.monoFontVariable)).toBe(Resources.systemMonoStack);
@@ -76,6 +77,8 @@ describe("PreferencesService", () => {
     expect(changed.accessMode).toBe(AccessMode.Full);
     expect(changed.defaultShellId).toBe("cmd");
     expect(service.defaultShellId()).toBe("cmd");
+    expect(changed.terminalOutputLimit).toBe(250);
+    expect(service.terminalOutputLimit()).toBe(250);
   });
 
   it("falls back to the defaults for unreadable storage", () => {
@@ -100,6 +103,9 @@ describe("PreferencesService", () => {
     expect(Preferences.fromJson([]).codeFont).toBe(FontChoice.Noldova);
     expect(Preferences.fromJson({ defaultShellId: " " }).defaultShellId).toBeNull();
     expect(Preferences.createDefault().defaultShellId).toBeNull();
+    expect(Preferences.createDefault().terminalOutputLimit).toBe(100);
+    expect([9, 10, 10_000, 10_001, 12.5, "50"].map(t => Preferences.fromJson({ terminalOutputLimit: t }).terminalOutputLimit))
+      .toEqual([100, 10, 10_000, 100, 100, 100]);
     expect(Preferences.fromJson(null).toJson()).toEqual(Preferences.createDefault().toJson());
   });
 

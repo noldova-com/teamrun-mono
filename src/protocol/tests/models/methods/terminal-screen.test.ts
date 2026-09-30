@@ -22,7 +22,7 @@ export class TerminalScreenTests {
     exit: { code: 0 },
     restartCount: 0,
     sequence: 3,
-    stored: { start: 0, end: 0 }
+    stored: { start: 0, end: 0, dropped: 0 }
   };
   private static readonly json: object = {
     state: TerminalScreenTests.state,

@@ -13,7 +13,7 @@ import { TerminalLineRange, TerminalOutputPayload } from "@noldova/teamrun-proto
 
 @TestClass
 export class TerminalOutputPayloadTests {
-  private static readonly json: object = { terminalId: "terminal-1", sequence: 4, data: "hello\r\n", stored: { start: 0, end: 31 } };
+  private static readonly json: object = { terminalId: "terminal-1", sequence: 4, data: "hello\r\n", stored: { start: 0, end: 31, dropped: 0 } };
 
   @TestMethod
   public roundTripsThroughJson(): void {
@@ -37,7 +37,7 @@ export class TerminalOutputPayloadTests {
 
   @TestMethod
   public rejectsInvalidValuesWithTheirPath(): void {
-    const exception = Assert.throws(() => TerminalOutputPayload.fromJson({ ...TerminalOutputPayloadTests.json, stored: { start: "0", end: 1 } }), JsonException);
+    const exception = Assert.throws(() => TerminalOutputPayload.fromJson({ ...TerminalOutputPayloadTests.json, stored: { start: "0", end: 1, dropped: 0 } }), JsonException);
 
     Assert.areEqual("$.stored.start", exception.path);
   }

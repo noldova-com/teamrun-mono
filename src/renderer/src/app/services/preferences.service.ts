@@ -40,6 +40,7 @@ export class PreferencesService {
   public readonly openMode: Signal<OpenMode> = computed(() => this.current().openMode);
   public readonly imageOpenMode: Signal<ImageOpenMode> = computed(() => this.current().imageOpenMode);
   public readonly defaultShellId: Signal<string | null> = computed(() => this.current().defaultShellId);
+  public readonly terminalOutputLimit: Signal<number> = computed(() => this.current().terminalOutputLimit);
   public readonly clock: Signal<ClockChoice> =
     computed(() => this.current().timeFormat.includes(Resources.meridiemToken) ? ClockChoice.TwelveHour : ClockChoice.TwentyFourHour);
 
@@ -115,6 +116,10 @@ export class PreferencesService {
 
   public setDefaultShellId(defaultShellId: string): void {
     this.update(current => current.with({ defaultShellId }));
+  }
+
+  public setTerminalOutputLimit(terminalOutputLimit: number): void {
+    this.update(current => current.with({ terminalOutputLimit }));
   }
 
   public composerFor(conversationId: string): ComposerSettings | null {

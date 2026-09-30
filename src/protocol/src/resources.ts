@@ -193,6 +193,8 @@ export class Resources {
   public static readonly storedField: string = "stored";
   public static readonly startField: string = "start";
   public static readonly endField: string = "end";
+  public static readonly droppedField: string = "dropped";
+  public static readonly storedLimitField: string = "storedLimit";
   public static readonly linesField: string = "lines";
   public static readonly wrappedField: string = "wrapped";
   public static readonly runsField: string = "runs";
@@ -211,9 +213,14 @@ export class Resources {
   public static readonly terminalRgbColor: number = 0x1000000;
   public static readonly maximumTerminalColor: number = 0x1ffffff;
   public static readonly terminalTextStyles: number = 0x1ff;
+  public static readonly terminalStoredLimitUnit: number = 1024 * 1024;
+  public static readonly defaultTerminalStoredLimit: number = 100 * Resources.terminalStoredLimitUnit;
+  public static readonly minimumTerminalStoredLimit: number = 10 * Resources.terminalStoredLimitUnit;
+  public static readonly maximumTerminalStoredLimit: number = 10_000 * Resources.terminalStoredLimitUnit;
   public static readonly terminalLineRangeReversed: string = "A range of terminal lines ends at or after its start.";
   public static readonly terminalRunsMismatch: string = "The runs of a terminal line cover its text exactly.";
   public static readonly terminalPageOutsideStored: string = "A page of terminal lines lies within the stored lines.";
+  public static readonly terminalDroppedBeyondStart: string = "A terminal cannot have dropped more lines than come before its stored lines.";
 
   public static readonly provenanceMismatch: string = "A provider's message carries its provenance and no other message does.";
   public static readonly messageEndMismatch: string = "A pending, running, or awaiting message has no end time; an ended one has it.";

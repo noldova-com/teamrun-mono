@@ -134,6 +134,16 @@ describe("TerminalsService", () => {
     expect(requests(MethodName.TerminalShells)).toHaveLength(3);
   });
 
+  it("opens new terminals with the output limit chosen in Settings", async () => {
+    const terminals = await start();
+
+    await terminals.open();
+    TestBed.inject(PreferencesService).setTerminalOutputLimit(25);
+    await terminals.open();
+
+    expect(requests(MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t).storedLimit)).toEqual([100 * 1024 * 1024, 25 * 1024 * 1024]);
+  });
+
   it("opens a terminal in the home folder without a selected project and reports a terminal that cannot open", async () => {
     TestBed.configureTestingModule({ providers: [{ provide: TEAMRUN_BRIDGE, useValue: bridge }] });
     const terminals = TestBed.inject(TerminalsService);
