@@ -43,7 +43,7 @@ class WindowsSignHookTests {
       });
       process.chdir(root);
       const modules = await PowerShellGalleryFixture.writeAsync(path.join(root, "gallery-fixture"), "0.5.8");
-      process.env["PSModulePath"] = modules + path.delimiter + (originalModulePath ?? "");
+      process.env["PSModulePath"] = PowerShellGalleryFixture.modulePath(modules);
       await new TrustedSigningModule().prepareAsync();
       const file = path.join(root, "TeamRun-windows-x64.exe");
       await windowsSignHook({ path: file });

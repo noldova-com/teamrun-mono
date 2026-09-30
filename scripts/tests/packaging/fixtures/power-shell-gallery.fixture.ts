@@ -6,10 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export default class PowerShellGalleryFixture {
+  private static readonly POWERSHELL: string = "pwsh";
+  private static readonly MODULE_PATH_QUERY: readonly string[] = ["-NoProfile", "-NonInteractive", "-Command", "$env:PSModulePath"];
+  private static readonly MODULE_PATH_QUERY_TIMEOUT: number = 30_000;
   private static readonly MODULES_DIRECTORY: string = "modules";
   private static readonly GALLERY_DIRECTORY: string = "gallery";
   private static readonly PROVIDER_NAME: string = "PowerShellGetFixture";
@@ -46,6 +50,20 @@ export default class PowerShellGalleryFixture {
 
   public static get signingRecordExtension(): string {
     return PowerShellGalleryFixture.SIGNING_RECORD_EXTENSION;
+  }
+
+  /**
+   * Returns a PSModulePath that starts with the fixture modules and continues with the folders pwsh uses by default.
+   * pwsh puts its own folders in front of an inherited PSModulePath that lacks them, which would hide the fixture.
+   */
+  public static modulePath(modules: string): string {
+    const query = spawnSync(PowerShellGalleryFixture.POWERSHELL, [...PowerShellGalleryFixture.MODULE_PATH_QUERY],
+      { encoding: PowerShellGalleryFixture.UTF8_ENCODING, timeout: PowerShellGalleryFixture.MODULE_PATH_QUERY_TIMEOUT });
+    if (query.error !== undefined)
+      throw query.error;
+    if (query.status !== 0)
+      throw new Error(query.stderr);
+    return modules + path.delimiter + query.stdout.trim();
   }
 
   public static async writeAsync(root: string, manifestVersion: string): Promise<string> {

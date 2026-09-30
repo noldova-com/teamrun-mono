@@ -102,8 +102,7 @@ class TrustedSigningModuleTests {
 
   private static async useGalleryAsync(manifestVersion: string): Promise<void> {
     const modules = await PowerShellGalleryFixture.writeAsync(path.join(TrustedSigningModuleTests.root, "gallery-fixture"), manifestVersion);
-    process.env[TrustedSigningModuleTests.MODULE_PATH_VARIABLE] =
-      modules + path.delimiter + (process.env[TrustedSigningModuleTests.MODULE_PATH_VARIABLE] ?? "");
+    process.env[TrustedSigningModuleTests.MODULE_PATH_VARIABLE] = PowerShellGalleryFixture.modulePath(modules);
   }
 }
 
