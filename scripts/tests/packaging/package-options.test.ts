@@ -86,7 +86,7 @@ class PackageOptionsTests {
       assert.ok(!args.includes("--config.win.signAndEditExecutable=false"));
     });
 
-    test("signed installers require signing, signed Windows uses Azure Artifact Signing and signed macOS requires notarization", () => {
+    test("signed installers require signing, signed Windows uses the repository's sign hook and signed macOS requires notarization", () => {
       const windows = new PackageOptions(["--signed"], "win32", "x64");
       const azure = { AZURE_TENANT_ID: "fixture", AZURE_CLIENT_ID: "fixture", AZURE_CLIENT_SECRET: "fixture" };
       assert.throws(() => windows.assertSigningEnvironment({}), /AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET/);
@@ -96,10 +96,10 @@ class PackageOptionsTests {
       new PackageOptions([], "darwin", "arm64").assertSigningEnvironment({});
       assert.ok(windows.createBuilderArguments().includes("--config.forceCodeSigning=true"));
       assert.ok(windows.createBuilderArguments().includes("--config.win.signExecutable=true"));
-      for (const option of [`publisherName=${rootManifest.teamrun.windowsPublisher}`, "endpoint=https://wus3.codesigning.azure.net/", "codeSigningAccountName=noldova-signing",
-        "certificateProfileName=TeamRun"])
-        assert.ok(windows.createBuilderArguments().includes(`--config.win.azureSignOptions.${option}`), option);
-      assert.ok(!new PackageOptions([], "win32", "x64").createBuilderArguments().some(t => t.includes("azureSignOptions")));
+      for (const option of ["sign=./scripts/packaging/windows-sign-hook.ts", "signingHashAlgorithms=sha256", `publisherName=${rootManifest.teamrun.windowsPublisher}`])
+        assert.ok(windows.createBuilderArguments().includes(`--config.win.signtoolOptions.${option}`), option);
+      assert.ok(!windows.createBuilderArguments().some(t => t.includes("azureSignOptions")));
+      assert.ok(!new PackageOptions([], "win32", "x64").createBuilderArguments().some(t => t.includes("signtoolOptions")));
       const mac = new PackageOptions(["--signed"], "darwin", "arm64");
       assert.ok(mac.createBuilderArguments().includes("--config.mac.notarize=true"));
       assert.ok(!mac.createBuilderArguments().includes("--config.mac.identity=null"));

@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -30,6 +30,9 @@ jobs:
     name: Classify changes
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
     outputs:
       run-code: ${{ steps.scope.outputs.run-code }}
     steps:
@@ -39,45 +42,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '26.7.0'
+          package-manager-cache: false
+
       - name: Select verification scope
         id: scope
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          run_code=true
-          if [[ "$EVENT_NAME" == pull_request || "$EVENT_NAME" == push ]]; then
-            if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]] &&
-              git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null &&
-              git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
-              comparison_base=$BASE_SHA
-              if [[ "$EVENT_NAME" == pull_request ]]; then
-                comparison_base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
-              fi
-              # Disabling rename detection checks both the old and new paths.
-              git diff --no-renames --name-only -z "$comparison_base" "$HEAD_SHA" -- > "$RUNNER_TEMP/teamrun-changed-files"
-              if [[ -s "$RUNNER_TEMP/teamrun-changed-files" ]]; then
-                run_code=false
-                while IFS= read -r -d '' changed_path; do
-                  if [[ "$changed_path" == *.md && ( "$changed_path" != */* || "$changed_path" == docs/* || "$changed_path" == .github/* ) ]]; then
-                    continue
-                  fi
-                  run_code=true
-                  break
-                done < "$RUNNER_TEMP/teamrun-changed-files"
-              fi
-            else
-              echo 'Comparison history is unavailable; running the full code checks.'
-            fi
-          fi
-          printf 'run-code=%s\n' "$run_code" >> "$GITHUB_OUTPUT"
-          if [[ "$run_code" == false ]]; then
-            echo 'Only Markdown documentation changed; code builds and tests are not required.' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'Full build and test verification selected.' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/classify-changes.ts
 
   build:
     name: Build (Linux x64)
@@ -304,6 +282,11 @@ jobs:
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/package.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/package.stderr.log" >&2' EXIT
           npm run test:package > "$RUNNER_TEMP/teamrun-ci/package.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/package.stderr.log"
+
+      - name: Check workflow scripts
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-ci/workflows.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/workflows.stderr.log" >&2' EXIT
+          npm run test:workflows > "$RUNNER_TEMP/teamrun-ci/workflows.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/workflows.stderr.log"
 
       - name: Check desktop tooling
         run: |

@@ -62,6 +62,20 @@ export class PseudoTerminalTests {
   }
 
   @TestMethod
+  public async endsTheShellOnceWhenItEndsOnRequest(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const fake = new FakePty(1);
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+
+    await pty.end();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.areEqual(1, fake.kills.length);
+    Assert.areEqual("0", listener.exitCodes.join(","));
+    Assert.areEqual(0, fake.listenerCount);
+  }
+
+  @TestMethod
   public async forcesTheShellWhenAskingDoesNotEndIt(): Promise<void> {
     const listener = new RecordingPseudoTerminalListener();
     const fake = new FakePty(2);
@@ -70,22 +84,36 @@ export class PseudoTerminalTests {
     await pty.end();
 
     Assert.isTrue(pty.hasExited);
-    Assert.areEqual("undefined,SIGKILL,undefined", fake.kills.map(t => String(t)).join(","));
+    Assert.areEqual("undefined,SIGKILL", fake.kills.map(t => String(t)).join(","));
     Assert.areEqual(0, fake.listenerCount);
   }
 
   @TestMethod
-  public async givesUpWhenNothingEndsTheShell(): Promise<void> {
+  public async asksOnlyOnceWhereNoSignalForcesTheShell(): Promise<void> {
     const listener = new RecordingPseudoTerminalListener();
     const fake = new FakePty(0);
     const pty = new PseudoTerminal(fake, listener, undefined, 20);
 
-    await pty.end();
+    await Promise.all([pty.end(), pty.end()]);
 
     Assert.isFalse(pty.hasExited);
-    Assert.areEqual(2, fake.kills.length);
+    Assert.areEqual(1, fake.kills.length);
     fake.emitExit(1);
     Assert.isTrue(pty.hasExited);
+    Assert.areEqual(1, fake.kills.length);
+  }
+
+  @TestMethod
+  public async ignoresAResizeAfterAskingTheShellToEnd(): Promise<void> {
+    const listener = new RecordingPseudoTerminalListener();
+    const fake = new FakePty(0);
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+
+    pty.resize(new TerminalSize(100, 30));
+    await pty.end();
+    pty.resize(new TerminalSize(120, 40));
+
+    Assert.areEqual("100x30", fake.sizes.join(","));
   }
 
   @TestMethod
@@ -113,6 +141,20 @@ export class PseudoTerminalTests {
 
     Assert.isTrue(pty.hasExited);
     Assert.areEqual(1, reader.released);
+    Assert.areEqual(1, fake.kills.length);
+  }
+
+  @TestMethod
+  public reportsAnExitWithoutACodeWhenThePlatformGivesNone(): void {
+    const listener = new RecordingPseudoTerminalListener();
+    const fake = new FakePty(0);
+    const pty = new PseudoTerminal(fake, listener, undefined, 20);
+
+    fake.emitExitWithoutCode();
+
+    Assert.isTrue(pty.hasExited);
+    Assert.areEqual(1, listener.exitCodes.length);
+    Assert.isNull(listener.exitCodes[0]);
     Assert.areEqual(1, fake.kills.length);
   }
 

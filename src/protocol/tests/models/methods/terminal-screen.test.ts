@@ -19,7 +19,7 @@ export class TerminalScreenTests {
     shellKind: "Zsh",
     conptyBuild: null,
     size: { columns: 80, rows: 24 },
-    exitCode: 0,
+    exit: { code: 0 },
     restartCount: 0,
     sequence: 3,
     stored: { start: 0, end: 0 }

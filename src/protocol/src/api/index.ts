@@ -96,6 +96,7 @@ export { UpdateCheckpointResult } from "../models/update-checkpoint-result.js";
 export { UpdateOperation } from "../models/update-operation.js";
 export { TerminalShellKind } from "../enums/terminal-shell-kind.js";
 export { TerminalTextStyle } from "../enums/terminal-text-style.js";
+export { TerminalExit } from "../models/terminal-exit.js";
 export { TerminalLine } from "../models/terminal-line.js";
 export { TerminalLineRange } from "../models/terminal-line-range.js";
 export { TerminalShell } from "../models/terminal-shell.js";

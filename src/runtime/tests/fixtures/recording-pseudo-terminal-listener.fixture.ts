@@ -10,7 +10,7 @@ import type { IPseudoTerminalListener, PseudoTerminal } from "@noldova/teamrun-r
 
 export class RecordingPseudoTerminalListener implements IPseudoTerminalListener {
   public readonly sources: PseudoTerminal[] = [];
-  public readonly exitCodes: number[] = [];
+  public readonly exitCodes: (number | null)[] = [];
   public output: string = "";
 
   public onData(source: PseudoTerminal, data: string): void {
@@ -18,7 +18,7 @@ export class RecordingPseudoTerminalListener implements IPseudoTerminalListener 
     this.output += data;
   }
 
-  public onExit(source: PseudoTerminal, exitCode: number): void {
+  public onExit(source: PseudoTerminal, exitCode: number | null): void {
     this.sources.push(source);
     this.exitCodes.push(exitCode);
   }

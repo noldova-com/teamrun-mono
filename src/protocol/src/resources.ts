@@ -187,7 +187,8 @@ export class Resources {
   public static readonly shellIdField: string = "shellId";
   public static readonly shellKindField: string = "shellKind";
   public static readonly conptyBuildField: string = "conptyBuild";
-  public static readonly exitCodeField: string = "exitCode";
+  public static readonly exitField: string = "exit";
+  public static readonly codeField: string = "code";
   public static readonly restartCountField: string = "restartCount";
   public static readonly storedField: string = "stored";
   public static readonly startField: string = "start";

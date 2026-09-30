@@ -10,5 +10,5 @@ import type { PseudoTerminal } from "../services/terminals/pseudo-terminal.js";
 
 export interface IPseudoTerminalListener {
   onData(source: PseudoTerminal, data: string): void;
-  onExit(source: PseudoTerminal, exitCode: number): void;
+  onExit(source: PseudoTerminal, exitCode: number | null): void;
 }

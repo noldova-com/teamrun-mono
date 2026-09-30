@@ -12,6 +12,7 @@ import {
   Event,
   EventName,
   MethodName,
+  TerminalExit,
   TerminalIdParams,
   TerminalInputParams,
   TerminalLineRange,
@@ -44,8 +45,8 @@ describe("TerminalPanelComponent", () => {
   let bridge: FakeTeamRunBridge;
   let opened: number;
 
-  const stateOf = (id: string, exitCode: number | null = null, sequence: number = 0): TerminalState =>
-    new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exitCode, 0, sequence, new TerminalLineRange(0, 0));
+  const stateOf = (id: string, exit: TerminalExit | null = null, sequence: number = 0): TerminalState =>
+    new TerminalState(id, SampleData.project.id, "PowerShell", TerminalShellKind.PowerShell, null, new TerminalSize(80, 24), exit, 0, sequence, new TerminalLineRange(0, 0));
   const inputs = (): string[] => bridge.requests.filter(t => t.method === MethodName.TerminalInput).map(t => TerminalInputParams.fromJson(t.payload).data);
   const prepare = async (platform: string): Promise<TerminalsService> => {
     bridge.info = { dataDirectory: "D:\\data", productVersion: "0.0.1-test", platform };
@@ -138,9 +139,12 @@ describe("TerminalPanelComponent", () => {
     expect(element.querySelector(".tr-terminal-exit")).toBeNull();
     FakeResizeObserver.resizeAll();
 
-    bridge.emit(new Event(EventName.TerminalChanged, stateOf("t1", 0, 1).toJson()));
+    bridge.emit(new Event(EventName.TerminalChanged, stateOf("t1", new TerminalExit(0), 1).toJson()));
     fixture.detectChanges();
     expect(element.querySelector(".tr-terminal-exit span")?.textContent).toBe("The shell exited with code 0.");
+    bridge.emit(new Event(EventName.TerminalChanged, stateOf("t1", new TerminalExit(null), 2).toJson()));
+    fixture.detectChanges();
+    expect(element.querySelector(".tr-terminal-exit span")?.textContent).toBe("The shell exited without an exit code.");
     element.querySelector<HTMLButtonElement>(".tr-terminal-exit button")!.click();
     expect(bridge.requests.filter(t => t.method === MethodName.TerminalRestart).map(t => t.payload)).toEqual([new TerminalIdParams("t1").toJson()]);
 
