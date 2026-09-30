@@ -8,6 +8,9 @@
     "output": "_build/package"
   },
   "asar": true,
+  "asarUnpack": [
+    "node_modules/node-pty/**"
+  ],
   "npmRebuild": false,
   "nodeGypRebuild": false,
   "toolsets": {
@@ -33,6 +36,10 @@
     "artifactName": "TeamRun-windows-${arch}.${ext}",
     "icon": "assets/icons/icon-dark.ico",
     "signExecutable": false,
+    "signExts": [
+      ".dll",
+      ".node"
+    ],
     "signtoolOptions": {
       "sign": "./scripts/packaging/windows-sign-hook.ts",
       "signingHashAlgorithms": [

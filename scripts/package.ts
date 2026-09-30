@@ -17,6 +17,7 @@ import AppImageLauncher from "./packaging/app-image-launcher.ts";
 import PackageArtifacts from "./packaging/package-artifacts.ts";
 import PackageOptions from "./packaging/package-options.ts";
 import PackageException from "./packaging/package.exception.ts";
+import NativeTerminalFiles from "./packaging/native-terminal-files.ts";
 import PackagedManifest from "./packaging/packaged-manifest.ts";
 import Script from "./script.ts";
 import TrustedSigningModule from "./packaging/trusted-signing-module.ts";
@@ -42,6 +43,7 @@ export default class Package extends Script {
   private static readonly NEWLINE: string = "\n";
   private static readonly RENDERER_SEGMENTS: readonly string[] = ["_build", "renderer", "browser"];
   private static readonly BUILDING: string = "Running electron-builder (publication disabled)...";
+  private static readonly CHECKING_TERMINAL_FILES: string = "Checking the native terminal files outside the archive...";
   private static readonly WINDOWS_PLATFORM: string = "windows";
   private static readonly LINUX_PLATFORM: string = "linux";
   private static readonly BUILDER_CLI_PATH: string = "node_modules/electron-builder/cli.js";
@@ -76,6 +78,8 @@ export default class Package extends Script {
     await this.executeNpmCommandAsync(options.createInstallArguments(), options.appDirectory);
     const archives = packages.map(packageInfo => path.resolve(Config.PACKAGES_FOLDER, packageInfo.formatTarballFileName(Config.VERSION)));
     await this.executeNpmCommandAsync(options.createInstallArguments(archives), options.appDirectory);
+    const nativeTerminalFiles = new NativeTerminalFiles(options.nodePlatform, options.architecture);
+    await nativeTerminalFiles.prune(options.appDirectory);
 
     const externalDependencies: Record<string, string> = { ...rootManifest.dependencies };
     for (const [location, entry] of Object.entries(rootLock.packages)) {
@@ -109,6 +113,8 @@ export default class Package extends Script {
       process.execPath,
       [path.resolve(Package.BUILDER_CLI_PATH), ...options.createBuilderArguments()],
       process.cwd());
+    this.writeLog(Package.CHECKING_TERMINAL_FILES);
+    await nativeTerminalFiles.verify(options.resourcesDirectory);
     if (!options.directoryOnly)
       await new PackageArtifacts(options, Config.VERSION).writeReport(process.env[Package.RELEASE_REVISION_VARIABLE] ?? process.env[Package.GITHUB_REVISION_VARIABLE] ?? null);
   }

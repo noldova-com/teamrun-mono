@@ -171,6 +171,9 @@ jobs:
           if [ "$PACKAGE_SIGNED" = true ] && [ "$PACKAGE_PLATFORM" = windows ]; then
             executables=("_build/package/windows-$PACKAGE_ARCHITECTURE/TeamRun-windows-$PACKAGE_ARCHITECTURE.exe" "_build/package/windows-$PACKAGE_ARCHITECTURE/"win*-unpacked/TeamRun.exe)
             test "${#executables[@]}" -eq 2 && test -f "${executables[0]}" && test -f "${executables[1]}"
+            mapfile -t natives < <(find "_build/package/windows-$PACKAGE_ARCHITECTURE/"win*-unpacked/resources/app.asar.unpacked -type f \( -name '*.exe' -o -name '*.dll' -o -name '*.node' \))
+            test "${#natives[@]}" -eq 4
+            executables+=("${natives[@]}")
             WINDOWS_PUBLISHER="$(node --print 'require("./package.json").teamrun.windowsPublisher')" SIGNED_FILES="${executables[*]}" powershell -NoProfile -NonInteractive -Command '
               $ErrorActionPreference = "Stop"
               $flags = [System.Security.Cryptography.X509Certificates.X500DistinguishedNameFlags]::UseNewLines
@@ -185,6 +188,37 @@ jobs:
               }
               if ($failed) { exit 1 }' >> "$RUNNER_TEMP/teamrun-package/package.stdout.log" 2>> "$RUNNER_TEMP/teamrun-package/package.stderr.log"
           fi
+
+      - name: Run a command in a terminal of the installed application
+        env:
+          INSTALLED: ${{ runner.temp }}/teamrun-installed
+        run: |
+          trap 'cat "$RUNNER_TEMP/teamrun-package/installed.stdout.log"; cat "$RUNNER_TEMP/teamrun-package/installed.stderr.log" >&2' EXIT
+          rm -rf "$INSTALLED" && mkdir -p "$INSTALLED"
+          {
+            if [ "$PACKAGE_PLATFORM" = windows ]; then
+              INSTALLER="$(cygpath -w "$GITHUB_WORKSPACE/_build/package/windows-$PACKAGE_ARCHITECTURE/TeamRun-windows-$PACKAGE_ARCHITECTURE.exe")" \
+              TARGET="$(cygpath -w "$INSTALLED")" powershell -NoProfile -NonInteractive -Command '
+                $ErrorActionPreference = "Stop"
+                $process = Microsoft.PowerShell.Management\Start-Process -FilePath $env:INSTALLER -ArgumentList "/S", ("/D=" + $env:TARGET) -Wait -PassThru
+                exit $process.ExitCode'
+              executable="$INSTALLED/TeamRun.exe"
+              resources="$INSTALLED/resources"
+            elif [ "$PACKAGE_PLATFORM" = mac ]; then
+              apps=("_build/package/mac-$PACKAGE_ARCHITECTURE/"*/TeamRun.app)
+              test "${#apps[@]}" -eq 1
+              ditto "${apps[0]}" "$INSTALLED/TeamRun.app"
+              executable="$INSTALLED/TeamRun.app/Contents/MacOS/TeamRun"
+              resources="$INSTALLED/TeamRun.app/Contents/Resources"
+            else
+              appimages=("$GITHUB_WORKSPACE/_build/package/linux-$PACKAGE_ARCHITECTURE/"*.AppImage)
+              test "${#appimages[@]}" -eq 1
+              (cd "$INSTALLED" && "${appimages[0]}" --appimage-extract > /dev/null)
+              executable="$INSTALLED/squashfs-root/teamrun"
+              resources="$INSTALLED/squashfs-root/resources"
+            fi
+            node scripts/check-installed-terminal.ts --executable "$executable" --resources "$resources"
+          } > "$RUNNER_TEMP/teamrun-package/installed.stdout.log" 2> "$RUNNER_TEMP/teamrun-package/installed.stderr.log"
 
       - name: Retain installers and reports
         id: installers

@@ -27,6 +27,11 @@ export default class PackageOptions {
   private static readonly MAC_PLATFORM: string = "mac";
   private static readonly LINUX_PLATFORM: string = "linux";
   private static readonly ARCHITECTURES: readonly string[] = ["x64", "arm64"];
+  private static readonly DEFAULT_ARCHITECTURE: string = "x64";
+  private static readonly WINDOWS_UNPACKED_PREFIX: string = "win";
+  private static readonly UNPACKED_SUFFIX: string = "-unpacked";
+  private static readonly RESOURCES_FOLDER: string = "resources";
+  private static readonly MAC_RESOURCES_SEGMENTS: readonly string[] = ["TeamRun.app", "Contents", "Resources"];
   private static readonly LINUX_SIGNING_UNSUPPORTED: string = "--signed is supported for Windows and macOS only.";
   private static readonly SIGNED_DIRECTORY_UNSUPPORTED: string = "--signed requires an installer build; omit --dir.";
   private static readonly WINDOWS_BUILDER_OPTION: string = "--win";
@@ -113,6 +118,15 @@ export default class PackageOptions {
 
   public get outputDirectory(): string {
     return path.resolve(PackageOptions.PACKAGE_OUTPUT_FOLDER, this.targetName);
+  }
+
+  public get resourcesDirectory(): string {
+    const suffix = this.architecture === PackageOptions.DEFAULT_ARCHITECTURE ? String() : `-${this.architecture}`;
+    if (this.platform === PackageOptions.WINDOWS_PLATFORM)
+      return path.join(this.outputDirectory, `${PackageOptions.WINDOWS_UNPACKED_PREFIX}${suffix}${PackageOptions.UNPACKED_SUFFIX}`, PackageOptions.RESOURCES_FOLDER);
+    if (this.platform === PackageOptions.LINUX_PLATFORM)
+      return path.join(this.outputDirectory, `${PackageOptions.LINUX_PLATFORM}${suffix}${PackageOptions.UNPACKED_SUFFIX}`, PackageOptions.RESOURCES_FOLDER);
+    return path.join(this.outputDirectory, `${PackageOptions.MAC_PLATFORM}${suffix}`, ...PackageOptions.MAC_RESOURCES_SEGMENTS);
   }
 
   public get installerPolicyPath(): string {
