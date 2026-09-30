@@ -156,7 +156,7 @@ export class TerminalHost {
   private async listShells(): Promise<readonly TerminalShell[]> {
     const environment = await this.environment.create();
     const defaultId = this.shells.findDefault(environment).id;
-    return this.shells.findAll(environment).map(t => new TerminalShell(t.id, t.name, t.kind, t.id === defaultId));
+    return (await this.shells.findAll(environment)).map(t => new TerminalShell(t.id, t.name, t.kind, t.id === defaultId));
   }
 
   private async start(owner: ITerminalOwner, projectId: string | null, folder: string, shellId: string | null,
@@ -164,7 +164,7 @@ export class TerminalHost {
     if (this.stopped)
       throw new ServiceException(ErrorCode.Unavailable, Resources.terminalsStopped);
     const environment = await this.environment.create();
-    const shell = Object.isNull(shellId) ? this.shells.findDefault(environment) : this.findShell(shellId, environment);
+    const shell = Object.isNull(shellId) ? this.shells.findDefault(environment) : await this.findShell(shellId, environment);
     const id = Guid.createVersion7().toString();
     const terminal = HostedTerminal.start(id, owner, projectId, folder, shell, environment, size,
       join(this.directory, `${id}${Resources.terminalHistoryExtension}`), this.settings);
@@ -177,8 +177,8 @@ export class TerminalHost {
     return terminal;
   }
 
-  private findShell(shellId: string, environment: ShellEnvironment): Shell {
-    const shell = this.shells.findAll(environment).find(t => t.id === shellId);
+  private async findShell(shellId: string, environment: ShellEnvironment): Promise<Shell> {
+    const shell = (await this.shells.findAll(environment)).find(t => t.id === shellId);
     if (Object.isUndefined(shell))
       throw new ServiceException(ErrorCode.NotFound, Resources.terminalShellNotFound, [shellId]);
     return shell;

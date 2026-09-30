@@ -32,7 +32,8 @@ export class FixtureShell implements IShellLocator {
     return FixtureShell.create();
   }
 
-  public findAll(): readonly Shell[] {
-    return [FixtureShell.create(), new Shell("fixture-other", FixtureShell.otherName, TerminalShellKind.Bash, process.execPath, [FixtureShell.scriptPath])];
+  public findAll(): Promise<readonly Shell[]> {
+    return Promise.resolve([FixtureShell.create(),
+      new Shell("fixture-other", FixtureShell.otherName, TerminalShellKind.Bash, process.execPath, [FixtureShell.scriptPath])]);
   }
 }

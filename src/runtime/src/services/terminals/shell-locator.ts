@@ -13,46 +13,88 @@ import { posix, win32 } from "node:path";
 import "@noldova/teamrun-foundation-core";
 import { ServiceException } from "@noldova/teamrun-foundation-services";
 import { ErrorCode, TerminalShellKind } from "@noldova/teamrun-protocol";
+import { CommandRunner, ProcessTerminator } from "@noldova/teamrun-providers";
 
 import type { IShellLocator } from "../../interfaces/i-shell-locator.js";
 import { Shell } from "../../models/shell.js";
 import type { ShellEnvironment } from "../../models/shell-environment.js";
+import type { VisualStudioInstallation } from "../../models/visual-studio-installation.js";
 import { Resources } from "../../resources.js";
+import { VisualStudioReader } from "./visual-studio.reader.js";
+import { WslDistributionReader } from "./wsl-distribution.reader.js";
 
 export class ShellLocator implements IShellLocator {
   private readonly platform: string;
+  private readonly architecture: string;
   private readonly userShell: () => string | null;
   private readonly exists: (path: string) => boolean;
   private readonly listedShells: () => string | null;
+  private readonly wslDistributions: (environment: ShellEnvironment) => Promise<readonly string[]>;
+  private readonly visualStudios: (environment: ShellEnvironment) => Promise<readonly VisualStudioInstallation[]>;
 
-  public constructor(platform: string, userShell: () => string | null, exists: (path: string) => boolean, listedShells: () => string | null) {
+  public constructor(
+    platform: string,
+    architecture: string,
+    userShell: () => string | null,
+    exists: (path: string) => boolean,
+    listedShells: () => string | null,
+    wslDistributions: (environment: ShellEnvironment) => Promise<readonly string[]>,
+    visualStudios: (environment: ShellEnvironment) => Promise<readonly VisualStudioInstallation[]>) {
     this.platform = platform;
+    this.architecture = architecture;
     this.userShell = userShell;
     this.exists = exists;
     this.listedShells = listedShells;
+    this.wslDistributions = wslDistributions;
+    this.visualStudios = visualStudios;
   }
 
   public static fromPlatform(platform: string, listedShellsPath: string = Resources.listedShellsPath): ShellLocator {
-    return new ShellLocator(platform, () => userInfo().shell, t => ShellLocator.hasEntry(t), () => ShellLocator.readText(listedShellsPath));
+    const runner = new CommandRunner(new ProcessTerminator(platform));
+    return new ShellLocator(platform, process.arch, () => userInfo().shell, t => ShellLocator.hasEntry(t), () => ShellLocator.readText(listedShellsPath),
+      t => WslDistributionReader.forSystemRoot(ShellLocator.systemRoot(t), runner).read(t.toRecord()),
+      t => VisualStudioReader.forEnvironment(t, runner).read(t.toRecord()));
   }
 
   public findDefault(environment: ShellEnvironment): Shell {
     return this.platform === Resources.windowsPlatform ? this.findWindowsDefault(environment) : this.findLoginShell(environment);
   }
 
-  public findAll(environment: ShellEnvironment): readonly Shell[] {
-    return this.platform === Resources.windowsPlatform ? this.findWindowsShells(environment) : this.findUnixShells(environment);
+  public async findAll(environment: ShellEnvironment): Promise<readonly Shell[]> {
+    return this.platform === Resources.windowsPlatform ? await this.findWindowsShells(environment) : this.findUnixShells(environment);
   }
 
   private findWindowsDefault(environment: ShellEnvironment): Shell {
     return this.findPowerShell(environment) ?? ShellLocator.windowsPowerShell(ShellLocator.systemRoot(environment));
   }
 
-  private findWindowsShells(environment: ShellEnvironment): Shell[] {
+  private async findWindowsShells(environment: ShellEnvironment): Promise<Shell[]> {
     const systemRoot = ShellLocator.systemRoot(environment);
-    const shells = [this.findPowerShell(environment), ShellLocator.windowsPowerShell(systemRoot), ShellLocator.commandPrompt(systemRoot),
-      this.findGitBash(environment)];
+    const powerShell = this.findPowerShell(environment);
+    const windowsPowerShell = ShellLocator.windowsPowerShell(systemRoot);
+    const [distributions, visualStudios] = await Promise.all([this.wslDistributions(environment), this.visualStudios(environment)]);
+    const shells = [powerShell, windowsPowerShell, ShellLocator.commandPrompt(systemRoot), this.findGitBash(environment),
+      ...distributions.filter(t => !t.toLowerCase().startsWith(Resources.wslDockerPrefix)).map(t => ShellLocator.wslShell(systemRoot, t)),
+      ...visualStudios.flatMap(t => this.developerShells(t, systemRoot, powerShell ?? windowsPowerShell))];
     return shells.filter((t): t is Shell => !Object.isNull(t));
+  }
+
+  private developerShells(installation: VisualStudioInstallation, systemRoot: string, powerShell: Shell): Shell[] {
+    const tools = win32.join(installation.path, ...Resources.developerToolsSegments);
+    const script = win32.join(tools, Resources.developerCommandScript);
+    const module = win32.join(tools, Resources.developerShellModule);
+    const architecture = Resources.developerArchitectures.get(this.architecture) ?? this.architecture;
+    const id = Resources.developerIdPrefix + installation.instanceId;
+    const shells: Shell[] = [];
+    if (this.exists(script))
+      shells.push(new Shell(id + Resources.developerCommandSuffix, Resources.formatDeveloperCommandPromptName(installation.name),
+        TerminalShellKind.CommandPrompt, win32.join(systemRoot, ...Resources.commandPromptSegments),
+        [Resources.keepOpenArgument, script, Resources.noStartDirectoryArgument, ...Resources.formatDeveloperArchitectureArguments(architecture)]));
+    if (this.exists(module))
+      shells.push(new Shell(id + Resources.developerPowerShellSuffix, Resources.formatDeveloperPowerShellName(installation.name),
+        TerminalShellKind.PowerShell, powerShell.executable, [Resources.powerShellNoExitArgument, Resources.powerShellCommandArgument,
+          Resources.formatDeveloperPowerShellCommand(module, installation.path, architecture)]));
+    return shells;
   }
 
   private findPowerShell(environment: ShellEnvironment): Shell | null {
@@ -129,6 +171,11 @@ export class ShellLocator implements IShellLocator {
   private static windowsPowerShell(systemRoot: string): Shell {
     return new Shell(Resources.windowsPowerShellId, Resources.windowsPowerShellName, TerminalShellKind.PowerShell,
       win32.join(systemRoot, ...Resources.windowsPowerShellSegments), []);
+  }
+
+  private static wslShell(systemRoot: string, distribution: string): Shell {
+    return new Shell(Resources.wslIdPrefix + distribution, distribution, TerminalShellKind.Wsl, win32.join(systemRoot, ...Resources.wslSegments),
+      [Resources.wslDistributionArgument, distribution]);
   }
 
   private static commandPrompt(systemRoot: string): Shell {

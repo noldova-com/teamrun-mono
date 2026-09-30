@@ -778,6 +778,35 @@ export declare class TrackedProcess {
 }
 
 /**
+ * A Visual Studio installation as `vswhere` reports it.
+ */
+export declare class VisualStudioInstallation {
+  /**
+   * The installation's instance id.
+   */
+  public readonly instanceId: string;
+
+  /**
+   * The installation's display name, such as "Visual Studio Professional 2026".
+   */
+  public readonly name: string;
+
+  /**
+   * The installation folder.
+   */
+  public readonly path: string;
+
+  /**
+   * Initializes the installation.
+   * @param instanceId The instance id; not blank.
+   * @param name The display name; not blank.
+   * @param path The installation folder; not blank.
+   * @throws ArgumentException when a value is blank.
+   */
+  public constructor(instanceId: string, name: string, path: string);
+}
+
+/**
  * Names a process image through `tasklist` on Windows, `/proc/<pid>/exe` on Linux, and `ps` on other platforms.
  */
 export declare class ProcessInspector {
@@ -2354,10 +2383,10 @@ export interface IShellLocator {
   /**
    * Finds every installed shell, including the default shell.
    * @param environment The environment the shells will start with, which is also where they are looked for.
-   * @returns The shells, each with a distinct id.
-   * @throws ServiceException when the shells cannot be looked for.
+   * @returns A promise of the shells, each with a distinct id.
+   * @throws ServiceException (as a rejected promise) when the shells cannot be looked for.
    */
-  findAll(environment: ShellEnvironment): readonly Shell[];
+  findAll(environment: ShellEnvironment): Promise<readonly Shell[]>;
 }
 
 /**
@@ -2525,13 +2554,24 @@ export declare class ShellLocator implements IShellLocator {
   /**
    * Initializes the locator.
    * @param platform The platform, as `process.platform`.
+   * @param architecture The processor architecture, as `process.arch`; the Visual Studio developer shells build for it.
    * @param userShell Reads the person's login shell from the system, or `null` when none is recorded; a failure counts
    * as none.
    * @param exists Tells whether a file exists.
    * @param listedShells Reads the system's list of shells, one path per line as in `/etc/shells`, or `null` when there
    * is none.
+   * @param wslDistributions Reads the names of the person's WSL distributions on Windows, the default first; a
+   * rejection makes `findAll` reject.
+   * @param visualStudios Reads the Visual Studio installations on Windows; a rejection makes `findAll` reject.
    */
-  public constructor(platform: string, userShell: () => string | null, exists: (path: string) => boolean, listedShells: () => string | null);
+  public constructor(
+    platform: string,
+    architecture: string,
+    userShell: () => string | null,
+    exists: (path: string) => boolean,
+    listedShells: () => string | null,
+    wslDistributions: (environment: ShellEnvironment) => Promise<readonly string[]>,
+    visualStudios: (environment: ShellEnvironment) => Promise<readonly VisualStudioInstallation[]>);
 
   /**
    * Creates the locator for a platform, reading the login shell from the system's user record. A file counts as
@@ -2540,7 +2580,8 @@ export declare class ShellLocator implements IShellLocator {
    * @param platform The platform, as `process.platform`.
    * @param listedShellsPath The system's list of shells; `/etc/shells` by default. A path that is not a file counts as
    * no list.
-   * @returns The locator.
+   * @returns The locator, for this process's architecture, reading WSL distributions through `WslDistributionReader`
+   * and Visual Studio installations through `VisualStudioReader`.
    */
   public static fromPlatform(platform: string, listedShellsPath?: string): ShellLocator;
 
@@ -2558,14 +2599,83 @@ export declare class ShellLocator implements IShellLocator {
    * Finds every installed shell, the default shell first. On Windows these are PowerShell 7 (`pwsh`), Windows
    * PowerShell (`windows-powershell`), Command Prompt (`cmd`) and Git Bash (`git-bash`), which is looked for through
    * the `cmd` folder of a Git on `Path`, then in `Git` under `%ProgramFiles%` and `%ProgramFiles(x86)%` and in
-   * `Programs\Git` under `%LOCALAPPDATA%`, and starts with `--login -i`. Elsewhere they are the login shell and the
-   * other existing shells in the system's list, one per name, leaving out terminal multiplexers and shells that
-   * refuse sign-in; each shell's id is its path.
+   * `Programs\Git` under `%LOCALAPPDATA%`, and starts with `--login -i`. They are followed by each WSL
+   * distribution (`wsl-<name>`, `wsl.exe -d <name>`), leaving out Docker Desktop's `docker-desktop` distributions,
+   * and, for each Visual Studio installation, a Developer Command Prompt (`vs-<instance>-cmd`, `cmd.exe /k` running
+   * `Common7\Tools\VsDevCmd.bat -startdir=none`) and a Developer PowerShell (`vs-<instance>-powershell`, the
+   * PowerShell found above running `Enter-VsDevShell -SkipAutomaticLocation`), each only when its file exists and
+   * both built for this architecture. Elsewhere they are the login shell and the other existing shells in the
+   * system's list, one per name, leaving out terminal multiplexers and shells that refuse sign-in; each shell's id is
+   * its path.
    * @param environment The environment the shells will start with.
-   * @returns The shells.
-   * @throws ServiceException `Unavailable` on Windows when `SystemRoot` is not set.
+   * @returns A promise of the shells.
+   * @throws ServiceException `Unavailable` (as a rejected promise) on Windows when `SystemRoot` is not set or the WSL
+   * distributions or Visual Studio installations cannot be read.
    */
-  public findAll(environment: ShellEnvironment): readonly Shell[];
+  public findAll(environment: ShellEnvironment): Promise<readonly Shell[]>;
+}
+
+/**
+ * Reads the names of the person's WSL distributions from their registry key through Windows PowerShell.
+ */
+export declare class WslDistributionReader {
+  /**
+   * Initializes the reader.
+   * @param command The command that prints the distributions.
+   * @param runner Runs the command.
+   * @param timeoutMilliseconds How long the command may run; a positive integer.
+   */
+  public constructor(command: ProcessCommand, runner: CommandRunner, timeoutMilliseconds: number);
+
+  /**
+   * Creates the reader that runs Windows PowerShell from the Windows folder with a 20-second deadline.
+   * @param systemRoot The Windows folder, from `SystemRoot`.
+   * @param runner Runs the command.
+   * @returns The reader.
+   */
+  public static forSystemRoot(systemRoot: string, runner: CommandRunner): WslDistributionReader;
+
+  /**
+   * Reads the distributions. The command prints one line per distribution, its base64-encoded UTF-8 name and `1` for
+   * the default distribution or `0`, separated by a space, and then `End`; without WSL it prints only `End`.
+   * @param environment The environment to run the command with.
+   * @returns The distribution names, the default first and the others in the order printed.
+   * @throws ServiceException `Unavailable` (as a rejected promise) when the command cannot start, times out, fails or
+   * prints output that cannot be read.
+   */
+  public read(environment: NodeJS.ProcessEnv): Promise<readonly string[]>;
+}
+
+/**
+ * Lists the Visual Studio installations through `vswhere`, which the Visual Studio Installer places in
+ * `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer`.
+ */
+export declare class VisualStudioReader {
+  /**
+   * Initializes the reader.
+   * @param command The `vswhere` command, or `null` where there can be none.
+   * @param runner Runs the command.
+   * @param timeoutMilliseconds How long the command may run; a positive integer.
+   */
+  public constructor(command: ProcessCommand | null, runner: CommandRunner, timeoutMilliseconds: number);
+
+  /**
+   * Creates the reader for the `vswhere` under the environment's `ProgramFiles(x86)`, listing every product, including
+   * previews and Build Tools, as UTF-8 JSON, with a 20-second deadline.
+   * @param environment The environment that names the program folders.
+   * @param runner Runs the command.
+   * @returns The reader; without `ProgramFiles(x86)` it has no command.
+   */
+  public static forEnvironment(environment: ShellEnvironment, runner: CommandRunner): VisualStudioReader;
+
+  /**
+   * Lists the installations.
+   * @param environment The environment to run the command with.
+   * @returns The installations in `vswhere`'s order; none when there is no command or `vswhere` is not installed.
+   * @throws ServiceException `Unavailable` (as a rejected promise) when `vswhere` cannot start, times out, fails or
+   * prints anything but an array of installations with an instance id, a display name and a path.
+   */
+  public read(environment: NodeJS.ProcessEnv): Promise<readonly VisualStudioInstallation[]>;
 }
 
 /**
