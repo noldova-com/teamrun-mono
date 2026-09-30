@@ -186,7 +186,7 @@ This table owns component geometry and radii. Typography follows section 1, radi
 | Text field | 26px minimum high; preferred width 200px; 6px inner padding; small radius | Panel | Input tokens; labelled; focus border; wraps validation text outside the input |
 | Select | 26px minimum high; preferred width 320px; small radius | Panel | Field styling; arrow in readable foreground; shrinks to its container |
 | Dropdown list | 26px minimum rows; 4px inner padding; 8px row side padding; small radius | Panel | Dropdown surface, 1px border and widget shadow; chosen/keyboard row uses active-list pair; no decorative check mark |
-| Checkbox | 18px visual square; 8px label gap; hover radius | Panel label | Label participates in the hit target; border and check mark remain identifiable |
+| Checkbox | 18px visual square; 8px label gap; box aligned with the label's first line; hover radius | Panel label | Label participates in the hit target; border and check mark remain identifiable |
 | Choice pills (toggle group) | 22px minimum visual height; 8px side padding; 4px gaps; small radius | Panel, 600 | Selected or hover fill, no decorative border/check; separate semantic selected state |
 | Settings item | Padding 12px 14px 18px; description gap 3px; control gap 9px; medium radius | Panel; title 600 | Subtle hover surface; text and controls wrap |
 | Settings heading | Automatic height; 10px surrounding space, 15px start inset | Settings group heading, 600 | Heading foreground; grows with its proportional line height |

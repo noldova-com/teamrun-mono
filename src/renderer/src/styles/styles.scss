@@ -516,7 +516,11 @@ mat-icon.mat-icon {
   background-color: var(--tr-checkbox);
 }
 
-.mat-mdc-checkbox .mdc-form-field > label {
+.mat-mdc-checkbox .mat-internal-form-field {
+  align-items: flex-start;
+}
+
+.mat-mdc-checkbox .mat-internal-form-field > .mat-internal-form-field-label {
   padding-left: var(--tr-space-2);
 }
 
