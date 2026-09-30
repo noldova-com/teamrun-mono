@@ -76,18 +76,22 @@ class WorkflowCommandsTests {
       assert.doesNotMatch(workflow, /contents: write|actions: write/);
     });
 
-    test("merge groups run both required checks without widening their permissions", async () => {
+    test("merge groups run both required checks, the linked-issue one from its own workflow without permissions", async () => {
       const checks = await readFile(".github/workflows/build-and-test.yml", "utf8");
       const linked = await readFile(".github/workflows/require-linked-issue.yml", "utf8");
-      for (const workflow of [checks, linked])
-        assert.ok(workflow.includes("  merge_group:\n    types: [checks_requested]\n    branches: [main]\n"));
+      const queued = await readFile(".github/workflows/require-linked-issue-merge-group.yml", "utf8");
+      const trigger = "  merge_group:\n    types: [checks_requested]\n    branches: [main]\n";
+      assert.ok(checks.includes(trigger));
       assert.ok(checks.includes("BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}"));
       assert.ok(checks.includes("HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"));
       assert.ok(checks.includes("\npermissions:\n  contents: read\n\n"));
+      assert.ok(linked.includes("\non:\n  pull_request_target:\n"));
+      assert.doesNotMatch(linked, /merge_group/);
       assert.ok(linked.includes("\npermissions:\n  issues: read\n  pull-requests: read\n\n"));
-      assert.ok(linked.includes("group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"));
-      assert.ok(linked.includes("if: github.event_name == 'merge_group'"));
-      assert.ok(linked.includes("if: github.event_name == 'pull_request_target'"));
+      assert.ok(queued.includes(`\non:\n${trigger}\npermissions: {}\n`));
+      assert.equal((queued.match(/\n {4}name: /g) ?? []).length, 1);
+      assert.ok(queued.includes("\n    name: Require linked issue\n"));
+      assert.doesNotMatch(queued, /\bif:|pull_request|push:|workflow_dispatch|secrets\.|github\.token/);
     });
 
     test("each target runs its package tests and its UI workflows in parallel jobs that the required aggregate check needs", async () => {
