@@ -97,6 +97,7 @@ describe("SidebarComponent", () => {
     expect(row.querySelector(".tr-row-actions")).not.toBeNull();
     expect(element.querySelector("mat-progress-spinner")?.nextElementSibling?.classList.contains("tr-row-actions")).toBe(true);
     expect(element.querySelectorAll("mat-progress-spinner").length).toBe(1);
+    expect(element.querySelector<HTMLElement>("mat-progress-spinner")!.style.width).toBe(`${Resources.conversationSpinnerDiameter}px`);
     const nested = (): string[] => Array.from(element.querySelectorAll(".tr-conversation-row.tr-nav-row-nested")).map(t => t.textContent?.trim() ?? "");
     expect(nested().length).toBe(store.conversationsOf("p1").length + store.conversationsOf("p2").length - 1);
     expect(nested().some(t => t.includes(SampleData.conversation.title))).toBe(false);

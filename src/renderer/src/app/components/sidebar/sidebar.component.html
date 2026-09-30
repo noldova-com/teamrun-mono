@@ -92,7 +92,7 @@ LICENSE file in the root directory of this source tree.
         {{ conversation.title || resources.untitledConversation }}
       </button>
       @if (store.isWorking(conversation.id)) {
-        <mat-progress-spinner class="tr-row-working mr-1 shrink-0" mode="indeterminate" [diameter]="resources.spinnerDiameter"
+        <mat-progress-spinner class="tr-row-working mr-1 shrink-0" mode="indeterminate" [diameter]="resources.conversationSpinnerDiameter"
           [attr.aria-label]="resources.workingLabel" />
       }
       <button mat-icon-button class="tr-small-icon-button tr-row-actions shrink-0" [matMenuTriggerFor]="conversationMenu"

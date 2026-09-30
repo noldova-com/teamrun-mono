@@ -17,7 +17,7 @@ LICENSE file in the root directory of this source tree.
         <span class="tr-tab-label">{{ titleOf(conversationId) }}</span>
         <span class="tr-tab-actions">
           @if (store.isWorking(conversationId)) {
-            <mat-progress-spinner class="tr-tab-spinner" mode="indeterminate" [diameter]="resources.spinnerDiameter"
+            <mat-progress-spinner class="tr-tab-spinner" mode="indeterminate" [diameter]="resources.conversationSpinnerDiameter"
               [attr.aria-label]="resources.workingLabel" />
           }
           <span role="button" class="tr-tab-close" [attr.aria-label]="resources.closeTabLabel" (click)="close($event, conversationId)">

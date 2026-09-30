@@ -767,6 +767,7 @@ export class Resources {
   public static readonly defaultMessageTextSize: number = 14;
   public static readonly defaultCodeTextSize: number = 14;
   public static readonly spinnerDiameter: number = 16;
+  public static readonly conversationSpinnerDiameter: number = 10;
   public static readonly minimumTextSize: number = 12;
   public static readonly maximumTextSize: number = 18;
   public static readonly defaultsTitle: string = "Defaults for new conversations";
