@@ -23,7 +23,8 @@
     "test:package": "node scripts/test-package.ts",
     "test:renderer": "node scripts/test-renderer.ts",
     "test:ui": "playwright test --config src/desktop/tests/e2e/playwright.config.ts",
-    "test:release": "node scripts/test-release.ts"
+    "test:release": "node scripts/test-release.ts",
+    "test:workflows": "node scripts/test-workflows.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

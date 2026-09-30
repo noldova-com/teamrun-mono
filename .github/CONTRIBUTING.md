@@ -72,6 +72,8 @@ npm run cli -- help
 
 Run `npm run test:build` to verify package-build orchestration and artifact fingerprints in disposable projects, including a real compiler, pack and offline install check. The command type-checks scripts and requires 100% line, branch and function coverage for the build command, build evidence and its test entry point.
 
+Run `npm run test:workflows` to check the scripts that workflows run, such as the Build and test change classification, against disposable Git repositories and a simulated GitHub API. The command type-checks scripts and requires 100% line, branch and function coverage for those scripts and its test entry point.
+
 ## Run the desktop and UI checks
 
 After installing dependencies, install the pinned Electron runtime once and launch the built application:

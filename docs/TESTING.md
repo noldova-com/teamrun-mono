@@ -84,7 +84,9 @@ Report covered/executable file counts and percentage against the tested source i
 
 Documentation changes require content, consistency, link and formatting checks. Verified commands and prerequisites belong in README or the owning tooling guide when available; do not invent commands for missing tooling.
 
-For automatic PR and `main` push runs, the Build and test workflow skips its code build and test matrix only when every changed path is a Markdown file at the repository root, under `docs/`, or under `.github/`. Markdown under source or scripts, other file types, and mixed changes require the full matrix. Renames account for both paths. PRs are compared from their merge base; pushes compare the previous and new revisions. Empty comparisons or unavailable history select the full matrix. Manual runs always select it.
+For automatic PR and `main` push runs, the Build and test workflow skips its code build and test matrix only when every changed path is a Markdown file at the repository root, under `docs/`, or under `.github/`. Markdown under source or scripts, other file types, and mixed changes require the full matrix. Renames account for both paths. PRs are compared from their merge base; pushes to `main` are compared with the newest revision in their history whose `main` run succeeded, so one run covers every push since. Empty comparisons, unavailable history or no such revision select the full matrix. Manual runs always select it.
+
+Every push to `main` is verified on `main`. A later push never cancels a `main` run; pushes that arrive while it runs wait, and only the newest waiting run starts, covering all of them. A new push to a PR cancels that PR's run in progress.
 
 The required aggregate check reports a documentation-only skip explicitly. Failed change classification, a failed, cancelled or unexpectedly skipped build, or any failed, cancelled or unexpectedly skipped required target fails that check. PR-description and issue validation still run for documentation changes. Installer packaging and releases remain explicit manual or tag-triggered operations with their complete verification.
 
