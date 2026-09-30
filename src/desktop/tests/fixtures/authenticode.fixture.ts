@@ -15,8 +15,17 @@ import { Resources } from "@noldova/teamrun-desktop";
 export class Authenticode {
   private static nodeSignerValue: string | null = null;
 
+  public static async timed<T>(label: string, action: () => Promise<T> | T): Promise<T> {
+    const started = performance.now();
+    try { return await action(); }
+    finally { console.error(`[timing #193] ${label}: ${Math.round(performance.now() - started)} ms`); }
+  }
+
   public static get nodeSigner(): string {
+    const started = performance.now();
+    const cached = Authenticode.nodeSignerValue !== null;
     Authenticode.nodeSignerValue ??= Authenticode.signer(process.execPath);
+    if (!cached) console.error(`[timing #193] read node.exe signer: ${Math.round(performance.now() - started)} ms`);
     return Authenticode.nodeSignerValue;
   }
 

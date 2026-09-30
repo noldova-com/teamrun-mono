@@ -6,7 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { execFileSync } from "node:child_process";
 import { copyFile, writeFile } from "node:fs/promises";
+import { win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Assert, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
@@ -50,8 +52,13 @@ export class WindowsSignatureVerifierTests {
   public async acceptsAValidSignatureWhoseSignerMatchesEveryNamedField(): Promise<void> {
     using directory = new TemporaryDirectory();
     const signed = await WindowsSignatureVerifierTests.copySigned(directory, "it's $(Get-Date) [1].exe");
-    await WindowsSignatureVerifierTests.verifier(Authenticode.nodeSigner).verify(signed);
-    await WindowsSignatureVerifierTests.verifier(WindowsSignatureVerifierTests.commonName).verify(signed);
+    const signer = Authenticode.nodeSigner;
+    await Authenticode.timed("verify node.exe copy, accepted", () => WindowsSignatureVerifierTests.verifier(signer).verify(signed));
+    await Authenticode.timed("verify node.exe copy by CN, accepted", () => WindowsSignatureVerifierTests.verifier(WindowsSignatureVerifierTests.commonName).verify(signed));
+    const small = directory.resolve("small.exe");
+    await copyFile("_build/electron-dev/d3dcompiler_47.dll", small);
+    await Authenticode.timed("verify 4.7 MB signed file, refused", () => WindowsSignatureVerifierTests.verifier(signer).verify(small).catch(() => undefined));
+    await Authenticode.timed("powershell exit 0", () => WindowsSignatureVerifierTests.fakePowerShell());
   }
 
   @TestMethod
@@ -97,7 +104,7 @@ export class WindowsSignatureVerifierTests {
 
   private static async copySigned(directory: TemporaryDirectory, name: string): Promise<string> {
     const file = directory.resolve(name);
-    await copyFile(process.execPath, file);
+    await Authenticode.timed("copy node.exe", () => copyFile(process.execPath, file));
     return file;
   }
 
@@ -105,8 +112,12 @@ export class WindowsSignatureVerifierTests {
     return new WindowsSignatureVerifier(publisher, process.execPath, [WindowsSignatureVerifierTests.FIXTURE, ...args], timeoutMilliseconds);
   }
 
+  private static fakePowerShell(): void {
+    execFileSync(win32.join(Authenticode.systemRoot, ...Resources.windowsPowerShellSegments), ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "exit 0"]);
+  }
+
   private static async refuses(message: string, verifier: WindowsSignatureVerifier, file: string): Promise<void> {
-    const refusal = await Assert.throwsAsync(() => verifier.verify(file), UpdateSignatureException);
+    const refusal = await Authenticode.timed(`refuse ${file.split("\\").at(-1)}`, () => Assert.throwsAsync(() => verifier.verify(file), UpdateSignatureException));
     Assert.areEqual(message, refusal.message);
   }
 }
