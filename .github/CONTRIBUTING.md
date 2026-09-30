@@ -106,7 +106,7 @@ npm run test:ui
 
 Linux needs a display; a headless host can use `xvfb-run --auto-servernum --server-args="-screen 0 2560x1440x24" npm run test:ui`. The UI suite uses disposable projects and a fixture provider, never provider sign-in or paid turns. It preserves Electron sandboxing and records selected screenshots and traces in `_build/ui-results/`, with the HTML report at `_build/ui-report/index.html`. These checks do not establish native clipboard/file-picker, installer, or live-provider behavior.
 
-Actions job summaries show desktop UI outcomes and failure details beside the package results. Each target links its main-window PNG, uploaded without a ZIP for browser viewing, and the full UI report artifact. Both are retained for seven days; no report website is deployed. Local runs also write `_build/ui-results/summary.md`.
+Each target's UI job summary shows desktop UI outcomes and failure details, and its packages job summary shows the package results. Each UI job links its main-window PNG, uploaded without a ZIP for browser viewing, and the full UI report artifact. Both are retained for seven days; no report website is deployed. Local runs also write `_build/ui-results/summary.md`.
 
 ## Build installers
 
