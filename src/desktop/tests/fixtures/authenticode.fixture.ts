@@ -27,9 +27,12 @@ export class Authenticode {
   }
 
   public static signer(file: string): string {
+    const environment: NodeJS.ProcessEnv = Object.fromEntries(Object.entries(process.env)
+      .filter(([name]) => name.toUpperCase() !== Resources.powerShellModulePathVariable));
+    environment["TEAMRUN_TEST_FILE"] = file;
     return execFileSync(win32.join(Authenticode.systemRoot, ...Resources.windowsPowerShellSegments),
       ["-NoProfile", "-NonInteractive", "-Command", "(Microsoft.PowerShell.Security\\Get-AuthenticodeSignature -LiteralPath $env:TEAMRUN_TEST_FILE).SignerCertificate.Subject"],
-      { env: { ...process.env, TEAMRUN_TEST_FILE: file }, encoding: "utf8", windowsHide: true }).trim();
+      { env: environment, encoding: "utf8", windowsHide: true }).trim();
   }
 
   public static async tamper(file: string): Promise<void> {
