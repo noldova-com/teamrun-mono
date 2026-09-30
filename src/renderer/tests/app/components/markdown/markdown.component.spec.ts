@@ -184,7 +184,10 @@ describe("MarkdownComponent", () => {
       for (let tick = 0; tick < 90; tick++) {
         arrived = Math.min(full.length, arrived + 1 + (tick * 7) % 23);
         fixture.componentRef.setInput("text", full.slice(0, arrived));
-        frames(fixture, 6, () => sightings.push(...symbols.filter(t => visible(root).replace("tr-code-header", String.empty).includes(t))));
+        frames(fixture, 6, () => {
+          const shown = visible(root).replace("tr-code-header", String.empty);
+          sightings.push(...symbols.filter(t => shown.includes(t)));
+        });
       }
 
       expect(arrived).toBe(full.length);
