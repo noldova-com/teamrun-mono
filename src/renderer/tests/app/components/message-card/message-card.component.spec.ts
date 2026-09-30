@@ -198,6 +198,20 @@ describe("MessageCardComponent", () => {
     expect(interim(SampleData.withStatus(SampleData.reply, MessageStatus.Completed, [narration, step, answer]))).toEqual([true, false]);
   });
 
+  it("shows a running reply's consecutive thoughts as one step titled by its latest paragraph until the answer follows it", () => {
+    TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const fixture = TestBed.createComponent(MessageCardComponent);
+    const lines = (details: MessageDetail[]): string[] => {
+      fixture.componentRef.setInput("message", SampleData.withStatus(SampleData.reply, MessageStatus.Running, details));
+      fixture.detectChanges();
+      return [...(fixture.nativeElement as HTMLElement).querySelectorAll("tr-activity-block li button span")].map(t => t.textContent ?? String.empty);
+    };
+    const thoughts = [0, 1, 2].map(t => new MessageDetail(t, DetailKind.Reasoning, `Thought ${t}.`, null, SampleData.timestamp));
+
+    expect(lines(thoughts)).toEqual(["Thought 2."]);
+    expect(lines([...thoughts, new MessageDetail(3, DetailKind.Text, "The answer.", null, SampleData.timestamp)])).toEqual(["Thought 0."]);
+  });
+
   it("copies what the user wrote and what the reply answered", async () => {
     const written: string[] = [];
     const clipboard = { writeText: (text: string): Promise<void> => { written.push(text); return Promise.resolve(); } };

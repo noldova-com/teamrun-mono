@@ -43,6 +43,7 @@ export class ActivityBlockComponent implements OnInit {
   public readonly beforeExpand = input<(() => Promise<boolean>) | null>(null);
   public readonly streaming = input(false);
   public readonly entering = input(false);
+  public readonly growing = input(false);
 
   protected readonly resources: typeof Resources = Resources;
   protected readonly formatter: Formatter = inject(Formatter);
@@ -67,6 +68,14 @@ export class ActivityBlockComponent implements OnInit {
       return detail;
 
     return new MessageDetail(detail.sequence, detail.kind, text.prefix(reveal.count), detail.payload, detail.createdAt);
+  }
+
+  protected titleOf(entry: ActivityEntry): string {
+    const shown = this.shown(entry);
+    if (shown.kind === DetailKind.Reasoning && this.growing() && !this.isOpen(entry) && entry === this.entries().at(-1))
+      return this.formatter.latestThought(shown);
+
+    return this.formatter.title(shown, this.rootPath());
   }
 
   protected isOpen(entry: ActivityEntry): boolean {

@@ -107,6 +107,33 @@ describe("Formatter", () => {
     expect(formatter().isWorkingTreeEvidence(message.details[5]!)).toBe(false);
   });
 
+  it("combines consecutive thoughts into one thinking step and keeps the steps between them apart", () => {
+    const message = reply([
+      detail(0, DetailKind.Reasoning, "Reading the files first. Then more."),
+      detail(1, DetailKind.Reasoning, "Comparing them."),
+      detail(2, DetailKind.Command, "> ls"),
+      detail(3, DetailKind.Reasoning, "One more idea"),
+      detail(4, DetailKind.Text, "Done."),
+      detail(5, DetailKind.Reasoning, "After the answer.")
+    ]);
+
+    const activity = formatter().activity(message);
+
+    expect(activity.map(t => [t.detail.sequence, t.detail.kind, t.detail.text])).toEqual([
+      [0, DetailKind.Reasoning, "Reading the files first. Then more.\n\nComparing them."],
+      [2, DetailKind.Command, "> ls"],
+      [3, DetailKind.Reasoning, "One more idea"],
+      [5, DetailKind.Reasoning, "After the answer."]
+    ]);
+    expect(formatter().activitySummary(activity.slice(0, 3))).toBe("Ran 1 command, thought 2 times");
+    expect(formatter().title(activity[0]!.detail)).toBe("Reading the files first.");
+    expect(formatter().body(activity[0]!.detail)).toBe("Then more.\n\nComparing them.");
+    expect(formatter().latestThought(activity[0]!.detail)).toBe("Comparing them.");
+    expect(formatter().title(activity[2]!.detail)).toBe("One more idea");
+    expect(formatter().body(activity[2]!.detail)).toBeNull();
+    expect(formatter().latestThought(detail(9, DetailKind.Reasoning, "  \n"))).toBe("");
+  });
+
   it("labels activity with the duration and the step count", () => {
     const running = reply([], MessageStatus.Running);
     const start = Date.parse(SampleData.timestamp);
