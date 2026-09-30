@@ -12,8 +12,8 @@ import VerificationScope from "./verification-scope.ts";
 import type VerifiedRevisions from "./verified-revisions.ts";
 
 export default class ChangeClassifier {
-  private static readonly PULL_REQUEST_EVENT: string = "pull_request";
   private static readonly PUSH_EVENT: string = "push";
+  private static readonly COMPARED_EVENTS: readonly string[] = ["pull_request", "merge_group", ChangeClassifier.PUSH_EVENT];
   private static readonly REVISION_PATTERN: RegExp = /^[0-9a-f]{40}$/;
   private static readonly MARKDOWN_EXTENSION: string = ".md";
   private static readonly DOCUMENTATION_FOLDERS: readonly string[] = ["docs/", ".github/"];
@@ -33,35 +33,41 @@ export default class ChangeClassifier {
   }
 
   /**
-   * Chooses between the full verification and the documentation-only shortcut. Pull requests compare with their merge base; pushes compare
-   * with the newest main revision in their history whose run succeeded, so a run that follows skipped, failed or batched pushes covers them all.
+   * Chooses between the full verification and skipping the code builds and tests. Pull requests and merge groups compare with their merge
+   * base. A push skips them when a merge queue run already passed for the same tree; otherwise it compares with the newest main revision in
+   * its history whose run succeeded, so a run that follows skipped, failed or batched pushes covers them all.
    */
   public async classifyAsync(eventName: string, baseRevision: string, headRevision: string): Promise<VerificationScope> {
-    if (eventName !== ChangeClassifier.PULL_REQUEST_EVENT && eventName !== ChangeClassifier.PUSH_EVENT)
+    if (!ChangeClassifier.COMPARED_EVENTS.includes(eventName))
       return new VerificationScope(true, ChangeClassifier.MANUAL_RUN);
     if (!this.exists(headRevision))
       return new VerificationScope(true, ChangeClassifier.HISTORY_UNAVAILABLE);
 
     let comparison: string;
-    let reason: string;
-    if (eventName === ChangeClassifier.PULL_REQUEST_EVENT) {
-      if (!this.exists(baseRevision))
-        return new VerificationScope(true, ChangeClassifier.HISTORY_UNAVAILABLE);
-      comparison = this.git(["merge-base", baseRevision, headRevision]).trim();
-      reason = `Compared with the merge base ${comparison}.`;
-    }
-    else {
+    let description: string;
+    if (eventName === ChangeClassifier.PUSH_EVENT) {
+      const tree = this.git(["rev-parse", `${headRevision}^{tree}`]).trim();
+      if ((await this.verifiedRevisions.listQueueTreesAsync()).includes(tree))
+        return new VerificationScope(false, `A merge queue run of Build and test already passed for this revision's tree ${tree}.`);
       const verified = await this.findVerifiedAsync(headRevision);
       if (verified === null)
         return new VerificationScope(true, ChangeClassifier.NO_VERIFIED_REVISION);
       comparison = verified;
-      reason = `Compared with ${comparison}, the last main revision whose run succeeded.`;
+      description = `${comparison}, the last main revision whose run succeeded`;
+    }
+    else {
+      if (!this.exists(baseRevision))
+        return new VerificationScope(true, ChangeClassifier.HISTORY_UNAVAILABLE);
+      comparison = this.git(["merge-base", baseRevision, headRevision]).trim();
+      description = `the merge base ${comparison}`;
     }
 
     const paths = this.git(["diff", "--no-renames", "--name-only", "-z", comparison, headRevision, "--"]).split("\0").filter(t => t.length > 0);
     if (paths.length === 0)
       return new VerificationScope(true, ChangeClassifier.EMPTY_COMPARISON);
-    return new VerificationScope(!paths.every(t => ChangeClassifier.isDocumentation(t)), reason);
+    return paths.every(t => ChangeClassifier.isDocumentation(t))
+      ? new VerificationScope(false, `Only Markdown documentation changed since ${description}.`)
+      : new VerificationScope(true, `Files other than Markdown documentation changed since ${description}.`);
   }
 
   private static isDocumentation(changedPath: string): boolean {
