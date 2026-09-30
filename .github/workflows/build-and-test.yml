@@ -148,12 +148,14 @@ jobs:
           retention-days: 7
 
   validate:
-    name: Build and test (${{ matrix.target }})
+    name: Build and test (${{ matrix.target }}, ${{ matrix.suite }})
     needs: [changes, build]
     if: needs.changes.outputs.run-code == 'true'
     strategy:
       fail-fast: false
       matrix:
+        suite: [packages, UI]
+        target: [Linux x64, Linux ARM64, Windows x64, Windows ARM64, macOS x64, macOS ARM64]
         include:
           - target: Linux x64
             runner: ubuntu-24.04
@@ -244,6 +246,7 @@ jobs:
           npm install --no-save --ignore-scripts --no-audit --no-fund ./_packages/*.tgz > "$RUNNER_TEMP/teamrun-ci/build-install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build-install.stderr.log"
 
       - name: Prepare Electron runtime
+        if: matrix.suite == 'UI'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/electron.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/electron.stderr.log" >&2' EXIT
           {
@@ -258,47 +261,56 @@ jobs:
           } > "$RUNNER_TEMP/teamrun-ci/electron.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/electron.stderr.log"
 
       - name: Type-check repository scripts
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/typecheck.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/typecheck.stderr.log" >&2' EXIT
           node node_modules/typescript/bin/tsc --project scripts/tsconfig.json > "$RUNNER_TEMP/teamrun-ci/typecheck.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/typecheck.stderr.log"
           node node_modules/typescript/bin/tsc --project src/desktop/tests/e2e/tsconfig.json >> "$RUNNER_TEMP/teamrun-ci/typecheck.stdout.log" 2>> "$RUNNER_TEMP/teamrun-ci/typecheck.stderr.log"
 
       - name: Check build contracts
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/build-tests.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/build-tests.stderr.log" >&2' EXIT
           npm run test:build > "$RUNNER_TEMP/teamrun-ci/build-tests.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build-tests.stderr.log"
 
       - name: Run package tests and coverage gate
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/test.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/test.stderr.log" >&2' EXIT
           npm run test -- --skip-test-details --skip-coverage-details > "$RUNNER_TEMP/teamrun-ci/test.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/test.stderr.log"
 
       - name: Check release contracts
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/release.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/release.stderr.log" >&2' EXIT
           npm run test:release > "$RUNNER_TEMP/teamrun-ci/release.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/release.stderr.log"
 
       - name: Check packaging contracts
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/package.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/package.stderr.log" >&2' EXIT
           npm run test:package > "$RUNNER_TEMP/teamrun-ci/package.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/package.stderr.log"
 
       - name: Check workflow scripts
+        if: matrix.suite == 'packages'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/workflows.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/workflows.stderr.log" >&2' EXIT
           npm run test:workflows > "$RUNNER_TEMP/teamrun-ci/workflows.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/workflows.stderr.log"
 
       - name: Check desktop tooling
+        if: matrix.suite == 'UI'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/desktop.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/desktop.stderr.log" >&2' EXIT
           npm run test:desktop > "$RUNNER_TEMP/teamrun-ci/desktop.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/desktop.stderr.log"
 
       - name: Run renderer tests
+        if: matrix.suite == 'UI'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/renderer.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/renderer.stderr.log" >&2' EXIT
           npm run test:renderer > "$RUNNER_TEMP/teamrun-ci/renderer.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/renderer.stderr.log"
 
       - name: Run desktop UI workflows
+        if: matrix.suite == 'UI'
         env:
           RUNNER_PLATFORM: ${{ runner.os }}
         run: |
@@ -311,7 +323,7 @@ jobs:
 
       - name: Retain desktop screenshots and traces
         id: ui-report
-        if: always() && !cancelled()
+        if: always() && !cancelled() && matrix.suite == 'UI'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ui-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}
@@ -323,7 +335,7 @@ jobs:
 
       - name: Retain main-window screenshot
         id: ui-main-window
-        if: always() && !cancelled() && hashFiles('_build/ui-results/main-window.png') != ''
+        if: always() && !cancelled() && matrix.suite == 'UI' && hashFiles('_build/ui-results/main-window.png') != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ui-main-window-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}.png
@@ -333,7 +345,7 @@ jobs:
           retention-days: 7
 
       - name: Link desktop UI evidence in the summary
-        if: always() && !cancelled()
+        if: always() && !cancelled() && matrix.suite == 'UI'
         env:
           UI_REPORT_URL: ${{ steps.ui-report.outputs.artifact-url }}
           UI_MAIN_WINDOW_URL: ${{ steps.ui-main-window.outputs.artifact-url }}
@@ -360,7 +372,7 @@ jobs:
         if: always() && !cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: logs-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}
+          name: logs-${{ matrix.suite }}-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/teamrun-ci/*.log
             ${{ runner.temp }}/teamrun-ci/npm-renderer/
