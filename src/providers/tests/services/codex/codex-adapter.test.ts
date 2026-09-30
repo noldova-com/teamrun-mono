@@ -66,10 +66,10 @@ export class CodexAdapterTests {
   public async describesItselfAndChecksSignIn(): Promise<void> {
     using host = new CodexTestHost();
     const adapter = host.createAdapter();
-    const loggedOut = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
-    const apiKey = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "apikey" });
-    const failing = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "error" });
-    const missing = host.createAdapter(process.env, null);
+    const loggedOut = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
+    const apiKey = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "apikey" });
+    const failing = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "error" });
+    const missing = host.createAdapter(host.environment, null);
 
     const signedIn = await adapter.checkSignIn(host.createAccount());
     const signedOut = await loggedOut.checkSignIn(host.createAccount());
@@ -98,7 +98,7 @@ export class CodexAdapterTests {
   public async listsModelsThroughOneProcessPerProfile(): Promise<void> {
     using host = new CodexTestHost();
     const adapter = host.createAdapter();
-    const missing = host.createAdapter(process.env, null);
+    const missing = host.createAdapter(host.environment, null);
 
     const [first, second] = await Promise.all([adapter.listModels(null), adapter.listModels(null)]);
     const forAccount = await adapter.listModels(host.createAccount());
@@ -164,7 +164,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async startsThreadsWithTheIsolatedConfigurationAndProfile(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, OPENAI_API_KEY: "secret" });
+    const adapter = host.createAdapter({ ...host.environment, OPENAI_API_KEY: "secret" });
     const account = host.createAccount("acc-2", "work-profile");
     const listener = new RecordingTurnListener();
 
@@ -188,7 +188,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async forksThreadsThroughATurn(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
     const fork = (threadId: string): Promise<string> =>
       adapter.forkSession(new ForkRequest(null, host.directory.path, threadId, "turn-7", new RequestedSettings("codex", null, "low")));
 
@@ -202,7 +202,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async resumesOrRestartsNativeSessions(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "none" });
     const resumed = new RecordingTurnListener();
     const restarted = new RecordingTurnListener();
 
@@ -295,7 +295,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async interruptsOnAbort(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_SLOW_TURN_START: "1" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_SLOW_TURN_START: "1" });
     const controller = new AbortController();
     const listener = new RecordingTurnListener();
 
@@ -314,7 +314,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async givesUpAfterTheInterruptGrace(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_INTERRUPT: "fail" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_INTERRUPT: "fail" });
     const controller = new AbortController();
     const listener = new RecordingTurnListener();
 
@@ -331,7 +331,7 @@ export class CodexAdapterTests {
   @TestMethod
   public async failsWhenTheServerDiesOrRefuses(): Promise<void> {
     using host = new CodexTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CODEX_ACCOUNT: "error" });
+    const adapter = host.createAdapter({ ...host.environment, TEAMRUN_FAKE_CODEX_ACCOUNT: "error" });
     const listener = new RecordingTurnListener();
 
     const exited = await adapter.runTurn(host.createRequest("exit"), listener, new AbortController().signal);
@@ -357,8 +357,8 @@ export class CodexAdapterTests {
   public async rejectsUnavailableExecutablesAndUnsupportedModelEffort(): Promise<void> {
     using host = new CodexTestHost();
     const adapter = host.createAdapter();
-    const missing = host.createAdapter(process.env, null);
-    const unspawnable = host.createAdapter(process.env, new ProcessCommand("teamrun-no-such-executable", []));
+    const missing = host.createAdapter(host.environment, null);
+    const unspawnable = host.createAdapter(host.environment, new ProcessCommand("teamrun-no-such-executable", []));
 
     const badEffort = await adapter.runTurn(host.createRequest("complete", null, null, null, "extreme"), new RecordingTurnListener(), new AbortController().signal);
     const notFound = await missing.runTurn(host.createRequest("complete"), new RecordingTurnListener(), new AbortController().signal);

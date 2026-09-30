@@ -75,9 +75,9 @@ export class ClaudeAdapterTests {
     }
     host.factory.next.modelsFailure = new Error("Discovery refused");
     await Assert.throwsAsync(() => adapter.listModels(null), Error);
-    await Assert.throwsAsync(() => host.createAdapter(process.env, null).listModels(null), Error);
+    await Assert.throwsAsync(() => host.createAdapter(host.environment, null).listModels(null), Error);
     host.factory.next.modelsHang = true;
-    const hanging = new ClaudeAdapter(host.command, process.env, "test", host.factory, host.runner, host.versionReader,
+    const hanging = new ClaudeAdapter(host.command, host.environment, "test", host.factory, host.runner, host.versionReader,
       new ProviderTimings(5000, 5000, 5000, 1, 1000, 300, 500, 200, 1, 20));
     const error = await Assert.throwsAsync(() => hanging.listModels(null), Error);
     Assert.isTrue(error.message.includes("in time"));
@@ -118,10 +118,12 @@ export class ClaudeAdapterTests {
   @TestMethod
   public async checksSignInWithACleanedEnvironment(): Promise<void> {
     using host = new ClaudeTestHost();
-    const adapter = host.createAdapter({ ...process.env, TEAMRUN_FAKE_CLAUDE_OUTPUT: "env", ANTHROPIC_API_KEY: "secret", CLAUDE_CODE_USE_BEDROCK: "routed" });
-    const missing = host.createAdapter(process.env, null);
-    const unspawnable = host.createAdapter(process.env, new ProcessCommand("teamrun-no-such-executable", []));
-    const hanging = new ClaudeAdapter(host.command, { ...process.env, TEAMRUN_FAKE_CLAUDE_HANG: "1" }, "0.0.1-test",
+    const adapter = host.createAdapter({
+      ...host.environment, TEAMRUN_FAKE_CLAUDE_OUTPUT: "env", ANTHROPIC_API_KEY: "secret", CLAUDE_CODE_USE_BEDROCK: "routed"
+    });
+    const missing = host.createAdapter(host.environment, null);
+    const unspawnable = host.createAdapter(host.environment, new ProcessCommand("teamrun-no-such-executable", []));
+    const hanging = new ClaudeAdapter(host.command, { ...host.environment, TEAMRUN_FAKE_CLAUDE_HANG: "1" }, "0.0.1-test",
       host.factory, host.runner, host.versionReader, new ProviderTimings(5000, 100, 1, 1, 1, 1, 1, 1, 1, 20));
     const account = host.createAccount("acc-1", "claude-profile");
 
@@ -149,7 +151,7 @@ export class ClaudeAdapterTests {
   @TestMethod
   public async runsATurnWithIsolatedOptions(): Promise<void> {
     using host = new ClaudeTestHost();
-    const adapter = host.createAdapter({ ...process.env, ANTHROPIC_API_KEY: "secret" });
+    const adapter = host.createAdapter({ ...host.environment, ANTHROPIC_API_KEY: "secret" });
     const account = host.createAccount("acc-2", "turn-profile");
     const listener = new RecordingTurnListener();
     listener.decisions.push("allow", "deny");
@@ -227,7 +229,7 @@ export class ClaudeAdapterTests {
   @TestMethod
   public async failsWithoutStartingWhenTheRequestCannotBeServed(): Promise<void> {
     using host = new ClaudeTestHost();
-    const missing = host.createAdapter(process.env, null);
+    const missing = host.createAdapter(host.environment, null);
     const adapter = host.createAdapter();
 
     const notFound = await missing.runTurn(host.createRequest("Hi"), new RecordingTurnListener(), new AbortController().signal);

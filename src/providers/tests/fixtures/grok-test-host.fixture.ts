@@ -12,10 +12,12 @@ import { RequestedSettings } from "@noldova/teamrun-protocol";
 import { AppServerClientInfo, GrokAdapter, ProcessCommand, ProcessTerminator, ProviderTimings } from "@noldova/teamrun-providers";
 
 import { RecordingProcessTracker } from "./recording-process-tracker.fixture.js";
+import { IsolatedPath } from "./isolated-path.fixture.js";
 import { TemporaryDirectory } from "./temporary-directory.fixture.js";
 
 export class GrokTestHost implements AsyncDisposable {
   public readonly directory = new TemporaryDirectory();
+  public readonly environment: NodeJS.ProcessEnv = IsolatedPath.environment(this.directory.path);
   public readonly command = new ProcessCommand(process.execPath, [fileURLToPath(new URL("./fake-grok-agent.fixture.js", import.meta.url))]);
   public readonly tracker = new RecordingProcessTracker();
   public readonly terminator = new ProcessTerminator(process.platform);
@@ -23,7 +25,7 @@ export class GrokTestHost implements AsyncDisposable {
   public readonly info = new AppServerClientInfo("teamrun-tests", "TeamRun tests", "test");
   private readonly adapters: GrokAdapter[] = [];
 
-  public createAdapter(environment: NodeJS.ProcessEnv = process.env, command: ProcessCommand | null = this.command, terminator: ProcessTerminator = this.terminator): GrokAdapter {
+  public createAdapter(environment: NodeJS.ProcessEnv = this.environment, command: ProcessCommand | null = this.command, terminator: ProcessTerminator = this.terminator): GrokAdapter {
     const adapter = new GrokAdapter(command, environment, this.directory.resolve("profile"), this.info, terminator, this.timings, this.tracker);
     this.adapters.push(adapter);
     return adapter;

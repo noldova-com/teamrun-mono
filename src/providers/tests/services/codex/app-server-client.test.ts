@@ -130,7 +130,7 @@ export class AppServerClientTests {
   @TestMethod
   public async failsPendingRequestsWhenTheServerExits(): Promise<void> {
     using host = new CodexTestHost();
-    const client = host.createClient({ ...process.env, TEAMRUN_FAKE_CODEX_STDERR: "1" });
+    const client = host.createClient({ ...host.environment, TEAMRUN_FAKE_CODEX_STDERR: "1" });
     const exits: number[] = [];
     client.subscribeExit({ handleExit: (exit: ProcessExit) => exits.push(exit.code ?? -1) });
     await client.start();
@@ -150,9 +150,9 @@ export class AppServerClientTests {
   @TestMethod
   public async reportsInitializationFailures(): Promise<void> {
     using host = new CodexTestHost();
-    const refusing = host.createClient({ ...process.env, TEAMRUN_FAKE_CODEX_INIT: "fail" });
-    const exiting = host.createClient({ ...process.env, TEAMRUN_FAKE_CODEX_INIT: "exit" });
-    const missing = host.createClient(process.env, new ProcessCommand("teamrun-no-such-executable", ["app-server"]));
+    const refusing = host.createClient({ ...host.environment, TEAMRUN_FAKE_CODEX_INIT: "fail" });
+    const exiting = host.createClient({ ...host.environment, TEAMRUN_FAKE_CODEX_INIT: "exit" });
+    const missing = host.createClient(host.environment, new ProcessCommand("teamrun-no-such-executable", ["app-server"]));
 
     const refused = await Assert.throwsAsync(() => refusing.start(), AppServerException);
     const exited = await Assert.throwsAsync(() => exiting.start(), AppServerUnavailableException);
@@ -170,7 +170,7 @@ export class AppServerClientTests {
   @TestMethod
   public async terminatesAServerThatIgnoresTheClosedInput(): Promise<void> {
     using host = new CodexTestHost();
-    const client = host.createClient({ ...process.env, TEAMRUN_FAKE_CODEX_IGNORE_STDIN_END: "1" });
+    const client = host.createClient({ ...host.environment, TEAMRUN_FAKE_CODEX_IGNORE_STDIN_END: "1" });
     await client.start();
 
     await client.stop();
