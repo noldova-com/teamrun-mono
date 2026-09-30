@@ -51,10 +51,9 @@ export default class PackageOptions {
   private static readonly SIGNED_OPTIONS: readonly string[] = ["--config.forceCodeSigning=true"];
   private static readonly SIGNED_WINDOWS_OPTIONS: readonly string[] = [
     "--config.win.signExecutable=true",
-    "--config.win.azureSignOptions.publisherName=Rostislav Rotaru",
-    "--config.win.azureSignOptions.endpoint=https://wus3.codesigning.azure.net/",
-    "--config.win.azureSignOptions.codeSigningAccountName=noldova-signing",
-    "--config.win.azureSignOptions.certificateProfileName=TeamRun"
+    "--config.win.signtoolOptions.sign=./scripts/packaging/windows-sign-hook.ts",
+    "--config.win.signtoolOptions.signingHashAlgorithms=sha256",
+    "--config.win.signtoolOptions.publisherName=Rostislav Rotaru"
   ];
   private static readonly SIGNED_MAC_OPTION: string = "--config.mac.notarize=true";
   private static readonly UNSIGNED_WINDOWS_OPTION: string = "--config.win.signExecutable=false";
