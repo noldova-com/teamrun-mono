@@ -24,12 +24,6 @@ export class Authenticode {
     return Authenticode.cachedSigner(Authenticode.smallSignedFile);
   }
 
-  private static cachedSigner(file: string): string {
-    const signer = Authenticode.signers.get(file) ?? Authenticode.signer(file);
-    Authenticode.signers.set(file, signer);
-    return signer;
-  }
-
   public static get systemRoot(): string {
     const systemRoot = process.env[Resources.systemRootVariable];
     if (!systemRoot) throw new Error("Windows did not provide SystemRoot.");
@@ -55,5 +49,11 @@ export class Authenticode {
       await handle.write(byte, 0, 1, position);
     }
     finally { await handle.close(); }
+  }
+
+  private static cachedSigner(file: string): string {
+    const signer = Authenticode.signers.get(file) ?? Authenticode.signer(file);
+    Authenticode.signers.set(file, signer);
+    return signer;
   }
 }
