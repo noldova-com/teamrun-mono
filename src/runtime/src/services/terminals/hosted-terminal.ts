@@ -48,6 +48,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
   private paused: boolean = false;
   private closed: boolean = false;
   private operation: Promise<void> = Promise.resolve();
+  private released: Promise<void> = Promise.resolve();
 
   public readonly id: string;
   public readonly owner: ITerminalOwner;
@@ -147,6 +148,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
       return;
 
     this.pty = null;
+    this.released = Promise.all([this.released, source.end()]).then(() => undefined);
     this.emulator.afterWrites(() => {
       this.flushOutput();
       this.exit = new TerminalExit(exitCode);
@@ -188,6 +190,7 @@ export class HostedTerminal implements IPseudoTerminalListener {
     this.pty = null;
     if (!Object.isNull(pty))
       await pty.end();
+    await this.released;
     await this.parsed();
     this.cancelFlush();
     this.output = String.empty;
