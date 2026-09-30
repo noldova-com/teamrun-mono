@@ -31,8 +31,8 @@ export class IsolatedShellLocator implements IShellLocator {
     mkdirSync(directory, { recursive: true });
   }
 
-  public findAll(environment: ShellEnvironment): readonly Shell[] {
-    return [this.findDefault(environment), IsolatedShellLocator.FIXTURE_SHELL];
+  public findAll(environment: ShellEnvironment): Promise<readonly Shell[]> {
+    return Promise.resolve([this.findDefault(environment), IsolatedShellLocator.FIXTURE_SHELL]);
   }
 
   public findDefault(environment: ShellEnvironment): Shell {

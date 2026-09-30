@@ -183,6 +183,7 @@ export class Resources {
   public static readonly shellIdParameterName: string = "id";
   public static readonly shellNameParameterName: string = "name";
   public static readonly executableParameterName: string = "executable";
+  public static readonly instanceIdParameterName: string = "instanceId";
   public static readonly variableNameParameterName: string = "name";
   public static readonly endMillisecondsParameterName: string = "endMilliseconds";
   public static readonly highWatermarkParameterName: string = "highWatermark";
@@ -265,6 +266,47 @@ export class Resources {
   public static readonly gitCommandFolder: string = "cmd";
   public static readonly gitExecutable: string = "git.exe";
   public static readonly gitBashSegments: readonly string[] = ["bin", "bash.exe"];
+  public static readonly wslIdPrefix: string = "wsl-";
+  public static readonly wslSegments: readonly string[] = ["System32", "wsl.exe"];
+  public static readonly wslDistributionArgument: string = "-d";
+  public static readonly wslDockerPrefix: string = "docker-desktop";
+  public static readonly wslDefaultFlag: string = "1";
+  public static readonly wslOtherFlag: string = "0";
+  public static readonly wslDistributionScript: string = [
+    "$ErrorActionPreference = 'Stop'",
+    "$utf8 = [Text.Encoding]::UTF8",
+    "$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\\Microsoft\\Windows\\CurrentVersion\\Lxss')",
+    "if ($null -ne $key) {",
+    "  $default = [string]$key.GetValue('DefaultDistribution', '')",
+    "  foreach ($id in $key.GetSubKeyNames()) {",
+    "    $distribution = $key.OpenSubKey($id)",
+    "    $name = [string]$distribution.GetValue('DistributionName', '')",
+    "    $distribution.Close()",
+    "    if ($name -ne '') { [Console]::Out.WriteLine(([Convert]::ToBase64String($utf8.GetBytes($name)), [int]($id -eq $default)) -join ' ') }",
+    "  }",
+    "  $key.Close()",
+    "}",
+    "[Console]::Out.WriteLine('End')"
+  ].join("\n");
+  public static readonly vswhereSegments: readonly string[] = ["Microsoft Visual Studio", "Installer", "vswhere.exe"];
+  public static readonly vswhereArguments: readonly string[] = ["-products", "*", "-prerelease", "-utf8", "-format", "json"];
+  public static readonly vswhereInstanceIdField: "instanceId" = "instanceId";
+  public static readonly vswhereDisplayNameField: "displayName" = "displayName";
+  public static readonly vswhereInstallationPathField: "installationPath" = "installationPath";
+  public static readonly vswhereNotStarted: string = "vswhere could not start.";
+  public static readonly vswhereTimedOut: string = "vswhere did not answer in time.";
+  public static readonly vswhereUnreadable: string = "vswhere returned output TeamRun could not read.";
+  public static readonly developerToolsSegments: readonly string[] = ["Common7", "Tools"];
+  public static readonly developerCommandScript: string = "VsDevCmd.bat";
+  public static readonly developerShellModule: string = "Microsoft.VisualStudio.DevShell.dll";
+  public static readonly developerCommandSuffix: string = "-cmd";
+  public static readonly developerPowerShellSuffix: string = "-powershell";
+  public static readonly developerIdPrefix: string = "vs-";
+  public static readonly keepOpenArgument: string = "/k";
+  public static readonly noStartDirectoryArgument: string = "-startdir=none";
+  public static readonly powerShellNoExitArgument: string = "-NoExit";
+  public static readonly powerShellCommandArgument: string = "-Command";
+  public static readonly developerArchitectures: ReadonlyMap<string, string> = new Map([["x64", "amd64"], ["ia32", "x86"], ["arm64", "arm64"]]);
   public static readonly windowsEnvironmentArguments: readonly string[] = ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"];
   public static readonly windowsEnvironmentMilliseconds: number = 20_000;
   public static readonly windowsEnvironmentEnd: string = "End";
@@ -354,6 +396,37 @@ export class Resources {
 
   public static formatWindowsEnvironmentExit(exitCode: number | null): string {
     return `Windows PowerShell ended with exit code ${String(exitCode)}.`;
+  }
+
+  public static formatWslDistributionsFailed(reason: string): string {
+    return `TeamRun could not read the WSL distributions from Windows. ${reason}`;
+  }
+
+  public static formatVisualStudioFailed(reason: string): string {
+    return `TeamRun could not list the Visual Studio installations. ${reason}`;
+  }
+
+  public static formatVswhereExit(exitCode: number | null): string {
+    return `vswhere ended with exit code ${String(exitCode)}.`;
+  }
+
+  public static formatDeveloperCommandPromptName(installation: string): string {
+    return `Developer Command Prompt (${installation})`;
+  }
+
+  public static formatDeveloperPowerShellName(installation: string): string {
+    return `Developer PowerShell (${installation})`;
+  }
+
+  public static formatDeveloperArchitectureArguments(architecture: string): readonly string[] {
+    return [`-arch=${architecture}`, `-host_arch=${architecture}`];
+  }
+
+  public static formatDeveloperPowerShellCommand(module: string, installation: string, architecture: string): string {
+    const quote = (value: string): string => `'${value.replaceAll("'", "''")}'`;
+    return `& { Microsoft.PowerShell.Core\\Import-Module ${quote(module)}; ` +
+      `Microsoft.VisualStudio.DevShell\\Enter-VsDevShell -VsInstallPath ${quote(installation)} -SkipAutomaticLocation ` +
+      `-DevCmdArguments ${quote(Resources.formatDeveloperArchitectureArguments(architecture).join(" "))} }`;
   }
 
   public static formatCursorPosition(row: number, column: number): string {
