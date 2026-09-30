@@ -37,8 +37,7 @@
       "sign": "./scripts/packaging/windows-sign-hook.ts",
       "signingHashAlgorithms": [
         "sha256"
-      ],
-      "publisherName": "Rostislav Rotaru"
+      ]
     }
   },
   "mac": {

@@ -9,6 +9,7 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+import Config from "../config.ts";
 import PackageException from "./package.exception.ts";
 
 export default class PackageOptions {
@@ -49,7 +50,8 @@ export default class PackageOptions {
   private static readonly NEVER_PUBLISH_ARGUMENTS: readonly string[] = ["--publish", "never"];
   private static readonly DIRECTORY_OPTION: string = "--dir";
   private static readonly SIGNED_OPTIONS: readonly string[] = ["--config.forceCodeSigning=true"];
-  private static readonly SIGNED_WINDOWS_OPTION: string = "--config.win.signExecutable=true";
+  private static readonly SIGNED_WINDOWS_OPTIONS: readonly string[] = ["--config.win.signExecutable=true",
+    `--config.win.signtoolOptions.publisherName=${Config.WINDOWS_PUBLISHER}`];
   private static readonly SIGNED_MAC_OPTION: string = "--config.mac.notarize=true";
   private static readonly UNSIGNED_WINDOWS_OPTION: string = "--config.win.signExecutable=false";
   private static readonly UNSIGNED_MAC_OPTIONS: readonly string[] = ["--config.mac.identity=null", "--config.mac.notarize=false"];
@@ -149,7 +151,7 @@ export default class PackageOptions {
     if (this.signed) {
       argumentsList.push(...PackageOptions.SIGNED_OPTIONS);
       if (this.platform === PackageOptions.WINDOWS_PLATFORM)
-        argumentsList.push(PackageOptions.SIGNED_WINDOWS_OPTION);
+        argumentsList.push(...PackageOptions.SIGNED_WINDOWS_OPTIONS);
       else
         argumentsList.push(PackageOptions.SIGNED_MAC_OPTION);
     }

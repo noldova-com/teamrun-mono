@@ -9,7 +9,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
-import { Resources, UpdateService, UpdateSettings } from "@noldova/teamrun-desktop";
+import { Resources, UpdateService, UpdateSettings, UpdateSignatureException } from "@noldova/teamrun-desktop";
 import { AppUpdateCommand, AppUpdateState, AppUpdateStatus } from "@noldova/teamrun-protocol";
 
 import { FakeUpdateBackend } from "../fixtures/fake-update-backend.fixture.js";
@@ -47,6 +47,32 @@ export class UpdateServiceTests {
       Assert.areEqual(2, attempts);
       Assert.areEqual([AppUpdateStatus.Preparing, AppUpdateStatus.Installing].join(), statuses.join());
       Assert.areEqual(Resources.updateInstalling, service.state.message);
+    }
+    finally { service.dispose(); }
+  }
+
+  @TestMethod
+  public async explainsARefusedSignatureAndOffersNothingToInstall(): Promise<void> {
+    const backend = new FakeUpdateBackend();
+    const settings = UpdateSettings.fromEnvironment({ TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/", TEAMRUN_UPDATE_TEST_INSTALL: "1" }, true, "win32", "x64", true);
+    const restart = { install: async (_version: string, install: () => Promise<void>): Promise<void> => { await install(); } };
+    const service = new UpdateService(settings, "0.0.1", backend, () => undefined, restart);
+    try {
+      await service.execute(AppUpdateCommand.Check);
+      for (const message of [Resources.updateSignatureRejected, Resources.updateSignatureUnchecked]) {
+        backend.downloadResult = () => Promise.reject(new UpdateSignatureException(message));
+        const refused = await service.execute(AppUpdateCommand.Download);
+
+        Assert.areEqual(AppUpdateStatus.Error, refused.status);
+        Assert.areEqual(message, refused.message);
+        Assert.isFalse(refused.canInstall);
+        await service.execute(AppUpdateCommand.Install);
+        Assert.areEqual(0, backend.installs);
+      }
+      Assert.areEqual("The downloaded update is not signed by TeamRun's publisher, so TeamRun did not install it.", Resources.updateSignatureRejected);
+
+      backend.downloadResult = () => Promise.reject(new Error("connection reset"));
+      Assert.areEqual(Resources.updateDownloadFailed, (await service.execute(AppUpdateCommand.Download)).message);
     }
     finally { service.dispose(); }
   }

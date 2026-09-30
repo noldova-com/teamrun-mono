@@ -46,7 +46,7 @@ export default class BuildEvidence {
   }
 
   public static async fingerprintInputs(packageInfo: PackageInfo): Promise<string> {
-    const inputs = createHash(BuildEvidence.ALGORITHM).update(Config.VERSION).update(Config.PROTOCOL_VERSION);
+    const inputs = createHash(BuildEvidence.ALGORITHM).update(Config.VERSION).update(Config.PROTOCOL_VERSION).update(Config.WINDOWS_PUBLISHER);
 
     for (const file of [...BuildEvidence.ROOT_INPUTS, path.join(packageInfo.directory, Config.PACKAGE_MANIFEST_FILE_NAME)])
       inputs.update(await readFile(file));

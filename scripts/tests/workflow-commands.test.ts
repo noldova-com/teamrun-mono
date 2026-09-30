@@ -81,8 +81,9 @@ class WorkflowCommandsTests {
       assert.ok(workflow.includes("suite: [packages, UI]\n        target: [Linux x64, Linux ARM64, Windows x64, Windows ARM64, macOS x64, macOS ARM64]\n"));
       for (const step of ["Run package tests and coverage gate", "Check build contracts", "Check release contracts", "Check packaging contracts", "Check workflow scripts"])
         assert.ok(workflow.includes(`- name: ${step}\n        if: matrix.suite == 'packages'\n`), step);
-      for (const step of ["Prepare Electron runtime", "Check desktop tooling", "Run renderer tests", "Run desktop UI workflows"])
+      for (const step of ["Check desktop tooling", "Run renderer tests", "Run desktop UI workflows"])
         assert.ok(workflow.includes(`- name: ${step}\n        if: matrix.suite == 'UI'\n`), step);
+      assert.ok(workflow.includes("- name: Prepare Electron runtime\n        if: matrix.suite == 'UI' || runner.os == 'Windows'\n"));
       assert.ok(workflow.includes("name: logs-${{ matrix.suite }}-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_attempt }}"));
       assert.ok(workflow.includes("name: Build and test (all targets)\n    needs: [changes, build, validate]\n"));
     });

@@ -246,7 +246,7 @@ jobs:
           npm install --no-save --ignore-scripts --no-audit --no-fund ./_packages/*.tgz > "$RUNNER_TEMP/teamrun-ci/build-install.stdout.log" 2> "$RUNNER_TEMP/teamrun-ci/build-install.stderr.log"
 
       - name: Prepare Electron runtime
-        if: matrix.suite == 'UI'
+        if: matrix.suite == 'UI' || runner.os == 'Windows'
         run: |
           trap 'cat "$RUNNER_TEMP/teamrun-ci/electron.stdout.log"; cat "$RUNNER_TEMP/teamrun-ci/electron.stderr.log" >&2' EXIT
           {

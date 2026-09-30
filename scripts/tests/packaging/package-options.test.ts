@@ -11,6 +11,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import configuration from "../../../electron-builder.json" with { type: "json" };
+import rootManifest from "../../../package.json" with { type: "json" };
 import PackageOptions from "../../packaging/package-options.ts";
 import PackageException from "../../packaging/package.exception.ts";
 import PackagedManifest from "../../packaging/packaged-manifest.ts";
@@ -95,11 +96,11 @@ class PackageOptionsTests {
       new PackageOptions([], "darwin", "arm64").assertSigningEnvironment({});
       assert.ok(windows.createBuilderArguments().includes("--config.forceCodeSigning=true"));
       assert.ok(windows.createBuilderArguments().includes("--config.win.signExecutable=true"));
-      assert.ok(!windows.createBuilderArguments().some(t => t.includes("azureSignOptions") || t.includes("signtoolOptions")));
+      assert.ok(windows.createBuilderArguments().includes(`--config.win.signtoolOptions.publisherName=${rootManifest.teamrun.windowsPublisher}`));
+      assert.ok(!windows.createBuilderArguments().some(t => t.includes("azureSignOptions")));
+      assert.ok(!new PackageOptions([], "win32", "x64").createBuilderArguments().some(t => t.includes("signtoolOptions")));
       assert.equal(configuration.win.signExecutable, false);
-      assert.deepEqual(configuration.win.signtoolOptions, {
-        sign: "./scripts/packaging/windows-sign-hook.ts", signingHashAlgorithms: ["sha256"], publisherName: "Rostislav Rotaru"
-      });
+      assert.deepEqual(configuration.win.signtoolOptions, { sign: "./scripts/packaging/windows-sign-hook.ts", signingHashAlgorithms: ["sha256"] });
       const mac = new PackageOptions(["--signed"], "darwin", "arm64");
       assert.ok(mac.createBuilderArguments().includes("--config.mac.notarize=true"));
       assert.ok(!mac.createBuilderArguments().includes("--config.mac.identity=null"));

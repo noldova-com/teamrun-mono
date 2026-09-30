@@ -87,22 +87,23 @@ class BuildEvidenceTests {
       assert.equal(await BuildEvidence.fingerprintInputs(second), secondBefore);
     });
 
-    test("fresh processes include both the root product version and protocol version in the input identity", async t => {
+    test("fresh processes include the root product version, protocol version and Windows publisher in the input identity", async t => {
       const fixture = await BuildProjectFixture.create();
       t.after(() => fixture.close());
       const code = `const {default: Evidence} = await import(${JSON.stringify(new URL("../../build/build-evidence.ts", import.meta.url).href)});`
         + `const {default: Config} = await import(${JSON.stringify(new URL("../../config.ts", import.meta.url).href)});`
         + "console.log(await Evidence.fingerprintInputs(Config.PACKAGES[0]));";
       const fingerprints: string[] = [];
-      for (const [version, protocolVersion] of [["1.2.3", "0.1"], ["1.2.4", "0.1"], ["1.2.3", "0.2"]]) {
-        await fixture.write("package.json", JSON.stringify({ version, teamrun: { protocolVersion } }));
+      for (const [version, protocolVersion, windowsPublisher] of [["1.2.3", "0.1", "CN=A"], ["1.2.4", "0.1", "CN=A"], ["1.2.3", "0.2", "CN=A"],
+        ["1.2.3", "0.1", "CN=B"]]) {
+        await fixture.write("package.json", JSON.stringify({ version, teamrun: { protocolVersion, windowsPublisher } }));
         const child = spawnSync(process.execPath, ["--input-type=module", "-e", code], { cwd: fixture.directory, encoding: "utf8", timeout: 10_000 });
         assert.equal(child.error, undefined);
         assert.equal(child.status, 0, child.stderr);
         assert.match(child.stdout, /^[a-f0-9]{64}\r?\n$/);
         fingerprints.push(child.stdout.trim());
       }
-      assert.equal(new Set(fingerprints).size, 3);
+      assert.equal(new Set(fingerprints).size, 4);
     });
 
     test("evidence records input, archive and installed-tree identities and validates every configured package", async t => {

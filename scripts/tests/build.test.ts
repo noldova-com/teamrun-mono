@@ -72,7 +72,8 @@ class BuildTests {
       const runtime = Config.PACKAGES.find(t => t.name === "runtime");
       assert.ok(runtime);
       const fingerprint = await BuildEvidence.fingerprintInputs(runtime);
-      const expected = `export const version = "${Config.VERSION}";\nexport const protocol = "${Config.PROTOCOL_VERSION}";\nexport const build = "${fingerprint}";\n`;
+      const expected = `export const version = "${Config.VERSION}";\nexport const protocol = "${Config.PROTOCOL_VERSION}";\n`
+        + `export const publisher = "${Config.WINDOWS_PUBLISHER}";\nexport const build = "${fingerprint}";\n`;
       for (const file of ["_build/dist/runtime/resources.js", "_packages/contents/runtime/resources.js", "node_modules/@noldova/teamrun-runtime/resources.js"])
         assert.equal(await fixture.read(file), expected);
       assert.equal((await fixture.read("_build/evidence/runtime.sha256")).split("\n")[0], fingerprint);
@@ -182,7 +183,8 @@ class BuildTests {
       const evidence = await fixture.read("_build/evidence/foundation-core.sha256");
       assert.match(evidence, /^(?:[a-f0-9]{64}\n){3}$/);
       assert.equal(await fixture.read("node_modules/@noldova/teamrun-foundation-core/resources.js"),
-        `export const version = "${Config.VERSION}";\nexport const protocol = "${Config.PROTOCOL_VERSION}";\nexport const build = "${evidence.split("\n")[0]}";\n`);
+        `export const version = "${Config.VERSION}";\nexport const protocol = "${Config.PROTOCOL_VERSION}";\n`
+        + `export const publisher = "${Config.WINDOWS_PUBLISHER}";\nexport const build = "${evidence.split("\n")[0]}";\n`);
       const tarball = await readFile(path.join(fixture.directory, "_packages", `noldova-teamrun-foundation-core-${Config.VERSION}.tgz`));
       assert.deepEqual(tarball.subarray(0, 2), Buffer.from([0x1f, 0x8b]));
     });

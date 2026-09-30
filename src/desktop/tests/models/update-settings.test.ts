@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { readFileSync } from "node:fs";
+
 import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { Resources, UpdateSettings } from "@noldova/teamrun-desktop";
 
@@ -23,6 +25,16 @@ export class UpdateSettingsTests {
         Assert.isNull(settings.disabledReason);
       }
     Assert.isNotNull(UpdateSettings.fromEnvironment({}, true, "win32", "x64", false).feedUrl);
+  }
+
+  @TestMethod
+  public requiresTheWindowsPublisherThatSigningUsesOnEveryFeed(): void {
+    const signing = (JSON.parse(readFileSync("package.json", "utf8")) as { teamrun: { windowsPublisher: string } }).teamrun.windowsPublisher;
+    Assert.areEqual("CN=Rostislav Rotaru, O=Rostislav Rotaru, C=US", signing);
+    for (const environment of [{}, { TEAMRUN_UPDATE_TEST_FEED: "http://127.0.0.1:8000/" }, { TEAMRUN_UPDATE_TEST_FEED: "ftp://example.test/" }])
+      Assert.areEqual(signing, UpdateSettings.fromEnvironment(environment, true, "win32", "x64", true).windowsPublisher);
+    Assert.areEqual(signing, UpdateSettings.fromEnvironment({}, false, "win32", "x64", true).windowsPublisher);
+    Assert.areEqual("CN=Other", UpdateSettings.fromEnvironment({}, true, "win32", "x64", true, "CN=Other").windowsPublisher);
   }
 
   @TestMethod

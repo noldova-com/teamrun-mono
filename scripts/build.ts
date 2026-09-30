@@ -110,7 +110,8 @@ export class Build extends Script {
     if (!await this.pathExistsAsync(resourcesPath))
       return;
     const resources = await this.readFileAsync(resourcesPath);
-    let stamped = resources.split(Config.PROTOCOL_VERSION_PLACEHOLDER).join(Config.PROTOCOL_VERSION).split(Config.VERSION_PLACEHOLDER).join(Config.VERSION);
+    let stamped = resources.split(Config.PROTOCOL_VERSION_PLACEHOLDER).join(Config.PROTOCOL_VERSION).split(Config.VERSION_PLACEHOLDER).join(Config.VERSION)
+      .split(Config.WINDOWS_PUBLISHER_PLACEHOLDER).join(Config.WINDOWS_PUBLISHER);
     if (stamped.includes(Config.BUILD_PLACEHOLDER))
       stamped = stamped.split(Config.BUILD_PLACEHOLDER).join(await BuildEvidence.fingerprintInputs(packageInfo));
     await this.writeFileAsync(resourcesPath, stamped);
