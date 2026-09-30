@@ -167,7 +167,7 @@ Use the [PR template](PULL_REQUEST_TEMPLATE.md). Fill `## Summary` with what cha
 
 Keep the change small enough to review coherently. Include before/after screenshots for visual changes when useful, using disposable data. Commit messages describe the concrete change.
 
-An authorized human reviews and merges changes after the applicable requirements are met. A passing check does not authorize a release or establish that behavior outside the check's scope works.
+An authorized human reviews every change after the applicable requirements are met. For work done in a maintainer's lane, staging the reviewed snapshot is that review. The human, or an agent the maintainer has authorized to merge, merges a PR only when every check has passed, no review thread is unresolved and GitHub reports it mergeable. The human reviews commits pushed after that review, for example a fix for a failing check, before the PR merges. The squash merge keeps every co-author trailer, as [AI-assisted changes](#ai-assisted-changes) requires. A passing check does not authorize a release or establish that behavior outside the check's scope works.
 
 ### AI-assisted changes
 
