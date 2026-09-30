@@ -9,7 +9,7 @@
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { ProcessProbe } from "@noldova/teamrun-runtime";
+import { ProcessLaunchCommand, ProcessProbe } from "@noldova/teamrun-runtime";
 
 import type { IRestartProcesses } from "../interfaces/i-restart-processes.js";
 import { Resources } from "../resources.js";
@@ -37,10 +37,11 @@ export class RestartProcesses implements IRestartProcesses {
     }
   }
 
-  public reopen(dataDirectory: string): Promise<void> {
+  public async reopen(dataDirectory: string): Promise<void> {
     const environment = { ...this.environment, [Resources.dataDirectoryVariable]: dataDirectory };
     delete environment[Resources.runAsNodeVariable];
-    const child = spawn(this.executable, [], { env: environment, detached: true, stdio: Resources.updateIgnoredStdio, windowsHide: true });
+    const command = new ProcessLaunchCommand(process.platform, this.executable, []);
+    const child = spawn(command.executable, command.arguments, { env: environment, detached: true, stdio: Resources.updateIgnoredStdio, windowsHide: true });
     child.unref();
     return new Promise((resolve, reject) => {
       child.once(Resources.updateSpawnEvent, () => resolve());

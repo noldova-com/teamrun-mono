@@ -78,7 +78,7 @@ The first client may start the runtime; later clients attach, but only to a runt
 
 The local capability protects the endpoint from unauthorized clients; it is not an OS sandbox against another program running with the same user's privileges. The desktop separately validates IPC senders and limits the operations its preload exposes.
 
-On Linux, starting a detached runtime requires executable Bash at `/bin/bash` and readable, searchable `/proc/self/fd` from a mounted `/proc`. The launcher checks these prerequisites before spawning and reports an unavailable requirement immediately. It closes inherited descriptors above standard input, output and error in the child before executing the runtime, so the runtime and its provider children do not retain the desktop's files or sockets. Standard streams are disconnected, and Bash startup files and inherited shell options are disabled. Windows and macOS use the host's direct process launch.
+On Linux, starting a detached runtime requires executable Bash at `/bin/bash` and readable, searchable `/proc/self/fd` from a mounted `/proc`. The launcher checks these prerequisites before spawning and reports an unavailable requirement immediately. It closes inherited descriptors above standard input, output and error in the child before executing the runtime, so the runtime and its provider children do not retain the desktop's files or sockets. Standard streams are disconnected, and Bash startup files and inherited shell options are disabled. A desktop that reopens the other desktops it closed for an update that then failed launches them the same way. Windows and macOS use the host's direct process launch.
 
 ## 5. State and persistence
 

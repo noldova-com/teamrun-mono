@@ -163,15 +163,15 @@ export class Resources {
   public static readonly invalidWelcomeVersion: string = "The runtime returned an invalid protocol version.";
   public static readonly launchTimedOut: string = "The runtime did not publish its endpoint in time.";
   public static readonly spawnEvent: string = "spawn";
-  public static readonly runtimeLaunchShell: string = "/bin/bash";
-  public static readonly runtimeLaunchDescriptors: string = "/proc/self/fd";
-  public static readonly runtimeLaunchShellUnavailable: string = "Linux runtime startup requires executable Bash at /bin/bash. Install Bash or restore its execute permissions.";
-  public static readonly runtimeLaunchDescriptorsUnavailable: string = "Linux runtime startup requires access to /proc/self/fd. Ensure procfs is mounted at /proc and this process can read and traverse its descriptor directory.";
-  public static readonly runtimeLaunchShellArguments: readonly string[] = [
+  public static readonly processLaunchShell: string = "/bin/bash";
+  public static readonly processLaunchDescriptors: string = "/proc/self/fd";
+  public static readonly processLaunchShellUnavailable: string = "Starting a program on Linux requires executable Bash at /bin/bash. Install Bash or restore its execute permissions.";
+  public static readonly processLaunchDescriptorsUnavailable: string = "Starting a program on Linux requires access to /proc/self/fd. Ensure procfs is mounted at /proc and this process can read and traverse its descriptor directory.";
+  public static readonly processLaunchShellArguments: readonly string[] = [
     "--noprofile", "--norc", "-p", "-c",
     'set -e; shopt -s failglob; for descriptor in /proc/self/fd/*; do descriptor=${descriptor##*/}; ' +
       'if (( descriptor > 2 )); then exec {descriptor}>&-; fi; done; exec -- "$@"',
-    "teamrun-runtime"
+    "teamrun-launch"
   ];
   public static readonly dataDirectoryRequired: string = "The --data-dir argument is required.";
   public static readonly stoppedByIdle: string = "idle";

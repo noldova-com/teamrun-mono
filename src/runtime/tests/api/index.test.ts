@@ -15,8 +15,8 @@ export class RuntimeApiTests {
   public exportsTheCompleteCatalog(): void {
     const expected = [
       "ClientSession", "ConnectionException", "Endpoint", "EndpointKind", "IdleMonitor", "InvalidOperationException", "LaunchException", "LineBuffer",
-      "LockFile", "PendingCall", "ProcessInspector", "ProcessProbe", "ProcessRegistry", "ProviderRegistryFactory", "Resources",
-      "RuntimeAlreadyRunningException", "RuntimeBuildMismatchException", "RuntimeClient", "RuntimeEntry", "RuntimeLaunchCommand", "RuntimeLauncher",
+      "LockFile", "PendingCall", "ProcessInspector", "ProcessLaunchCommand", "ProcessLaunchException", "ProcessProbe", "ProcessRegistry", "ProviderRegistryFactory", "Resources",
+      "RuntimeAlreadyRunningException", "RuntimeBuildMismatchException", "RuntimeClient", "RuntimeEntry", "RuntimeLauncher",
       "RuntimeLock", "RuntimeServer", "RuntimeService", "RuntimeSettings", "RuntimeTimings", "TokenGenerator", "TrackedProcess"
     ];
 

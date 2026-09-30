@@ -11,33 +11,33 @@ import { accessSync, constants, readdirSync } from "node:fs";
 import { ArgumentException, ExceptionOptions } from "@noldova/teamrun-foundation-exceptions";
 import { ProcessCommand } from "@noldova/teamrun-providers";
 
-import { LaunchException } from "../exceptions/launch.exception.js";
+import { ProcessLaunchException } from "../exceptions/process-launch.exception.js";
 import { Resources } from "../resources.js";
 
-export class RuntimeLaunchCommand extends ProcessCommand {
+export class ProcessLaunchCommand extends ProcessCommand {
   public constructor(platform: string, executablePath: string, args: readonly string[]) {
     ArgumentException.throwIfNullOrWhitespace(executablePath, Resources.executablePathParameterName);
 
     const linux = platform === Resources.linuxPlatform;
     if (linux)
-      RuntimeLaunchCommand.assertLinuxPrerequisites();
-    super(linux ? Resources.runtimeLaunchShell : executablePath,
-      linux ? [...Resources.runtimeLaunchShellArguments, executablePath, ...args] : [...args]);
+      ProcessLaunchCommand.assertLinuxPrerequisites();
+    super(linux ? Resources.processLaunchShell : executablePath,
+      linux ? [...Resources.processLaunchShellArguments, executablePath, ...args] : [...args]);
   }
 
   private static assertLinuxPrerequisites(): void {
     try {
-      accessSync(Resources.runtimeLaunchShell, constants.X_OK);
+      accessSync(Resources.processLaunchShell, constants.X_OK);
     }
     catch (error) {
-      throw new LaunchException(Resources.runtimeLaunchShellUnavailable, new ExceptionOptions(error));
+      throw new ProcessLaunchException(Resources.processLaunchShellUnavailable, new ExceptionOptions(error));
     }
     try {
-      accessSync(Resources.runtimeLaunchDescriptors, constants.R_OK | constants.X_OK);
-      readdirSync(Resources.runtimeLaunchDescriptors);
+      accessSync(Resources.processLaunchDescriptors, constants.R_OK | constants.X_OK);
+      readdirSync(Resources.processLaunchDescriptors);
     }
     catch (error) {
-      throw new LaunchException(Resources.runtimeLaunchDescriptorsUnavailable, new ExceptionOptions(error));
+      throw new ProcessLaunchException(Resources.processLaunchDescriptorsUnavailable, new ExceptionOptions(error));
     }
   }
 }
