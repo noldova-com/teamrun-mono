@@ -455,6 +455,8 @@ export class Resources {
   public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly deviceAttributesFinal: string = "c";
+  public static readonly deviceStatusFinal: string = "n";
+  public static readonly cursorPositionRequest: number = 6;
   public static readonly transparentBackgrounds: readonly string[] = ["", "transparent", "rgba(0, 0, 0, 0)"];
   public static readonly terminalRestartReset: string = "\u001b[?1047l\u001b[!p\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?2004l\r";
   public static readonly terminalLineFeed: string = "\n";

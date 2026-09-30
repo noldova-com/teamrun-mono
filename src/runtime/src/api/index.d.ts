@@ -1369,6 +1369,14 @@ export declare class Resources {
    */
   public static readonly deviceAttributesAnswer: string;
   /**
+   * The final character of a device status report request: `n`.
+   */
+  public static readonly deviceStatusFinal: string;
+  /**
+   * The device status report parameter that asks for the cursor position: 6.
+   */
+  public static readonly cursorPositionRequest: number;
+  /**
    * The Erase in Display parameter that erases the saved lines: 3.
    */
   public static readonly eraseSavedLinesParameter: number;
@@ -1730,6 +1738,14 @@ export declare class Resources {
    * @returns The text.
    */
   public static formatWindowsEnvironmentExit(exitCode: number | null): string;
+
+  /**
+   * Formats the cursor position report that answers a cursor position request.
+   * @param row The cursor's row on the screen, counted from 1.
+   * @param column The cursor's column, counted from 1.
+   * @returns The report, `CSI row ; column R`.
+   */
+  public static formatCursorPosition(row: number, column: number): string;
 
   /**
    * Formats a UTF-8 locale name.
@@ -2773,7 +2789,8 @@ export declare class TerminalHistory {
  * The runtime's copy of a terminal's screen, drawn by `@xterm/headless`. Recent rows remain available for reflow;
  * rows leaving that bounded buffer are stored in history. Erasing saved lines or a full reset clears the history, and the alternate
  * screen of full-screen programs is not stored. It answers the primary device attributes query, which the Windows
- * pseudo-console asks when it starts and waits for, so the answer never depends on a window being attached; on
+ * pseudo-console asks when it starts and waits for, and the cursor position request, which the pseudo-console sends
+ * after its first input, so neither answer depends on a window being attached and the position is the shell's own; on
  * Windows it also rewraps the line holding the cursor when the width changes, so a resize keeps the prompt.
  */
 export declare class TerminalEmulator implements Disposable {

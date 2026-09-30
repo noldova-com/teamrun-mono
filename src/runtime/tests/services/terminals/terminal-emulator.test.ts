@@ -159,6 +159,19 @@ export class TerminalEmulatorTests {
   }
 
   @TestMethod
+  public async answersTheCursorPositionQueryFromItsOwnCursor(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);
+    const answers: string[] = [];
+    using emulator = new TerminalEmulator(new TerminalSize(20, 5), history, null, t => answers.push(t));
+
+    await TerminalEmulatorTests.write(emulator, "\u001b[6nab\r\ncd\u001b[6n\u001b[5n\u001b[?6n\u001b[6;0n");
+
+    Assert.areEqual(JSON.stringify(["\u001b[1;1R", "\u001b[2;3R"]), JSON.stringify(answers));
+    await history.close();
+  }
+
+  @TestMethod
   public async keepsTheLineHoldingTheCursorWhenTheWidthChangesOnWindows(): Promise<void> {
     using directory = new TemporaryDirectory();
     const history = new TerminalHistory(directory.resolve("t.jsonl"), () => undefined);

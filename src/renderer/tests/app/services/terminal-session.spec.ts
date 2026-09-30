@@ -78,13 +78,13 @@ describe("TerminalSession", () => {
     expect(session.state().sequence).toBe(4);
   });
 
-  it("leaves the device attributes question to the runtime, which answers it", async () => {
+  it("leaves the device attributes and cursor position questions to the runtime, which answers them", async () => {
     session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
 
-    session.receiveOutput(output(1, "\u001b[c\u001b[0c\u001b[6n"));
+    session.receiveOutput(output(1, "\u001b[c\u001b[0c\u001b[6n\u001b[5n"));
     await parsed();
 
-    expect(requests(MethodName.TerminalInput)).toEqual([new TerminalInputParams("t1", "\u001b[1;1R").toJson()]);
+    expect(requests(MethodName.TerminalInput)).toEqual([new TerminalInputParams("t1", "\u001b[0n").toJson()]);
   });
 
   it("follows the Windows pseudo-console only for a terminal that runs in one", () => {
