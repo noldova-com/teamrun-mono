@@ -10,16 +10,13 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, edited, synchronize, reopened, ready_for_review]
-  merge_group:
-    types: [checks_requested]
-    branches: [main]
 
 permissions:
   issues: read
   pull-requests: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -28,13 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Accept the merge group's pull requests
-        if: github.event_name == 'merge_group'
-        shell: bash
-        run: echo 'The merge queue admits only pull requests whose linked-issue check passed and removes any that stop meeting the requirements.' >> "$GITHUB_STEP_SUMMARY"
-
       - name: Verify PR description and tracking issue
-        if: github.event_name == 'pull_request_target'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,24 @@
+# @license
+# Copyright (c) Noldova.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
+name: Require linked issue for merge groups
+
+on:
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  check-linked-issue:
+    name: Require linked issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Accept the merge group's pull requests
+        shell: bash
+        run: echo 'The merge queue admits only pull requests whose linked-issue check passed and removes any that stop meeting the requirements.' >> "$GITHUB_STEP_SUMMARY"
