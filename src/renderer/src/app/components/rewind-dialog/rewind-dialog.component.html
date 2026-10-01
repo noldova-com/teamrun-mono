@@ -9,7 +9,7 @@ LICENSE file in the root directory of this source tree.
 <h2 mat-dialog-title>{{ resources.rewindTitle }}</h2>
 <mat-dialog-content>
   <p class="mt-0">{{ resources.rewindText }}</p>
-  <mat-checkbox [checked]="restoreFiles()" (change)="restoreFiles.set($event.checked)">{{ resources.restoreFilesLabel }}</mat-checkbox>
+  <mat-checkbox class="mt-[var(--tr-space-3)] block" [checked]="restoreFiles()" (change)="restoreFiles.set($event.checked)">{{ resources.restoreFilesLabel }}</mat-checkbox>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close>{{ resources.closeLabel }}</button>

@@ -107,6 +107,20 @@ export class GrokTurn implements IAcpClientListener {
     this.contentId = null;
   }
 
+  private static readChange(diff: JsonReader): JsonObject {
+    const before = diff.hasField(Resources.grokOldTextField) ? diff.readNullableString(Resources.grokOldTextField) : null;
+    const after = diff.readString(Resources.grokNewTextField);
+    const lines = [
+      ...String.isNullOrEmpty(before) ? [] : before.split(Resources.lineSeparator).map(t => `${Resources.diffRemovedPrefix}${t}`),
+      ...after.length === 0 ? [] : after.split(Resources.lineSeparator).map(t => `${Resources.diffAddedPrefix}${t}`)
+    ];
+    return {
+      [Resources.pathField]: diff.readNonBlankString(Resources.pathField),
+      [Resources.kindField]: String.isNullOrEmpty(before) ? Resources.addChangeKind : Resources.updateChangeKind,
+      [Resources.diffField]: lines.join(Resources.lineSeparator)
+    };
+  }
+
   private recordTool(update: JsonReader): void {
     const id = update.readNonBlankString(Resources.grokToolCallIdField);
     const merged = { ...this.tools.get(id), ...update.toJson() };
@@ -118,7 +132,10 @@ export class GrokTurn implements IAcpClientListener {
     const title = (tool.readOptionalString(Resources.titleField) ?? Resources.grokToolTitle).slice(0, Resources.maximumSummaryLength);
     const paths = tool.hasField(Resources.grokLocationsField)
       ? tool.readObjectArray(Resources.grokLocationsField).map(t => t.readNonBlankString(Resources.pathField)) : [];
-    const payload = { ...merged, files: paths, tool: kind };
+    const changes = tool.readOptionalString(Resources.statusField) === Resources.grokCompletedStatus && tool.hasField(Resources.contentField)
+      ? tool.readObjectArray(Resources.contentField).filter(t => t.readOptionalString(Resources.typeField) === Resources.grokDiffType).map(t => GrokTurn.readChange(t))
+      : [];
+    const payload = { ...merged, files: paths, tool: kind, ...(changes.length > 0 ? { [Resources.changesField]: changes } : {}) };
     const detailKind = kind === Resources.grokExecuteKind ? DetailKind.Command : kind === Resources.grokEditKind ? DetailKind.FileChange : DetailKind.Note;
     this.listener.onDetail(new TurnDetail(detailKind, title, payload, `${Resources.grokProviderId}-tool-${id}`));
   }

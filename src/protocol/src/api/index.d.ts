@@ -4377,7 +4377,8 @@ export declare class ReplyPage {
 }
 
 /**
- * Interprets recorded Codex file changes and Claude Edit, MultiEdit, and Write payloads consistently for full diffs and summaries.
+ * Interprets recorded file-change lists, as Codex and Grok replies record them, and Claude Edit, MultiEdit, and Write payloads
+ * consistently for full diffs and summaries.
  */
 export declare class FileChangeReader {
   /**
@@ -4386,6 +4387,12 @@ export declare class FileChangeReader {
    * @returns Parsed file changes in their first-seen order; unsupported payloads are ignored.
    */
   public editsOf(message: Message): readonly FileEdit[];
+  /**
+   * Parses and merges changes by file path within some of a reply's details.
+   * @param details The recorded details, in order.
+   * @returns Parsed file changes in their first-seen order; unsupported payloads are ignored.
+   */
+  public editsIn(details: readonly MessageDetail[]): readonly FileEdit[];
 }
 
 /**

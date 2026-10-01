@@ -516,7 +516,11 @@ mat-icon.mat-icon {
   background-color: var(--tr-checkbox);
 }
 
-.mat-mdc-checkbox .mdc-form-field > label {
+.mat-mdc-checkbox .mat-internal-form-field {
+  align-items: flex-start;
+}
+
+.mat-mdc-checkbox .mat-internal-form-field > .mat-internal-form-field-label {
   padding-left: var(--tr-space-2);
 }
 
@@ -1441,12 +1445,23 @@ tr-settings-page {
   min-width: 18rem;
 }
 
+.tr-tab-spinner.mat-mdc-progress-spinner,
+.tr-row-working.mat-mdc-progress-spinner {
+  --mat-progress-spinner-active-indicator-color: currentColor;
+}
+
 .tr-reply-status .mat-mdc-progress-spinner {
   --mat-progress-spinner-active-indicator-color: var(--mat-sys-primary);
 }
 
 .tr-activity-toggle .tr-activity-chevron.mat-icon {
   margin: 0;
+}
+
+.tr-thinking {
+  font-size: var(--tr-text-message);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .tr-interim {

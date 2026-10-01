@@ -179,6 +179,39 @@ describe("MessageCardComponent", () => {
     expect(element.querySelector(".tr-evidence-note")?.textContent).toContain("Git evidence may omit changes.");
   });
 
+  it("shows a running reply's text as ordinary text until a later step follows it, and the same once it ends", () => {
+    TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const fixture = TestBed.createComponent(MessageCardComponent);
+    const element = fixture.nativeElement as HTMLElement;
+    const interim = (message: Message): (boolean | undefined)[] => {
+      fixture.componentRef.setInput("message", message);
+      fixture.detectChanges();
+      return [...element.querySelectorAll("tr-markdown")].map(t => t.parentElement?.classList.contains("tr-interim"));
+    };
+    const narration = new MessageDetail(0, DetailKind.Text, "Looking at the project.", null, SampleData.timestamp);
+    const step = new MessageDetail(1, DetailKind.Command, "npm test", null, SampleData.timestamp);
+    const answer = new MessageDetail(2, DetailKind.Text, "All tests pass.", null, SampleData.timestamp);
+
+    expect(interim(SampleData.withStatus(SampleData.reply, MessageStatus.Running, [narration]))).toEqual([false]);
+    expect(interim(SampleData.withStatus(SampleData.reply, MessageStatus.Running, [narration, step]))).toEqual([true]);
+    expect(interim(SampleData.withStatus(SampleData.reply, MessageStatus.Running, [narration, step, answer]))).toEqual([true, false]);
+    expect(interim(SampleData.withStatus(SampleData.reply, MessageStatus.Completed, [narration, step, answer]))).toEqual([true, false]);
+  });
+
+  it("shows a running reply's consecutive thoughts as one step titled by its latest paragraph until the answer follows it", () => {
+    TestBed.configureTestingModule({ imports: [MessageCardComponent], providers: [{ provide: TEAMRUN_BRIDGE, useValue: SampleData.createBridge() }] });
+    const fixture = TestBed.createComponent(MessageCardComponent);
+    const lines = (details: MessageDetail[]): string[] => {
+      fixture.componentRef.setInput("message", SampleData.withStatus(SampleData.reply, MessageStatus.Running, details));
+      fixture.detectChanges();
+      return [...(fixture.nativeElement as HTMLElement).querySelectorAll("tr-activity-block li button span")].map(t => t.textContent ?? String.empty);
+    };
+    const thoughts = [0, 1, 2].map(t => new MessageDetail(t, DetailKind.Reasoning, `Thought ${t}.`, null, SampleData.timestamp));
+
+    expect(lines(thoughts)).toEqual(["Thought 2."]);
+    expect(lines([...thoughts, new MessageDetail(3, DetailKind.Text, "The answer.", null, SampleData.timestamp)])).toEqual(["Thought 0."]);
+  });
+
   it("copies what the user wrote and what the reply answered", async () => {
     const written: string[] = [];
     const clipboard = { writeText: (text: string): Promise<void> => { written.push(text); return Promise.resolve(); } };
@@ -237,7 +270,7 @@ describe("MessageCardComponent", () => {
     expect(element.textContent).toContain("Read 1 file");
     fixture.componentRef.setInput("message", SampleData.withStatus(reply, MessageStatus.Running));
     fixture.detectChanges();
-    expect([...element.querySelectorAll("tr-markdown")].every(t => t.parentElement?.classList.contains("tr-interim"))).toBe(true);
+    expect([...element.querySelectorAll("tr-markdown")].map(t => t.parentElement?.classList.contains("tr-interim"))).toEqual([true, false, false]);
   });
 
   it("puts the rewound message into the box", async () => {

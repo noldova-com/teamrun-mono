@@ -65,6 +65,56 @@ describe("ActivityBlockComponent", () => {
     expect(items[0]?.querySelector("pre")).toBeNull();
   });
 
+  describe("a thinking step", () => {
+    const text = "Reading the files first. Then more.\n\nComparing them. Still going.";
+    const create = (growing: boolean, entries: readonly ActivityEntry[] = [new ActivityEntry(detail(0, DetailKind.Reasoning, text), null)]): ComponentFixture<ActivityBlockComponent> => {
+      TestBed.configureTestingModule({ imports: [ActivityBlockComponent] });
+      const fixture = TestBed.createComponent(ActivityBlockComponent);
+      fixture.componentRef.setInput("entries", entries);
+      fixture.componentRef.setInput("label", "Thinking");
+      fixture.componentRef.setInput("growing", growing);
+      fixture.detectChanges();
+      return fixture;
+    };
+    const title = (fixture: ComponentFixture<ActivityBlockComponent>): string | null | undefined =>
+      (fixture.nativeElement as HTMLElement).querySelector("li button span")?.textContent;
+
+    it("shows its first sentence and opens to all of its text, however long", async () => {
+      const long = `${text}${Array.from({ length: 20 }, (_, i) => `\n\nParagraph ${i}.`).join("")}`;
+      const fixture = create(false, [new ActivityEntry(detail(0, DetailKind.Reasoning, long), null)]);
+      expect(title(fixture)).toBe("Reading the files first.");
+
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>("li button")!.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(title(fixture)).toBe("Reading the files first.");
+      expect(element.querySelector(".tr-thinking")?.textContent).toBe(long.slice("Reading the files first. ".length));
+      expect(element.querySelector(".tr-step-more")).toBeNull();
+    });
+
+    it("shows the first sentence of its latest paragraph while it is the newest step of a running reply, until it is opened", async () => {
+      const fixture = create(true);
+      expect(title(fixture)).toBe("Comparing them.");
+
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>("li button")!.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(title(fixture)).toBe("Reading the files first.");
+    });
+
+    it("shows its first sentence once another step follows it or the reply ends", () => {
+      const thought = new ActivityEntry(detail(0, DetailKind.Reasoning, text), null);
+      const fixture = create(true, [thought, new ActivityEntry(detail(1, DetailKind.Command, "> ls"), null)]);
+      expect(title(fixture)).toBe("Reading the files first.");
+
+      fixture.componentRef.setInput("entries", [thought]);
+      fixture.componentRef.setInput("growing", false);
+      fixture.detectChanges();
+      expect(title(fixture)).toBe("Reading the files first.");
+    });
+  });
+
   describe("while thinking text streams", () => {
     const originalMatchMedia = window.matchMedia;
     beforeEach(() => {
@@ -82,6 +132,7 @@ describe("ActivityBlockComponent", () => {
       fixture.componentRef.setInput("entries", entries);
       fixture.componentRef.setInput("label", "Thinking");
       fixture.componentRef.setInput("streaming", streaming);
+      fixture.componentRef.setInput("growing", streaming);
       fixture.componentRef.setInput("entering", entering);
       fixture.detectChanges();
       return fixture;
@@ -132,7 +183,12 @@ describe("ActivityBlockComponent", () => {
       expect(titles(fixture)[1]).toBe("");
       frames(fixture, 300);
       expect(titles(fixture)).toEqual(["Title line", "A second thought"]);
-      expect(element.querySelector("pre")?.textContent).toBe("Body line one\nBody line two");
+      const body = element.querySelector<HTMLElement>(".tr-thinking");
+      expect(body?.textContent).toBe("Body line one\nBody line two");
+      expect(body?.tagName).toBe("P");
+      expect(body?.classList.contains("tr-muted")).toBe(true);
+      expect(["tr-mono", "tr-raised", "max-h-64", "overflow-auto"].filter(t => body?.classList.contains(t))).toEqual([]);
+      expect(element.querySelector("pre")).toBeNull();
     });
 
     it("draws each step of a thought within its frame", () => {

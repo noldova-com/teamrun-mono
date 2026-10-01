@@ -13,12 +13,17 @@ import { DiffLineKind } from "../enums/diff-line-kind.js";
 import { DiffLine } from "../models/diff-line.js";
 import { FileEdit } from "../models/file-edit.js";
 import type { Message } from "../models/message.js";
+import type { MessageDetail } from "../models/message-detail.js";
 import { Resources } from "../resources.js";
 
 export class FileChangeReader {
   public editsOf(message: Message): readonly FileEdit[] {
+    return this.editsIn(message.details);
+  }
+
+  public editsIn(details: readonly MessageDetail[]): readonly FileEdit[] {
     const edits: FileEdit[] = [];
-    for (const detail of message.details) {
+    for (const detail of details) {
       if (!FileChangeReader.isJsonObject(detail.payload))
         continue;
       const changes = FileChangeReader.arrayOf(detail.payload[Resources.changesField]);

@@ -160,9 +160,11 @@ export class MessageCardComponent implements OnInit {
     }, Resources.copiedDuration);
   }
 
+  protected isNewest(segment: ReplySegment): boolean {
+    return this.segments().at(-1) === segment;
+  }
+
   protected isInterim(segment: ReplySegment): boolean {
-    if (this.isActive())
-      return true;
     const segments = this.segments();
     return segments.slice(segments.indexOf(segment) + 1).some(t => t.kind !== SegmentKind.Text);
   }

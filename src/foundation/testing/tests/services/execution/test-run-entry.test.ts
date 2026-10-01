@@ -10,13 +10,14 @@ import "@noldova/teamrun-foundation-core";
 
 import { spawn } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Assert, CoverageEnvironment, TestClass, TestData, TestMethod } from "@noldova/teamrun-foundation-testing";
 
 import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
+import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
 
 @TestClass
 export class TestRunEntryTests {
@@ -49,8 +50,33 @@ export class TestRunEntryTests {
   }
 
   @TestMethod
+  @TestData("usesTheRunsOwnTemporaryFolder", 0, null, false)
+  @TestData("leavesATemporaryFolder", 1, "Tests finished but left entry-leftover-", false)
+  @TestData("leavesATemporaryFolder", 1, "Tests finished but left entry-leftover-", true)
+  public async leavesTheTemporaryFolderAsItFoundIt(method: string, code: number, failure: string | null, asRoot: boolean): Promise<void> {
+    using directory = new TemporaryDirectory();
+    const testsDirectory = join(directory.path, "tests");
+    const temporaryDirectory = join(directory.path, "temporary");
+    await mkdir(testsDirectory);
+    await mkdir(temporaryDirectory);
+    const fixture = new URL("../../fixtures/execution/entry-lifetime.fixture.js", import.meta.url).href;
+    await writeFile(join(testsDirectory, "lifetime.test.js"), `export { EntryLifetimeFixture as EntryLifetimeTests } from ${JSON.stringify(fixture)};\n`);
+    const summaryPath = join(directory.path, "summary.md");
+
+    const result = await this.runEntryArgumentsAsync(["TestPackage", testsDirectory], JSON.stringify([method]), summaryPath,
+      asRoot ? { CONTEXT_TEMPORARY_ROOT: temporaryDirectory } : { TMPDIR: temporaryDirectory, TEMP: temporaryDirectory, TMP: temporaryDirectory });
+
+    Assert.areEqual(code, result.exitCode, result.errorOutput);
+    if (!Object.isNull(failure))
+      Assert.isTrue(result.errorOutput.includes(failure), result.errorOutput);
+    Assert.areEqual(!Object.isNull(failure), (await readFile(summaryPath, "utf8")).includes("### Package test execution failed"));
+    Assert.areEqual(0, (await readdir(temporaryDirectory)).length);
+  }
+
+  @TestMethod
   public async reportsAContractViolationAsACleanVerdict(): Promise<void> {
-    const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
+    using directory = new TemporaryDirectory();
+    const rootDirectory = directory.path;
     await writeFile(join(rootDirectory, "empty.test.js"), "export {};\n");
 
     const entryRun = await this.runEntryAsync("TestPackage", rootDirectory);
@@ -63,7 +89,8 @@ export class TestRunEntryTests {
 
   @TestMethod
   public async failsAnEmptySelectionLoudly(): Promise<void> {
-    const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
+    using directory = new TemporaryDirectory();
+    const rootDirectory = directory.path;
 
     const entryRun = await this.runEntryAsync("TestPackage", rootDirectory);
 
@@ -154,12 +181,14 @@ export class TestRunEntryTests {
     return this.runEntryArgumentsAsync([packageName, rootDirectory]);
   }
 
-  private async runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", summaryPath?: string): Promise<EntryRun> {
+  private async runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", summaryPath?: string, variables: Readonly<Record<string, string>> = {}): Promise<EntryRun> {
     const environment = CoverageEnvironment.forChild(process.env);
     // Fixture subprocesses must not append their deliberately failing results to the real CI summary.
     delete environment["GITHUB_STEP_SUMMARY"];
     if (!Object.isUndefined(summaryPath))
       environment["GITHUB_STEP_SUMMARY"] = summaryPath;
+    delete environment["CONTEXT_TEMPORARY_ROOT"];
+    Object.assign(environment, variables);
     if (Object.isNull(filters))
       delete environment["CONTEXT_TEST_FILTERS"];
     else

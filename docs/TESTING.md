@@ -37,7 +37,7 @@ The execution boundary owns test deadlines, cancellation and cleanup. A timeout 
 
 Observe pending failures before declaring the run complete. Late errors must not disappear after a passing result is printed; attribute them where possible and otherwise fail the run. Test-runner crashes, forced termination, cancellation and incomplete cleanup remain explicit unsuccessful or incomplete outcomes. A one-shot verification command must actually terminate with the appropriate exit status under the coding standards' process-lifetime rules.
 
-Tests involving files, repositories, databases or profiles use owned disposable locations. Cleanup touches only resources created for that fixture, preserves failure diagnostics and runs on success, failure and cancellation. Tests do not mutate real conversations, user profiles, project checkouts or the user's clipboard and desktop as incidental fixture setup.
+Tests involving files, repositories, databases or profiles use owned disposable locations. Cleanup touches only resources created for that fixture, preserves failure diagnostics and runs on success, failure and cancellation. The package test runner gives each run its own temporary folder and fails the run when tests leave anything in it. Tests do not mutate real conversations, user profiles, project checkouts or the user's clipboard and desktop as incidental fixture setup.
 
 Desktop terminal workflows use the installed default shell with disposable startup configuration and command history, including after terminal restarts. They verify that commands reach the disposable history while continuing to exercise the real shell and its output; personal shell profiles and history files are not test fixtures.
 
