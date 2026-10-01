@@ -66,6 +66,14 @@ export class Resources {
   public static readonly grokOtherKind: string = "other";
   public static readonly grokExecuteKind: string = "execute";
   public static readonly grokEditKind: string = "edit";
+  public static readonly grokCompletedStatus: string = "completed";
+  public static readonly grokDiffType: string = "diff";
+  public static readonly grokOldTextField: string = "oldText";
+  public static readonly grokNewTextField: string = "newText";
+  public static readonly addChangeKind: string = "add";
+  public static readonly updateChangeKind: string = "update";
+  public static readonly diffRemovedPrefix: string = "-";
+  public static readonly diffAddedPrefix: string = "+";
   public static readonly grokAllowOnce: string = "allow_once";
   public static readonly grokRejectOnce: string = "reject_once";
   public static readonly grokSelected: string = "selected";

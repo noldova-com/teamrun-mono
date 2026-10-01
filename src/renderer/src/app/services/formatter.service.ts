@@ -14,6 +14,7 @@ import {
   AuthStatus,
   type Teammate,
   DetailKind,
+  FileChangeReader,
   type Message,
   MessageAuthor,
   MessageDetail,
@@ -168,10 +169,11 @@ export class Formatter {
     return this.segments(message).flatMap(t => t.entries);
   }
 
-  public activitySummary(entries: readonly ActivityEntry[]): string {
+  public activitySummary(entries: readonly ActivityEntry[], editedFiles: number | null = null): string {
     const counts = { commands: 0, edits: 0, reads: 0, searches: 0, thoughts: 0, others: 0 };
     for (const entry of entries)
       counts[this.categoryOf(entry.detail)] += 1;
+    counts.edits = editedFiles ?? new FileChangeReader().editsIn(entries.map(t => t.detail)).length;
     const parts: string[] = [];
     if (counts.commands > 0)
       parts.push(Resources.formatCommandCount(counts.commands));

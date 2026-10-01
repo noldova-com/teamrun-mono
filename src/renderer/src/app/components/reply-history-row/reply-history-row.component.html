@@ -11,7 +11,7 @@ LICENSE file in the root directory of this source tree.
   <span>{{ formatter.time(item().summary.preview.createdAt) }}</span>
 </div>
 @if (panel() === activityPanel) {
-  <tr-activity-block [entries]="entries()" [label]="formatter.activitySummary(entries())" [rootPath]="rootPath()"
+  <tr-activity-block [entries]="entries()" [label]="formatter.activitySummary(entries(), item().summary.files.length)" [rootPath]="rootPath()"
     [expansion]="item().expansion" [beforeExpand]="ensureDetails" />
 } @else {
   <tr-edited-files-card [edits]="item().summary.files" [fullEdits]="edits()" [rootPath]="rootPath()"
