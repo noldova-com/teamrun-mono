@@ -15,6 +15,7 @@ export class RenderedText {
   private static readonly originals: WeakMap<Text, GraphemeText> = new WeakMap();
   private readonly root: Node;
   private left: number = 0;
+  private offset: number = 0;
 
   public constructor(root: Node) {
     this.root = root;
@@ -38,6 +39,14 @@ export class RenderedText {
 
   public showAll(): void {
     this.show(Number.POSITIVE_INFINITY);
+  }
+
+  public ranges(start: number, end: number): Range[] {
+    const ranges: Range[] = [];
+    this.offset = 0;
+    this.collect(this.root, start, end, ranges);
+
+    return ranges;
   }
 
   private countIn(node: Node): number {
@@ -77,6 +86,27 @@ export class RenderedText {
       element.hidden = hide;
     if (!hide)
       this.visit(element);
+  }
+
+  private collect(node: Node, start: number, end: number, ranges: Range[]): void {
+    for (const child of node.childNodes) {
+      if (this.offset >= end)
+        return;
+      if (child instanceof Text && !RenderedText.isLayout(child)) {
+        const original = RenderedText.originalOf(child);
+        const from = Math.max(start - this.offset, 0);
+        const to = Math.min(end - this.offset, original.count);
+        if (from < to) {
+          const range = document.createRange();
+          range.setStart(child, Math.min(original.prefix(from).length, child.length));
+          range.setEnd(child, Math.min(original.prefix(to).length, child.length));
+          ranges.push(range);
+        }
+        this.offset += original.count;
+      }
+      else if (child instanceof HTMLElement && !child.classList.contains(Resources.codeHeaderClass))
+        this.collect(child, start, end, ranges);
+    }
   }
 
   private static originalOf(node: Text): GraphemeText {
