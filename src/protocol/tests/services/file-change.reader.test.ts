@@ -44,6 +44,20 @@ export class FileChangeReaderTests {
     Assert.areEqual("a:update:1:2,b:add:3:0,c:update:2:1,d:update:0:0,deleted:update:0:1", edits.map(t => `${t.path}:${t.kind}:${t.additions}:${t.deletions}`).join(","));
   }
 
+  @TestMethod
+  public readsSomeOfAReplysDetailsLikeTheWholeReply(): void {
+    const message = FileChangeReaderTests.message([
+      { changes: [{ path: "a", kind: "add", diff: "+one" }] },
+      { tool: "Edit", input: { file_path: "a", old_string: "one", new_string: "two" } },
+      { changes: [{ path: "b", kind: "update", diff: "-x\n+y" }] }
+    ]);
+
+    const some = new FileChangeReader().editsIn(message.details.slice(0, 2));
+
+    Assert.areEqual("a:add:2:1", some.map(t => `${t.path}:${t.kind}:${t.additions}:${t.deletions}`).join(","));
+    Assert.areEqual(JSON.stringify(new FileChangeReader().editsOf(message)), JSON.stringify(new FileChangeReader().editsIn(message.details)));
+  }
+
   private static message(payloads: readonly JsonValue[]): Message {
     return new Message("m", "c", 0, MessageAuthor.User, null, MessageStatus.Completed,
       payloads.map((payload, i) => new MessageDetail(i, DetailKind.FileChange, "change", payload, "t")), null, "t", null, "t");
