@@ -818,6 +818,14 @@ export declare class Resources {
   public static readonly grokOtherKind: string;
   public static readonly grokExecuteKind: string;
   public static readonly grokEditKind: string;
+  public static readonly grokCompletedStatus: string;
+  public static readonly grokDiffType: string;
+  public static readonly grokOldTextField: string;
+  public static readonly grokNewTextField: string;
+  public static readonly addChangeKind: string;
+  public static readonly updateChangeKind: string;
+  public static readonly diffRemovedPrefix: string;
+  public static readonly diffAddedPrefix: string;
   public static readonly grokAllowOnce: string;
   public static readonly grokRejectOnce: string;
   public static readonly grokSelected: string;
