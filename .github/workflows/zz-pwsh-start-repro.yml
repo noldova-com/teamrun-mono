@@ -15,7 +15,7 @@ jobs:
       matrix:
         runner: [windows-11-arm]
         hide: ['0', '1']
-        copy: [a, b]
+        copy: [a, b, c]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     steps:
@@ -36,7 +36,10 @@ jobs:
           const os = require("node:os");
           const path = require("node:path");
           const hide = process.env.HIDE === "1";
-          const total = 600;
+          const total = 400;
+          const jumpLists = path.join(process.env.APPDATA, "Microsoft", "Windows", "Recent", "CustomDestinations");
+          const jumpListState = () => fs.existsSync(jumpLists) ? fs.readdirSync(jumpLists).map(t => t + "@" + fs.statSync(path.join(jumpLists, t)).mtimeMs).join(",") : "none";
+          const jumpListBefore = jumpListState();
           const root = fs.mkdtempSync(path.join(os.tmpdir(), "pwsh-starts-"));
           const codes = {};
           let failed = 0;
@@ -44,7 +47,7 @@ jobs:
             const profile = path.join(root, `p${i}`);
             fs.mkdirSync(profile);
             let output = "";
-            const child = spawn("pwsh", ["-NoProfile", "-NonInteractive", "-Command", "Import-Module Microsoft.PowerShell.Utility; $env:PSModulePath.Length"],
+            const child = spawn("pwsh", ["-NoProfile", "-NonInteractive", "-Command", "Import-Module Microsoft.PowerShell.Utility, Microsoft.PowerShell.Management, Microsoft.PowerShell.Security; (Get-Command).Count; Start-Sleep -Milliseconds 1000"],
               { env: { ...process.env, USERPROFILE: profile }, windowsHide: hide, stdio: ["ignore", "pipe", "pipe"] });
             child.stdout.on("data", t => output += t);
             child.stderr.on("data", t => output += t);
@@ -58,7 +61,7 @@ jobs:
           (async () => {
             for (let i = 0; i < total; i += 2)
               await Promise.all([start(i), start(i + 1)]);
-            console.log(JSON.stringify({ windowsHide: hide, total, codes }));
+            console.log(JSON.stringify({ windowsHide: hide, total, codes, jumpListWritten: jumpListState() !== jumpListBefore }));
             process.exitCode = failed === 0 ? 0 : 1;
           })();
           SCRIPT
