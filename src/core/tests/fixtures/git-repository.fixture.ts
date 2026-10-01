@@ -10,6 +10,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+import { Resources, WorkingTree } from "@noldova/teamrun-core";
+
 /**
  * A disposable git repository for the working-tree tests: initialised with one commit, files
  * written and committed on demand.
@@ -39,6 +41,11 @@ export class GitRepository {
   }
 
   public git(...args: string[]): string {
-    return execFileSync("git", args, { cwd: this.path, encoding: "utf8", windowsHide: true });
+    return this.gitWithInput(null, ...args);
+  }
+
+  public gitWithInput(input: string | null, ...args: string[]): string {
+    const executable = WorkingTree.locateGit(process.platform, process.env[Resources.pathVariable]);
+    return execFileSync(executable, args, { cwd: this.path, encoding: "utf8", windowsHide: true, ...(Object.isNull(input) ? {} : { input }) });
   }
 }

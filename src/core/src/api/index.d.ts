@@ -1195,6 +1195,8 @@ export declare class Resources {
   public static readonly updateKind: string;
   public static readonly deleteKind: string;
   public static readonly gitExecutable: string;
+  public static readonly windowsPlatform: string;
+  public static readonly pathVariable: string;
   public static readonly gitTopLevelArguments: readonly string[];
   public static readonly gitStatusArguments: readonly string[];
   public static readonly gitHashArguments: readonly string[];
@@ -2406,6 +2408,15 @@ export declare class WorkingTree {
    * @throws Error When Git finds the repository but cannot capture its files.
    */
   public static capture(directory: string, maximumSnapshotFiles?: number): Promise<WorkingTree | null>;
+
+  /**
+   * Finds the Git executable a launch would run. On macOS, a launch by name tries every PATH folder in turn and each failed
+   * attempt creates a process; starting the full path creates one.
+   * @param platform The host platform; Windows searches PATH in-process, so it keeps `git`.
+   * @param searchPath The PATH the launch uses.
+   * @returns The first executable `git` file in an absolute PATH folder, or `git` when there is none.
+   */
+  public static locateGit(platform: string, searchPath: string | undefined): string;
 
   /**
    * Compares working files against their starting content, independently of commits made during the turn.
