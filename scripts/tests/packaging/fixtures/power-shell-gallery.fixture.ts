@@ -39,6 +39,16 @@ export default class PowerShellGalleryFixture {
     "  [CmdletBinding()]",
     "  param([string]$Endpoint, [string]$CodeSigningAccountName, [string]$CertificateProfileName, [string]$FileDigest,",
     "    [string]$TimestampRfc3161, [string]$TimestampDigest, [string]$Files)",
+    "  Add-Type -Name StartupInfo -Namespace TeamRunFixture -MemberDefinition @'",
+    "[StructLayout(LayoutKind.Sequential)]",
+    "public struct Values { public int cb; public IntPtr reserved; public IntPtr desktop; public IntPtr title; public int x; public int y;",
+    "  public int width; public int height; public int columns; public int rows; public int fill; public int flags; public short showWindow;",
+    "  public short reserved2; public IntPtr reserved3; public IntPtr input; public IntPtr output; public IntPtr error; }",
+    "[DllImport(\"kernel32.dll\")] public static extern void GetStartupInfoW(out Values values);",
+    "'@",
+    "  $values = New-Object TeamRunFixture.StartupInfo+Values",
+    "  [TeamRunFixture.StartupInfo]::GetStartupInfoW([ref]$values)",
+    "  $PSBoundParameters['ShowWindow'] = $values.showWindow",
     "  $PSBoundParameters | ConvertTo-Json | Set-Content -Path ($Files + '.signing.json')",
     "}"
   ].join("\n");
@@ -58,7 +68,7 @@ export default class PowerShellGalleryFixture {
    */
   public static modulePath(modules: string): string {
     const query = spawnSync(PowerShellGalleryFixture.POWERSHELL, [...PowerShellGalleryFixture.MODULE_PATH_QUERY],
-      { encoding: PowerShellGalleryFixture.UTF8_ENCODING, timeout: PowerShellGalleryFixture.MODULE_PATH_QUERY_TIMEOUT });
+      { encoding: PowerShellGalleryFixture.UTF8_ENCODING, timeout: PowerShellGalleryFixture.MODULE_PATH_QUERY_TIMEOUT, windowsHide: true });
     if (query.error !== undefined)
       throw query.error;
     if (query.status !== 0)
