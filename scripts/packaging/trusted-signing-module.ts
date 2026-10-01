@@ -99,6 +99,7 @@ export default class TrustedSigningModule {
       const child = spawn(TrustedSigningModule.POWERSHELL, [...TrustedSigningModule.POWERSHELL_ARGUMENTS, command], {
         stdio: "inherit",
         shell: false,
+        windowsHide: true,
         env: { ...process.env, ...environment }
       });
       child.on("error", reject);

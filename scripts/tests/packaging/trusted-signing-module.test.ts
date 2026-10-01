@@ -69,7 +69,7 @@ class TrustedSigningModuleTests {
       await access(module.manifestPath);
     });
 
-    test("sign passes the endpoint, account, profile, digests, timestamp server and the absolute file path to the saved module", async () => {
+    test("sign passes the endpoint, account, profile, digests, timestamp server and the absolute file path to the saved module, in a hidden pwsh that skips its taskbar jump list", async () => {
       await TrustedSigningModuleTests.useGalleryAsync("0.5.8");
       const module = new TrustedSigningModule(path.join(TrustedSigningModuleTests.root, "signing"));
       await module.prepareAsync();
@@ -84,7 +84,8 @@ class TrustedSigningModuleTests {
         FileDigest: "SHA256",
         TimestampRfc3161: "http://timestamp.acs.microsoft.com",
         TimestampDigest: "SHA256",
-        Files: file
+        Files: file,
+        ShowWindow: 0
       });
     });
 
