@@ -92,7 +92,8 @@ LICENSE file in the root directory of this source tree.
         @default {
           @if (isActivityOpen()) {
             <tr-activity-block [entries]="segment.entries" [label]="formatter.activitySummary(segment.entries)" [rootPath]="rootPath()"
-              [expansion]="state().expansion" [streaming]="isActive()" [entering]="isEntering(segment)" />
+              [expansion]="state().expansion" [streaming]="isActive()" [entering]="isEntering(segment)"
+              [growing]="isActive() && isNewest(segment)" />
           }
         }
       }

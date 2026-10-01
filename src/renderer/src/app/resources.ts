@@ -582,6 +582,8 @@ export class Resources {
   public static readonly restoreFilesLabel: string = "Also put the project's files back to before this message (git projects, when a snapshot exists)";
   public static readonly rewindConfirmLabel: string = "Rewind";
   public static readonly paragraphSeparator: string = "\n\n";
+  public static readonly paragraphBreak: RegExp = /\n\s*\n/;
+  public static readonly sentenceEnd: RegExp = /[.!?](?=\s|$)/;
   public static readonly scrollDownLabel: string = "Scroll to the latest message";
   public static readonly scrollAwayThreshold: number = 120;
   public static readonly messagePageSize: number = 50;
