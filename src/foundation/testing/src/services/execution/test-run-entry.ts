@@ -8,7 +8,9 @@
 
 import "@noldova/teamrun-foundation-core";
 
-import { writeSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { ExceptionOptions } from "@noldova/teamrun-foundation-exceptions";
 
@@ -30,6 +32,7 @@ export class TestRunEntry {
     const testProjectArguments = process.argv.slice(2);
     const summary = new GitHubSummaryWriter(process.env[Resources.gitHubSummaryVariable]);
     this.keepCoverageFromChildren();
+    const temporaryDirectory = this.isolateTemporaryFiles();
 
     try {
       const filters = this.parseFilters(process.env[TestRunEntry.FILTERS_VARIABLE]);
@@ -58,6 +61,14 @@ export class TestRunEntry {
       process.exitCode = 1;
     }
 
+    const leftovers = this.removeTemporaryFiles(temporaryDirectory);
+    if (leftovers.length > 0) {
+      const failure = Resources.formatTemporaryLeftovers(leftovers);
+      writeSync(Resources.standardErrorDescriptor, failure);
+      summary.writeFailure(failure);
+      process.exitCode = Resources.failedExitCode;
+    }
+
     // A leaked test resource must fail the run instead of keeping CI alive after the report.
     setTimeout(() => {
       const failure = Resources.formatUnclosedTestResources(process.getActiveResourcesInfo());
@@ -73,6 +84,20 @@ export class TestRunEntry {
       process.env[Resources.coverageDirectoryVariable] = directory;
       delete process.env[Resources.coverageVariable];
     }
+  }
+
+  private isolateTemporaryFiles(): string {
+    const directory = mkdtempSync(join(tmpdir(), Resources.temporaryDirectoryPrefix));
+    for (const variable of Resources.temporaryDirectoryVariables)
+      process.env[variable] = directory;
+
+    return directory;
+  }
+
+  private removeTemporaryFiles(directory: string): string[] {
+    const leftovers = readdirSync(directory).sort();
+    rmSync(directory, { recursive: true, force: true, maxRetries: Resources.temporaryRemovalRetries });
+    return leftovers;
   }
 
   private parseFilters(text: string | undefined): string[] {

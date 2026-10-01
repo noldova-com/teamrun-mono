@@ -6,17 +6,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { Assert, CoverageAnalyzer, CoverageProject, TestClass, TestingException, TestMethod } from "@noldova/teamrun-foundation-testing";
+
+import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
 
 @TestClass
 export class CoverageReportReaderTests {
   @TestMethod
   public async rejectsMalformedCoverageJson(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
     await writeFile(join(includedDirectory, "sample.js"), "sample;\n");

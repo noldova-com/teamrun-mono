@@ -13,6 +13,9 @@ export class Resources {
   public static readonly gitHubSummaryVariable: string = "GITHUB_STEP_SUMMARY";
   public static readonly coverageVariable: string = "NODE_V8_COVERAGE";
   public static readonly coverageDirectoryVariable: string = "CONTEXT_COVERAGE_DIRECTORY";
+  public static readonly temporaryDirectoryPrefix: string = "teamrun-test-run-";
+  public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
+  public static readonly temporaryRemovalRetries: number = 5;
   public static readonly summaryDetailLimit: number = 20_000;
   public static readonly summaryEncoding: BufferEncoding = "utf8";
   public static readonly summaryNewline: string = "\n";
@@ -245,6 +248,10 @@ export class Resources {
         "a worker thread or a native handle keeps it alive. Failing the run.\n";
 
     return `Tests finished but resources remain open: ${resources.join(", ")}. Failing the run.\n`;
+  }
+
+  public static formatTemporaryLeftovers(leftovers: readonly string[]): string {
+    return `Tests finished but left ${leftovers.join(", ")} in the run's temporary folder; a test must remove what it creates. Failing the run.\n`;
   }
 
   public static summaryRow(label: string, value: string | number): string {
