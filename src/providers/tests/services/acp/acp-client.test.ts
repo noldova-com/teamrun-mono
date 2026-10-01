@@ -74,7 +74,8 @@ export class AcpClientTests {
     const client = new AcpClient(host.command, { ...host.environment, TEAMRUN_FAKE_GROK_STAY_OPEN: "1", TEAMRUN_FAKE_GROK_INIT: mode }, host.directory.path, terminator, host.timings, host.tracker);
     client.start();
     try {
-      await Assert.throwsAsync(() => client.request("initialize", {}), Error);
+      const failure = await Assert.throwsAsync(() => client.request("initialize", {}), Error);
+      Assert.areNotEqual(Resources.formatAcpTimeout("initialize"), failure.message);
       await Wait.until(() => terminator.calls > 0);
     }
     finally { await client.stop(); }

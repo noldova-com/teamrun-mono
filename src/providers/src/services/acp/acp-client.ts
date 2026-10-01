@@ -115,6 +115,8 @@ export class AcpClient {
       void this.stop().catch(() => undefined);
       return;
     }
+    if (!text.includes(Resources.lineSeparator))
+      return;
     let boundary: number;
     while ((boundary = this.buffered.indexOf(Resources.lineSeparator)) >= 0) {
       const line = this.buffered.slice(0, boundary).trim();
