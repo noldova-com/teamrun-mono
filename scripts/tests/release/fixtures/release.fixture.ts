@@ -12,6 +12,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import GitExecutable from "../../../git-executable.ts";
 import ReleaseCandidate from "../../../release/release-candidate.ts";
 
 export default class ReleaseFixture {
@@ -31,7 +32,7 @@ export default class ReleaseFixture {
     const directory = await mkdtemp(path.join(os.tmpdir(), "teamrun-release-"));
     await writeFile(path.join(directory, "package.json"), JSON.stringify({ version }));
     await writeFile(path.join(directory, "package-lock.json"), JSON.stringify({ version, packages: { "": { version } } }));
-    const git = (args: readonly string[]): string => execFileSync("git", [...args], { cwd: directory, encoding: "utf8", timeout: 10_000 });
+    const git = (args: readonly string[]): string => execFileSync(GitExecutable.locate(), [...args], { cwd: directory, encoding: "utf8", timeout: 10_000 });
     git(["init", "-q", "--initial-branch=main"]);
     git(["config", "user.name", "Release fixture"]);
     git(["config", "user.email", "fixture@example.invalid"]);
@@ -44,7 +45,7 @@ export default class ReleaseFixture {
   }
 
   public git(args: readonly string[]): string {
-    return execFileSync("git", [...args], { cwd: this.directory, encoding: "utf8", timeout: 10_000 }).trim();
+    return execFileSync(GitExecutable.locate(), [...args], { cwd: this.directory, encoding: "utf8", timeout: 10_000 }).trim();
   }
 
   public async seed(signedPlatforms: readonly string[] = []): Promise<void> {

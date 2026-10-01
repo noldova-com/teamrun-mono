@@ -9,6 +9,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 
+import GitExecutable from "../git-executable.ts";
 import PackageException from "../packaging/package.exception.ts";
 import ReleaseVersion from "./release-version.ts";
 
@@ -30,7 +31,7 @@ export default class ReleaseCandidate {
     if (!tag.startsWith("v"))
       throw new PackageException(ReleaseCandidate.TAG_PREFIX_REQUIRED);
     const version = new ReleaseVersion(tag.slice(1));
-    const git = (args: readonly string[]): string => execFileSync("git", [...args],
+    const git = (args: readonly string[]): string => execFileSync(GitExecutable.locate(), [...args],
       { cwd: directory, encoding: "utf8", timeout: ReleaseCandidate.COMMAND_TIMEOUT }).trim();
     const revision = git(["rev-parse", "--verify", `refs/tags/${tag}^{commit}`]);
     if (!ReleaseCandidate.REVISION_PATTERN.test(revision) || expectedRevision !== undefined && revision !== expectedRevision)

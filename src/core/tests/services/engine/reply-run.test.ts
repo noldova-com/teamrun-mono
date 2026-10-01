@@ -84,9 +84,8 @@ export class ReplyRunTests {
     repository.write("one.txt", "one\n");
     repository.commit();
     const hash = repository.git("rev-parse", "HEAD:one.txt").trim();
-    const { execFileSync } = await import("node:child_process");
     const entries = Array.from({ length: Resources.maximumSnapshotFiles + 1 }, (_, i) => `100644 ${hash}\tfile-${i}.txt`).join("\n");
-    execFileSync("git", ["update-index", "--index-info"], { cwd: project.rootPath, input: entries + "\n", windowsHide: true });
+    repository.gitWithInput(`${entries}\n`, "update-index", "--index-info");
     const conversation = host.createConversation(project);
     await host.engine.send(new MessageSendParams(conversation.id, "hello", new RequestedSettings("fake", null, null), null));
     await host.engine.waitForIdle();
