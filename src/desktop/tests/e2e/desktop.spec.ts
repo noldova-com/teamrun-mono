@@ -252,10 +252,13 @@ test("opens the default shell with disposable history, preserves output through 
   await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/, { timeout: 60_000 });
   await desktop.capture("terminal-opened");
 
+  const shown = (await desktop.terminalState()).size;
   await page.keyboard.press("Control+Backquote");
   await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
+  expect((await desktop.terminalState()).size).toEqual(shown);
   await page.keyboard.press("Control+Backquote");
   await expect(terminal.locator("textarea")).toBeFocused();
+  expect((await desktop.terminalState()).size).toEqual(shown);
   await expect(terminal.locator(".xterm-rows")).toContainText(/teamrun-terminal-check[\s\S]*teamrun-terminal-check/);
 
   await page.reload();
@@ -281,7 +284,7 @@ test("opens the default shell with disposable history, preserves output through 
   await expect(page.locator("tr-terminal-panel")).toHaveCount(0);
 });
 
-test("retains terminal output after a narrow resize, widening and a window reload", async () => {
+test("keeps a squeezed terminal at its smallest size and retains its output after widening and a window reload", async () => {
   const page = desktop.page;
   await page.getByRole("button", { name: "Conversation A", exact: true }).click();
   await page.keyboard.press("Control+Shift+Backquote");
@@ -304,7 +307,20 @@ test("retains terminal output after a narrow resize, widening and a window reloa
   await expect.poll(async () => {
     const size = (await desktop.terminalState()).size;
     return `${size.columns}x${size.rows}`;
-  }).toBe("2x1");
+  }).toBe("40x3");
+  await expect(terminal.locator(".xterm-rows > div")).toHaveCount(3);
+  await terminal.locator(".tr-terminal-screen").evaluate(element => {
+    element.style.width = "200px";
+    element.style.height = "80px";
+  });
+  const narrow = (await host.boundingBox())!;
+  const scrollbar = (await terminal.locator(".xterm .scrollbar.vertical").boundingBox())!;
+  expect(scrollbar.width).toBeGreaterThan(0);
+  expect(scrollbar.x).toBeGreaterThanOrEqual(narrow.x);
+  expect(scrollbar.x + scrollbar.width).toBeLessThanOrEqual(narrow.x + narrow.width);
+  await expect(terminal.locator(".xterm .scrollbar.vertical .slider")).not.toHaveCSS("top", "0px");
+  await desktop.scrollTerminalToStart();
+  expect(`${(await desktop.terminalState()).size.columns}`).toBe("40");
   await terminal.locator(".tr-terminal-screen").evaluate(element => {
     element.style.removeProperty("width");
     element.style.removeProperty("height");

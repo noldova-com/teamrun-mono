@@ -48,6 +48,8 @@ export class TerminalSession {
   private sequence: number = 0;
   private processed: number = 0;
   private focusPending: boolean = false;
+  private widthChangedAt: number = Number.NEGATIVE_INFINITY;
+  private widthTimer: ReturnType<typeof setTimeout> | null = null;
   private theme: ITheme;
 
   public readonly id: string;
@@ -152,12 +154,21 @@ export class TerminalSession {
     const proposed = this.fit.proposeDimensions();
     if (Object.isUndefined(proposed) || !Number.isFinite(proposed.cols) || !Number.isFinite(proposed.rows))
       return;
-    const size = TerminalSize.fitting(proposed.cols, proposed.rows);
-    if (size.columns === this.terminal.cols && size.rows === this.terminal.rows)
+    const fitted = TerminalSize.fitting(proposed.cols, proposed.rows);
+    let columns = fitted.columns;
+    if (columns !== this.terminal.cols) {
+      const now = Date.now();
+      if (now - this.widthChangedAt < Resources.terminalWidthSettleDelay) {
+        columns = this.terminal.cols;
+        this.settleWidth();
+      }
+      this.widthChangedAt = now;
+    }
+    if (columns === this.terminal.cols && fitted.rows === this.terminal.rows)
       return;
 
-    this.terminal.resize(size.columns, size.rows);
-    this.call(MethodName.TerminalResize, new TerminalResizeParams(this.id, size).toJson());
+    this.terminal.resize(columns, fitted.rows);
+    this.call(MethodName.TerminalResize, new TerminalResizeParams(this.id, new TerminalSize(columns, fitted.rows)).toJson());
   }
 
   public configure(fontFamily: string, fontSize: number, theme: ITheme): void {
@@ -177,7 +188,19 @@ export class TerminalSession {
   }
 
   public dispose(): void {
+    if (!Object.isNull(this.widthTimer))
+      clearTimeout(this.widthTimer);
     this.terminal.dispose();
+  }
+
+  private settleWidth(): void {
+    if (!Object.isNull(this.widthTimer))
+      clearTimeout(this.widthTimer);
+    this.widthTimer = setTimeout(() => {
+      this.widthTimer = null;
+      this.widthChangedAt = Number.NEGATIVE_INFINITY;
+      this.fitToHost();
+    }, Resources.terminalWidthSettleDelay);
   }
 
   private type(data: string): void {

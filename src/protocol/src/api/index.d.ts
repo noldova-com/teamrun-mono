@@ -1529,6 +1529,7 @@ export declare class Resources {
    * The narrowest terminal in columns: 2, the least a terminal emulator draws.
    */
   public static readonly minimumTerminalColumns: number;
+  public static readonly minimumTerminalRows: number;
   /**
    * The widest terminal in columns: 1000.
    */
@@ -4892,31 +4893,31 @@ export declare enum TerminalTextStyle {
  */
 export declare class TerminalSize {
   /**
-   * The width in columns; 2 through 1000.
+   * The width in columns; 40 through 1000.
    */
   public readonly columns: number;
   /**
-   * The height in rows; 1 through 1000.
+   * The height in rows; 3 through 1000.
    */
   public readonly rows: number;
 
   /**
    * Initializes the size.
-   * @param columns The width in columns; an integer from 2 through 1000.
-   * @param rows The height in rows; an integer from 1 through 1000.
+   * @param columns The width in columns; an integer from 40 through 1000.
+   * @param rows The height in rows; an integer from 3 through 1000.
    * @throws ArgumentOutOfRangeException when a dimension is not an integer in its range.
    */
   public constructor(columns: number, rows: number);
 
   /**
    * Makes the nearest size a terminal can have, for a space measured in character cells.
-   * @param columns The width in columns; a fraction is dropped and the result kept within 2 through 1000.
-   * @param rows The height in rows; a fraction is dropped and the result kept within 1 through 1000.
+   * @param columns The width in columns; a fraction is dropped and the result kept within 40 through 1000.
+   * @param rows The height in rows; a fraction is dropped and the result kept within 3 through 1000.
    * @returns The size.
    * @throws ArgumentOutOfRangeException when a dimension is not a finite number.
    * @example
    * ```ts
-   * TerminalSize.fitting(120.6, 0); // 120 columns and 1 row
+   * TerminalSize.fitting(120.6, 0); // 120 columns and 3 rows
    * ```
    */
   public static fitting(columns: number, rows: number): TerminalSize;

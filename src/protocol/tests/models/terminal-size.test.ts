@@ -35,22 +35,22 @@ export class TerminalSizeTests {
 
   @TestMethod
   public acceptsTheSmallestAndLargestSizes(): void {
-    Assert.areEqual(2, new TerminalSize(2, 1).columns);
-    Assert.areEqual(1, new TerminalSize(2, 1).rows);
+    Assert.areEqual(40, new TerminalSize(40, 3).columns);
+    Assert.areEqual(3, new TerminalSize(40, 3).rows);
     Assert.areEqual(1000, new TerminalSize(1000, 1000).columns);
     Assert.areEqual(1000, new TerminalSize(1000, 1000).rows);
   }
 
   @TestMethod
   public rejectsSizesOutOfRange(): void {
-    for (const [columns, rows] of [[1, 24], [1001, 24], [80.5, 24], [80, 0], [80, 1001], [80, 24.5]] as const)
+    for (const [columns, rows] of [[39, 24], [1001, 24], [80.5, 24], [80, 2], [80, 1001], [80, 24.5]] as const)
       Assert.throws(() => new TerminalSize(columns, rows), ArgumentOutOfRangeException);
   }
 
   @TestMethod
   public fitsASpaceToTheNearestAllowedSize(): void {
     Assert.isTrue(TerminalSize.fitting(120.6, 30.2).equals(new TerminalSize(120, 30)));
-    Assert.isTrue(TerminalSize.fitting(0, 0).equals(new TerminalSize(2, 1)));
+    Assert.isTrue(TerminalSize.fitting(0, 0).equals(new TerminalSize(40, 3)));
     Assert.isTrue(TerminalSize.fitting(5000, 2000).equals(new TerminalSize(1000, 1000)));
     Assert.throws(() => TerminalSize.fitting(Number.NaN, 24), ArgumentOutOfRangeException);
     Assert.throws(() => TerminalSize.fitting(80, Number.NaN), ArgumentOutOfRangeException);
