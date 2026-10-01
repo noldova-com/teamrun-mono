@@ -193,6 +193,8 @@ export class Resources {
   public static readonly updateKind: string = "update";
   public static readonly deleteKind: string = "delete";
   public static readonly gitExecutable: string = "git";
+  public static readonly windowsPlatform: string = "win32";
+  public static readonly pathVariable: string = "PATH";
   public static readonly gitTopLevelArguments: readonly string[] = ["rev-parse", "--show-toplevel"];
   public static readonly gitStatusArguments: readonly string[] = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
   public static readonly gitHashArguments: readonly string[] = ["hash-object", "--stdin-paths"];

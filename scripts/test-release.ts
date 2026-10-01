@@ -16,7 +16,8 @@ export default class TestRelease extends Script {
     "--test-coverage-lines=100", "--test-coverage-branches=100", "--test-coverage-functions=100",
     "--test-coverage-include=scripts/release/*.ts", "--test-coverage-include=scripts/validate-release.ts",
     "--test-coverage-include=scripts/publish-release.ts", "--test-coverage-include=scripts/test-release.ts",
-    "scripts/tests/release/*.test.ts", "scripts/tests/release-commands.test.ts"
+    "--test-coverage-include=scripts/git-executable.ts",
+    "scripts/tests/release/*.test.ts", "scripts/tests/release-commands.test.ts", "scripts/tests/git-executable.test.ts"
   ];
 
   public override async runAsync(): Promise<void> {

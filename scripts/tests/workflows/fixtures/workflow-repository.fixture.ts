@@ -11,6 +11,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import GitExecutable from "../../../git-executable.ts";
+
 export default class WorkflowRepositoryFixture {
   public readonly directory: string;
 
@@ -46,7 +48,7 @@ export default class WorkflowRepositoryFixture {
   }
 
   public git(args: readonly string[]): string {
-    return execFileSync("git", [...args], { cwd: this.directory, encoding: "utf8", timeout: 10_000 }).trim();
+    return execFileSync(GitExecutable.locate(), [...args], { cwd: this.directory, encoding: "utf8", timeout: 10_000 }).trim();
   }
 
   public close(): Promise<void> {

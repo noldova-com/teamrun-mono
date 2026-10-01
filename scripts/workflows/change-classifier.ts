@@ -8,6 +8,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 
+import GitExecutable from "../git-executable.ts";
 import VerificationScope from "./verification-scope.ts";
 import type VerifiedRevisions from "./verified-revisions.ts";
 
@@ -87,11 +88,11 @@ export default class ChangeClassifier {
   }
 
   private succeeds(args: readonly string[]): boolean {
-    return spawnSync("git", [...args], { cwd: this.directory, stdio: "ignore", timeout: ChangeClassifier.COMMAND_TIMEOUT }).status === 0;
+    return spawnSync(GitExecutable.locate(), [...args], { cwd: this.directory, stdio: "ignore", timeout: ChangeClassifier.COMMAND_TIMEOUT }).status === 0;
   }
 
   private git(args: readonly string[]): string {
-    return execFileSync("git", [...args], {
+    return execFileSync(GitExecutable.locate(), [...args], {
       cwd: this.directory, encoding: "utf8", timeout: ChangeClassifier.COMMAND_TIMEOUT, maxBuffer: ChangeClassifier.OUTPUT_LIMIT
     });
   }

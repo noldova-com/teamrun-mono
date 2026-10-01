@@ -7,8 +7,8 @@
  */
 
 import { execFile } from "node:child_process";
-import { copyFileSync, existsSync, rmSync, statSync, utimesSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { accessSync, constants, copyFileSync, existsSync, rmSync, statSync, utimesSync } from "node:fs";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { Guid } from "@noldova/teamrun-foundation-core";
@@ -49,6 +49,18 @@ export class WorkingTree {
 
     const before = await WorkingTree.readStates(root);
     return new WorkingTree(root, before, maximumSnapshotFiles, await WorkingTree.writeTree(root, maximumSnapshotFiles));
+  }
+
+  public static locateGit(platform: string, searchPath: string | undefined): string {
+    if (platform === Resources.windowsPlatform || Object.isUndefined(searchPath))
+      return Resources.gitExecutable;
+    for (const directory of searchPath.split(delimiter)) {
+      const candidate = join(directory, Resources.gitExecutable);
+      if (isAbsolute(directory) && WorkingTree.isExecutableFile(candidate))
+        return candidate;
+    }
+
+    return Resources.gitExecutable;
   }
 
   public async snapshot(name: string): Promise<string | null> {
@@ -189,9 +201,19 @@ export class WorkingTree {
     return entries;
   }
 
+  private static isExecutableFile(path: string): boolean {
+    try {
+      accessSync(path, constants.X_OK);
+      return statSync(path).isFile();
+    }
+    catch {
+      return false;
+    }
+  }
+
   private static async git(directory: string, args: readonly string[], input: string | null = null, env: NodeJS.ProcessEnv = process.env): Promise<string> {
     const environment = { ...env, [Resources.gitOptionalLocksVariable]: Resources.gitOptionalLocksDisabled };
-    const child = run(Resources.gitExecutable, [...args], {
+    const child = run(WorkingTree.locateGit(process.platform, env[Resources.pathVariable]), [...args], {
       cwd: directory, maxBuffer: Resources.gitOutputLimit, windowsHide: true, env: environment, timeout: Resources.gitTimeout
     });
     const stdin = child.child.stdin;
