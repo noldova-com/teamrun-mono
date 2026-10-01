@@ -128,10 +128,12 @@ describe("SettingsPageComponent", () => {
     const fixture = TestBed.createComponent(SettingsPageComponent);
     const element = fixture.nativeElement as HTMLElement;
     const select = (): HTMLElement => element.querySelector<HTMLElement>(".tr-default-shell-select")!;
+    const shown = (): string[] => Array.from(select().querySelectorAll(".tr-shell-trigger > span:not(.tr-shell-trigger-sizer)"), t => t.textContent!.trim());
     await vi.waitFor(() => {
       fixture.detectChanges();
-      expect(select().textContent?.trim()).toBe("PowerShell");
+      expect(shown()).toEqual(["PowerShell"]);
     });
+    expect(Array.from(select().querySelectorAll(".tr-shell-trigger-sizer"), t => [t.textContent?.trim(), t.getAttribute("aria-hidden")])).toEqual([["Command Prompt", "true"]]);
 
     select().click();
     fixture.detectChanges();
@@ -144,6 +146,7 @@ describe("SettingsPageComponent", () => {
 
     expect(TestBed.inject(PreferencesService).defaultShellId()).toBe("cmd");
     expect(TestBed.inject(TerminalsService).defaultShell()?.id).toBe("cmd");
+    expect(shown()).toEqual(["Command Prompt"]);
     expect(select().getAttribute("aria-label")).toBe(Resources.defaultShellLabel);
     expect(bridge.methods.filter(t => t === MethodName.TerminalShells)).toHaveLength(1);
   });

@@ -18,8 +18,13 @@ export class IsolatedShellLocator implements IShellLocator {
   private static readonly BASH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nHISTFILESIZE=1000\nHISTCONTROL=\nHISTIGNORE=\nPROMPT_COMMAND="history -w"\n`;
   private static readonly ZSH_PROFILE: string = `HISTFILE="$HOME/${IsolatedShellLocator.HISTORY_NAME}"\nHISTSIZE=1000\nSAVEHIST=1000\nsetopt INC_APPEND_HISTORY\n`;
 
+  private static readonly FIXTURE_ARGUMENTS: readonly string[] =
+    ["-e", "process.stdout.write('teamrun-fixture-shell-ready\\r\\n'); setInterval(() => undefined, 60_000);"];
   private static readonly FIXTURE_SHELL: Shell = new Shell("teamrun-fixture-shell", "Fixture shell", TerminalShellKind.Other, process.execPath,
-    ["-e", "process.stdout.write('teamrun-fixture-shell-ready\\r\\n'); setInterval(() => undefined, 60_000);"]);
+    IsolatedShellLocator.FIXTURE_ARGUMENTS);
+  private static readonly LONG_FIXTURE_SHELL: Shell = new Shell("teamrun-fixture-long-shell",
+    "Developer Command Prompt (Fixture Studio Professional 2026)", TerminalShellKind.CommandPrompt, process.execPath,
+    IsolatedShellLocator.FIXTURE_ARGUMENTS);
 
   private readonly directory: string;
   private readonly locator: IShellLocator;
@@ -32,7 +37,7 @@ export class IsolatedShellLocator implements IShellLocator {
   }
 
   public findAll(environment: ShellEnvironment): Promise<readonly Shell[]> {
-    return Promise.resolve([this.findDefault(environment), IsolatedShellLocator.FIXTURE_SHELL]);
+    return Promise.resolve([this.findDefault(environment), IsolatedShellLocator.FIXTURE_SHELL, IsolatedShellLocator.LONG_FIXTURE_SHELL]);
   }
 
   public findDefault(environment: ShellEnvironment): Shell {

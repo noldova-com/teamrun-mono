@@ -11,6 +11,7 @@ import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 import { MatSelectModule } from "@angular/material/select";
 
+import { TruncatedTooltipDirective } from "../../directives/truncated-tooltip.directive";
 import { Preferences } from "../../models/preferences";
 import { Resources } from "../../resources";
 import { PreferencesService } from "../../services/preferences.service";
@@ -19,7 +20,7 @@ import { SettingsRowComponent } from "../settings-row/settings-row.component";
 
 @Component({
   selector: "tr-settings-terminal",
-  imports: [MatFormFieldModule, MatInputModule, MatSelectModule, SettingsRowComponent],
+  imports: [MatFormFieldModule, MatInputModule, MatSelectModule, SettingsRowComponent, TruncatedTooltipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./settings-terminal.component.html"
 })

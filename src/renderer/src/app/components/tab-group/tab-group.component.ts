@@ -14,6 +14,7 @@ import { MatTooltipModule } from "@angular/material/tooltip";
 
 import "@noldova/teamrun-foundation-core";
 
+import { TruncatedTooltipDirective } from "../../directives/truncated-tooltip.directive";
 import type { DockSide } from "../../enums/dock-side";
 import { PanelKind } from "../../enums/panel-kind";
 import type { GroupFrame } from "../../models/group-frame";
@@ -29,7 +30,7 @@ import { PanelMenuComponent } from "../panel-menu/panel-menu.component";
 
 @Component({
   selector: "tr-tab-group",
-  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, PanelContentComponent, PanelMenuComponent],
+  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, PanelContentComponent, PanelMenuComponent, TruncatedTooltipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "absolute flex min-h-0 min-w-0 flex-col",
