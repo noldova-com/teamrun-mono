@@ -14,13 +14,16 @@ import {
 import "@noldova/teamrun-foundation-core";
 import type { TeammateMention } from "@noldova/teamrun-protocol";
 
+import type { FadeSpan } from "../../models/fade-span";
 import type { MarkdownBlock } from "../../models/markdown-block";
 import { MarkdownBlocks } from "../../models/markdown-blocks";
 import { MarkdownTail } from "../../models/markdown-tail";
 import { RenderedText } from "../../models/rendered-text";
+import { RevealFade } from "../../models/reveal-fade";
 import { TextReveal } from "../../models/text-reveal";
 import { Resources } from "../../resources";
 import { MotionPreference } from "../../services/motion-preference.service";
+import { RevealHighlights } from "../../services/reveal-highlights.service";
 
 @Component({
   selector: "tr-markdown",
@@ -37,7 +40,10 @@ export class MarkdownComponent {
   private readonly shown: WritableSignal<number> = signal(Number.POSITIVE_INFINITY);
   private readonly appliedHtml: string[] = [];
   private readonly appliedCount: number[] = [];
+  private readonly highlights: RevealHighlights = inject(RevealHighlights);
+  private readonly painted: [Highlight, Range][] = [];
   private reveal: TextReveal | null = null;
+  private fade: RevealFade | null = null;
   private limit: number = Number.POSITIVE_INFINITY;
 
   public readonly text = input.required<string>();
@@ -65,6 +71,7 @@ export class MarkdownComponent {
     });
     inject(DestroyRef).onDestroy(() => {
       this.reveal?.dispose();
+      this.fade?.clear();
       for (const timer of this.copied.values())
         window.clearTimeout(timer);
     });
@@ -103,12 +110,36 @@ export class MarkdownComponent {
     const animate = motionAllowed && (streaming || this.reveal.count < available);
     this.reveal.follow(available, !streaming, animate);
     this.setLimit(animate ? this.reveal.count : Number.POSITIVE_INFINITY);
+    if (animate && this.highlights.isSupported)
+      this.fade ??= new RevealFade(this.reveal.count, spans => this.paintFade(spans));
+    else if (!motionAllowed)
+      this.fade?.clear();
   }
 
   private advance(count: number): void {
     this.setLimit(count);
     this.changeDetector.detectChanges();
     this.applyReveal();
+    this.fade?.note(count);
+  }
+
+  private paintFade(spans: readonly FadeSpan[]): void {
+    const blocks = this.visibleBlocks();
+    const wrappers = this.wrappers();
+    const ranges: [Range, number][] = [];
+    let offset = 0;
+    blocks.forEach((block, index) => {
+      const wrapper = wrappers[index]?.nativeElement;
+      const start = offset;
+      offset += block.count;
+      if (Object.isUndefined(wrapper))
+        return;
+      for (const span of spans)
+        if (span.start < offset && span.end > start)
+          for (const range of new RenderedText(wrapper).ranges(span.start - start, span.end - start))
+            ranges.push([range, span.step]);
+    });
+    this.highlights.paint(this.painted, ranges);
   }
 
   private setLimit(limit: number): void {

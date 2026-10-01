@@ -561,6 +561,11 @@ export class Resources {
   public static readonly revealCatchUpMilliseconds: number = 250;
   public static readonly revealEndedCatchUpMilliseconds: number = 60;
   public static readonly revealMinimumCharactersPerSecond: number = 40;
+  public static readonly revealFadeMilliseconds: number = 150;
+  public static readonly revealFadeSteps: number = 5;
+  public static readonly revealFadeMaximumCharacters: number = 14;
+  public static readonly revealFadeHighlightPrefix: string = "tr-reveal-fade-";
+  public static readonly fadeKeySeparator: string = "|";
   public static readonly maximumHoldBackCharacters: number = 300;
   public static readonly reducedMotionQuery: string = "(prefers-reduced-motion: reduce)";
   public static readonly pinnedTitle: string = "Pinned";
@@ -1310,6 +1315,10 @@ export class Resources {
 
   public static formatAccountLine(provider: string, status: string, identity: string | null): string {
     return `${provider}${Resources.titleSeparator}${status}${Resources.titleSeparator}${identity ?? Resources.identityMissing}`;
+  }
+
+  public static formatFadeRule(name: string, color: string, opacity: number): string {
+    return `::highlight(${name}) { color: rgb(from ${color} r g b / calc(alpha * ${opacity})); }`;
   }
 
   public static formatWorkedFor(duration: string): string {

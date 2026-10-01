@@ -274,5 +274,95 @@ describe("MarkdownComponent", () => {
       expect(root.closest("[aria-live]")).toBeNull();
       expect(root.querySelector("[aria-live], [role='status'], [role='alert']")).toBeNull();
     });
+
+    describe("fading in", () => {
+      const registry = new Map<string, Set<Range>>();
+      const rules: string[] = [];
+      beforeEach(() => {
+        registry.clear();
+        rules.length = 0;
+        vi.stubGlobal("Highlight", class extends Set<Range> {});
+        vi.stubGlobal("CSS", { highlights: registry });
+        vi.stubGlobal("CSSStyleSheet", class { public insertRule(rule: string): void { rules.push(rule); } });
+        Object.defineProperty(document, "adoptedStyleSheets", { configurable: true, writable: true, value: [] });
+      });
+      afterEach(() => {
+        vi.unstubAllGlobals();
+        delete (document as { adoptedStyleSheets?: unknown }).adoptedStyleSheets;
+      });
+
+      const fading = (): string[] => [...registry.values()].flatMap(t => [...t])
+        .sort((a, b) => a.compareBoundaryPoints(Range.START_TO_START, b)).map(t => t.toString());
+
+      it("fades the newest characters in, each over the fade time, in the colour of their text", () => {
+        const fixture = create("Hello **world**, this is a longer sentence that streams in.");
+        const seen: string[] = [];
+
+        frames(fixture, 12, () => seen.push(fading().join("")));
+        const root = fixture.nativeElement as HTMLElement;
+        const shown = visible(root);
+
+        expect(seen.at(-1)!.length).toBeGreaterThan(0);
+        expect(shown.endsWith(seen.at(-1)!.slice(-1))).toBe(true);
+        expect(rules.length).toBeGreaterThan(0);
+        expect(rules.every(t => /^::highlight\(tr-reveal-fade-\d+\) \{ color: rgb\(from .+ r g b \/ calc\(alpha \* 0\.\d+\)\); \}$/.test(t))).toBe(true);
+        expect(document.adoptedStyleSheets.length).toBeGreaterThan(0);
+
+        frames(fixture, 300);
+        expect(visible(root)).toBe("Hello world, this is a longer sentence that streams in.");
+        frames(fixture, Math.ceil(Resources.revealFadeMilliseconds / 16) + 2);
+        expect(fading()).toEqual([]);
+      });
+
+      it("keeps older characters at full strength and the newest the faintest", () => {
+        const fixture = create("One two three four five six seven eight nine ten eleven twelve thirteen fourteen.");
+        frames(fixture, 20);
+
+        const steps = [...registry.entries()].filter(([, t]) => t.size > 0).map(([name]) => Number(name.slice(Resources.revealFadeHighlightPrefix.length)));
+        const text = visible(fixture.nativeElement as HTMLElement);
+        const faded = fading().join("");
+
+        expect(steps.length).toBeGreaterThan(1);
+        expect(text.endsWith(faded)).toBe(true);
+        expect(faded.length).toBeLessThan(text.length);
+      });
+
+      it("fades at most the last few characters, also while the end of a reply catches up", () => {
+        const fixture = create(`${"Many words arrive here at once. ".repeat(40)}`);
+        const widths: number[] = [];
+        frames(fixture, 10, () => widths.push(fading().join("").length));
+        fixture.componentRef.setInput("streaming", false);
+        fixture.detectChanges();
+        frames(fixture, 60, () => widths.push(fading().join("").length));
+
+        expect(Math.max(...widths)).toBe(Resources.revealFadeMaximumCharacters);
+        expect(widths.at(-1)).toBe(0);
+      });
+
+      it("fades nothing that was already there, and nothing when the person prefers reduced motion", () => {
+        create("Existing paragraph.", true, false);
+        frames(TestBed.createComponent(MarkdownComponent), 0);
+        expect(fading()).toEqual([]);
+
+        const query = { matches: true, addEventListener: (): void => undefined } as unknown as MediaQueryList;
+        window.matchMedia = (): MediaQueryList => query;
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({ imports: [MarkdownComponent] });
+        const reduced = create("Everything arrives at once.");
+        frames(reduced, 10);
+        expect(fading()).toEqual([]);
+      });
+
+      it("stops fading when it goes away", () => {
+        const fixture = create("Some streamed text that fades in as it appears.");
+        frames(fixture, 10);
+        expect(fading().length).toBeGreaterThan(0);
+
+        fixture.destroy();
+        expect(fading()).toEqual([]);
+        vi.advanceTimersByTime(Resources.revealFadeMilliseconds * 2);
+        expect(fading()).toEqual([]);
+      });
+    });
   });
 });
