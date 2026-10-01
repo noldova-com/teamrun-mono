@@ -1,0 +1,60 @@
+name: pwsh start repro (temporary, #267)
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/zz-pwsh-start-repro.yml
+
+permissions: {}
+
+jobs:
+  starts:
+    name: pwsh starts (${{ matrix.runner }}, ${{ matrix.mode }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-11-arm, mode: fresh }
+          - { runner: windows-11-arm, mode: warm }
+          - { runner: windows-11-arm, mode: fresh-parallel }
+          - { runner: windows-2025, mode: fresh }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - name: Describe pwsh
+        shell: bash
+        run: |
+          command -v pwsh
+          pwsh -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString(); [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture; [Runtime.InteropServices.RuntimeInformation]::OSArchitecture; [Runtime.InteropServices.RuntimeInformation]::FrameworkDescription; [Environment]::ProcessPath'
+
+      - name: Start pwsh 300 times
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          root="$RUNNER_TEMP/profiles"
+          logs="$RUNNER_TEMP/starts"
+          mkdir -p "$root" "$logs"
+          start() {
+            mkdir -p "$1"
+            USERPROFILE="$(cygpath -w "$1")" pwsh -NoProfile -NonInteractive -Command 'Import-Module Microsoft.PowerShell.Utility; $env:PSModulePath.Length' > "$2" 2>&1
+            echo $? >> "$2.code"
+          }
+          for i in $(seq 300); do
+            case "$MODE" in
+              fresh) start "$root/p$i" "$logs/s$i" ;;
+              warm) start "$root/shared" "$logs/s$i" ;;
+              fresh-parallel)
+                start "$root/a$i" "$logs/a$i" &
+                start "$root/b$i" "$logs/b$i" &
+                wait ;;
+            esac
+          done
+          total=$(cat "$logs"/*.code | wc -l)
+          failed=$(grep -lv '^0$' "$logs"/*.code | wc -l)
+          echo "starts: $total, failed: $failed"
+          echo "exit codes:"; cat "$logs"/*.code | sort | uniq -c
+          for code in $(grep -lv '^0$' "$logs"/*.code | head -n 5); do
+            echo "== ${code%.code} (exit $(cat "$code"))"; cat "${code%.code}"
+          done
+          test "$failed" -eq 0
