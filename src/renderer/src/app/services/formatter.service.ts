@@ -17,7 +17,7 @@ import {
   FileChangeReader,
   type Message,
   MessageAuthor,
-  type MessageDetail,
+  MessageDetail,
   MessageStatus,
   type ProviderAccount,
   type ProviderDescriptor
@@ -152,6 +152,12 @@ export class Formatter {
         steps[steps.length - 1] = new ActivityEntry(previous.detail, detail);
         continue;
       }
+      if (detail.kind === DetailKind.Reasoning && previous?.detail.kind === DetailKind.Reasoning) {
+        const thought = previous.detail;
+        steps[steps.length - 1] = new ActivityEntry(new MessageDetail(thought.sequence, thought.kind,
+          `${thought.text}${Resources.paragraphSeparator}${detail.text}`, thought.payload, thought.createdAt), null);
+        continue;
+      }
       steps.push(new ActivityEntry(detail, null));
     }
     closeActivity();
@@ -215,6 +221,8 @@ export class Formatter {
   }
 
   public title(detail: MessageDetail, rootPath: string | null = null): string {
+    if (detail.kind === DetailKind.Reasoning)
+      return Formatter.firstSentence(detail.text);
     const line = detail.text.split(Resources.lineSeparator)[0] ?? detail.text;
     if (Object.isNull(rootPath) || String.isNullOrWhitespace(rootPath))
       return line;
@@ -223,8 +231,16 @@ export class Formatter {
   }
 
   public body(detail: MessageDetail): string | null {
+    if (detail.kind === DetailKind.Reasoning) {
+      const rest = detail.text.slice(Formatter.firstSentence(detail.text).length).trimStart();
+      return rest.length === 0 ? null : rest;
+    }
     const index = detail.text.indexOf(Resources.lineSeparator);
     return index < 0 ? null : detail.text.slice(index + 1);
+  }
+
+  public latestThought(detail: MessageDetail): string {
+    return Formatter.firstSentence(detail.text.split(Resources.paragraphBreak).filter(t => !String.isNullOrWhitespace(t)).at(-1) ?? String.empty);
   }
 
   public modelLine(message: Message): string | null {
@@ -265,6 +281,12 @@ export class Formatter {
   public conversationTitle(text: string): string {
     const line = (text.split(Resources.lineSeparator).find(t => !String.isNullOrWhitespace(t)) ?? text).trim();
     return line.length <= Resources.maximumTitleLength ? line : `${line.slice(0, Resources.maximumTitleLength - 1).trimEnd()}${Resources.ellipsis}`;
+  }
+
+  private static firstSentence(text: string): string {
+    const line = text.split(Resources.lineSeparator)[0] ?? text;
+    const end = Resources.sentenceEnd.exec(line);
+    return Object.isNull(end) ? line : line.slice(0, end.index + 1);
   }
 
   private isResultOf(candidate: MessageDetail, step: MessageDetail): boolean {
