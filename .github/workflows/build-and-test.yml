@@ -333,12 +333,12 @@ jobs:
             started=$(date +%s)
             npm run test:renderer -- --reporters=verbose > "$RUNNER_TEMP/timing-$workers.log" 2>&1 || true
             echo "=== workers $workers: $(( $(date +%s) - started )) s, load $(node -p "require('os').loadavg()[0].toFixed(2)")"
-            sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E 'Test Files|Tests  |Duration' || true
-            sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E '[0-9]{4,}ms' | sort -t' ' -k1 | head -40 || true
+            sed "s/$(printf '\033')\[[0-9;]*m//g" "$RUNNER_TEMP/timing-$workers.log" | grep -E 'Test Files|Tests  |Duration' || true
+            sed "s/$(printf '\033')\[[0-9;]*m//g" "$RUNNER_TEMP/timing-$workers.log" | grep -E '[0-9]{4,}ms' | sort -t' ' -k1 | head -40 || true
           done
           kill $sampler || true
           echo "##[group]samples"; cat "$RUNNER_TEMP/samples.log"; echo "##[endgroup]"
-          for workers in default 3 2 1; do echo "##[group]verbose $workers"; sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
+          for workers in default 3 2 1; do echo "##[group]verbose $workers"; sed "s/$(printf '\033')\[[0-9;]*m//g" "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
 
       - name: Run desktop UI workflows
         if: matrix.suite == 'UI'
