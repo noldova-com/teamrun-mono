@@ -327,8 +327,12 @@ jobs:
           }
           sample > "$RUNNER_TEMP/samples.log" 2>&1 &
           sampler=$!
-          for workers in default 3 2 1; do
-            if [ "$workers" = default ]; then unset VITEST_MAX_WORKERS; else export VITEST_MAX_WORKERS=$workers; fi
+          for workers in on-1 on-2 on-3 off-1 off-2 off-3; do
+            if [ "$workers" = off-1 ] && [ "$RUNNER_OS" = macOS ]; then
+              sudo mdutil -a -i off || true
+              sudo mdutil -a -s || true
+              sleep 15
+            fi
             echo "=== start workers $workers at $(date +%H:%M:%S)"
             started=$(date +%s)
             npm run test:renderer -- --reporters=verbose > "$RUNNER_TEMP/timing-$workers.log" 2>&1 || true
@@ -338,7 +342,7 @@ jobs:
           done
           kill $sampler || true
           echo "##[group]samples"; cat "$RUNNER_TEMP/samples.log"; echo "##[endgroup]"
-          for workers in default 3 2 1; do echo "##[group]verbose $workers"; sed "s/$(printf '\033')\[[0-9;]*m//g" "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
+          for workers in on-1 on-2 on-3 off-1 off-2 off-3; do echo "##[group]verbose $workers"; sed "s/$(printf '\033')\[[0-9;]*m//g" "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
 
       - name: Run desktop UI workflows
         if: matrix.suite == 'UI'
