@@ -42,13 +42,13 @@ LICENSE file in the root directory of this source tree.
           [attr.aria-label]="resources.chooseShellLabel" [matMenuTriggerFor]="shellMenu" (menuOpened)="terminals.loadShells()">
           <mat-icon>{{ resources.icons["expandMore"] }}</mat-icon>
         </button>
-        <mat-menu #shellMenu="matMenu">
+        <mat-menu #shellMenu="matMenu" class="tr-shell-menu">
           @for (shell of terminals.shells(); track shell.id) {
             <button mat-menu-item class="tr-terminal-shell" (click)="terminals.open(group().id, shell.id)">
               <mat-icon>{{ resources.shellKindIcons[shell.kind] }}</mat-icon>
-              <span>{{ shell.name }}</span>
+              <span class="tr-shell-name truncate" [trTruncatedTooltip]="shell.name">{{ shell.name }}</span>
               @if (shell.id === terminals.defaultShell()?.id) {
-                <span class="tr-muted ml-2">{{ resources.defaultShellMark }}</span>
+                <span class="tr-shell-default tr-muted">{{ resources.defaultShellMark }}</span>
               }
             </button>
           }

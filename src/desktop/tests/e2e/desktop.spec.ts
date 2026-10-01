@@ -385,7 +385,17 @@ test("opens the shell chosen from the menu beside the new terminal button and sh
   await expect(dock.locator("tr-terminal-panel textarea")).toBeFocused();
 
   await dock.getByRole("button", { name: "Choose a shell", exact: true }).click();
-  await expect(page.getByRole("menuitem")).toHaveText([/Default$/, /Fixture shell$/]);
+  await expect(page.getByRole("menuitem")).toHaveText([/Default$/, /Fixture shell$/, /Developer Command Prompt \(Fixture Studio Professional 2026\)$/]);
+  const rows = await page.getByRole("menuitem").evaluateAll(items => items.map(item => {
+    const name = item.querySelector(".tr-shell-name")!;
+    return { height: Math.round(item.getBoundingClientRect().height), iconLeft: Math.round(item.querySelector("mat-icon")!.getBoundingClientRect().left),
+      nameLeft: Math.round(name.getBoundingClientRect().left), nameHeight: name.getBoundingClientRect().height,
+      rowHeight: item.getBoundingClientRect().height, shortened: name.scrollWidth > name.clientWidth };
+  }));
+  expect(new Set(rows.map(t => t.height)).size, JSON.stringify(rows)).toBe(1);
+  expect(new Set(rows.map(t => t.iconLeft)).size, JSON.stringify(rows)).toBe(1);
+  expect(new Set(rows.map(t => t.nameLeft)).size, JSON.stringify(rows)).toBe(1);
+  expect(rows.every(t => !t.shortened && t.nameHeight < t.rowHeight), JSON.stringify(rows)).toBe(true);
   await desktop.capture("terminal-shell-menu");
   await page.getByRole("menuitem", { name: /Fixture shell/ }).click();
 
@@ -431,10 +441,27 @@ test("opens new terminals with the default shell chosen in Settings", async () =
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.locator(".tr-settings-nav").getByText("Terminal", { exact: true }).click();
   const select = page.getByRole("combobox", { name: "Default shell" });
-  await expect(select).not.toHaveText("");
+  const shown = select.locator(".tr-shell-trigger > span:not(.tr-shell-trigger-sizer)");
+  const longName = "Developer Command Prompt (Fixture Studio Professional 2026)";
+  await expect(shown).not.toHaveText("");
+  await select.click();
+  const options = await page.getByRole("option").evaluateAll(items => items.map(item => {
+    const name = item.querySelector(".tr-shell-option-name")!;
+    return { height: Math.round(item.getBoundingClientRect().height), shortened: name.scrollWidth > name.clientWidth };
+  }));
+  expect(options.length, JSON.stringify(options)).toBe(3);
+  expect(new Set(options.map(t => t.height)).size, JSON.stringify(options)).toBe(1);
+  expect(options.every(t => !t.shortened), JSON.stringify(options)).toBe(true);
+  await expect(page.locator(".tr-shell-select-panel")).toHaveCSS("opacity", "1");
+  await desktop.capture("terminal-settings-shells");
+  await page.getByRole("option", { name: longName, exact: true }).click();
+  await expect(shown).toHaveText(longName);
+  expect(await shown.evaluate(t => t.scrollWidth <= t.clientWidth)).toBe(true);
+  await expect(page.locator(".tr-shell-select-panel")).toHaveCount(0);
+  await desktop.capture("terminal-settings-long-shell");
   await select.click();
   await page.getByRole("option", { name: "Fixture shell", exact: true }).click();
-  await expect(select).toHaveText("Fixture shell");
+  await expect(shown).toHaveText("Fixture shell");
   await desktop.capture("terminal-settings");
 
   await page.getByRole("button", { name: "Conversation A", exact: true }).click();

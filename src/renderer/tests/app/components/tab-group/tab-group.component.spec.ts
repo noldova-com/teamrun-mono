@@ -197,6 +197,8 @@ describe("TabGroupComponent", () => {
       [Resources.shellKindIcons[TerminalShellKind.PowerShell], "PowerShell"],
       [Resources.shellKindIcons[TerminalShellKind.CommandPrompt], "Command Prompt", Resources.defaultShellMark]
     ]));
+    expect(items()[0]!.closest(".mat-mdc-menu-panel")?.classList.contains("tr-shell-menu")).toBe(true);
+    expect(Array.from(items()[1]!.querySelectorAll(".mat-mdc-menu-item-text > span"), (t, i) => t.classList.contains(["tr-shell-name", "tr-shell-default"][i]!))).toEqual([true, true]);
     items()[0]!.click();
     await vi.waitFor(() => expect(layout.dock(DockSide.Bottom).panels.map(t => t.instance)).toEqual([null, "t1", "t9", "t10"]));
     expect(bridge.requests.filter(t => t.method === MethodName.TerminalOpen).map(t => TerminalOpenParams.fromJson(t.payload).shellId)).toEqual(["cmd", "pwsh"]);
