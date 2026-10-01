@@ -317,14 +317,27 @@ jobs:
         run: |
           node -p "const o = require('os'); ['parallelism', o.availableParallelism(), 'cpus', o.cpus().length, o.cpus()[0].model, 'memory GiB', (o.totalmem() / 2 ** 30).toFixed(1), 'load', o.loadavg().map(t => t.toFixed(2)).join('/')].join(' ')"
           if [ "$RUNNER_OS" = macOS ]; then sysctl -n hw.physicalcpu hw.logicalcpu machdep.cpu.brand_string; fi
+          sample() {
+            while true; do
+              start=$(node -p "Date.now()"); node -e 0; elapsed=$(( $(node -p "Date.now()") - start ))
+              if [ "$RUNNER_OS" = macOS ]; then md=$(ps -Ao comm | grep -c mdworker || true); top=$(ps -Ao pcpu,comm -r | sed -n '2,4p' | awk '{printf "%s %s; ", $1, $NF}'); else md=-; top=$(ps -Ao pcpu,comm --sort=-pcpu | sed -n '2,4p' | awk '{printf "%s %s; ", $1, $NF}'); fi
+              echo "sample $(date +%H:%M:%S) node-start ~${elapsed}ms mdworker $md load $(node -p "require('os').loadavg()[0].toFixed(2)") top $top"
+              sleep 5
+            done
+          }
+          sample > "$RUNNER_TEMP/samples.log" 2>&1 &
+          sampler=$!
           for workers in default 3 2 1; do
             if [ "$workers" = default ]; then unset VITEST_MAX_WORKERS; else export VITEST_MAX_WORKERS=$workers; fi
+            echo "=== start workers $workers at $(date +%H:%M:%S)"
             started=$(date +%s)
             npm run test:renderer -- --reporters=verbose > "$RUNNER_TEMP/timing-$workers.log" 2>&1 || true
             echo "=== workers $workers: $(( $(date +%s) - started )) s, load $(node -p "require('os').loadavg()[0].toFixed(2)")"
             sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E 'Test Files|Tests  |Duration' || true
             sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log" | grep -E '[0-9]{4,}ms' | sort -t' ' -k1 | head -40 || true
           done
+          kill $sampler || true
+          echo "##[group]samples"; cat "$RUNNER_TEMP/samples.log"; echo "##[endgroup]"
           for workers in default 3 2 1; do echo "##[group]verbose $workers"; sed 's/[[0-9;]*m//g' "$RUNNER_TEMP/timing-$workers.log"; echo "##[endgroup]"; done
 
       - name: Run desktop UI workflows
