@@ -8,11 +8,20 @@ LICENSE file in the root directory of this source tree.
 
 <h2 class="tr-settings-title">{{ resources.terminalTitle }}</h2>
 <tr-settings-row [label]="resources.defaultShellLabel" [hint]="resources.defaultShellHint">
-  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tr-select">
-    <mat-select class="tr-default-shell-select" [aria-label]="resources.defaultShellLabel" [value]="terminals.defaultShell()?.id"
-      (valueChange)="preferences.setDefaultShellId($event)">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tr-select tr-shell-select">
+    <mat-select class="tr-default-shell-select" panelClass="tr-shell-select-panel" [aria-label]="resources.defaultShellLabel"
+      [value]="terminals.defaultShell()?.id" (valueChange)="preferences.setDefaultShellId($event)">
+      <mat-select-trigger class="tr-shell-trigger">
+        @for (shell of terminals.shells(); track shell.id) {
+          @if (shell.id === terminals.defaultShell()?.id) {
+            <span class="truncate" [trTruncatedTooltip]="shell.name">{{ shell.name }}</span>
+          } @else {
+            <span class="tr-shell-trigger-sizer truncate" aria-hidden="true">{{ shell.name }}</span>
+          }
+        }
+      </mat-select-trigger>
       @for (shell of terminals.shells(); track shell.id) {
-        <mat-option [value]="shell.id">{{ shell.name }}</mat-option>
+        <mat-option [value]="shell.id"><span class="tr-shell-option-name block truncate" [trTruncatedTooltip]="shell.name">{{ shell.name }}</span></mat-option>
       }
     </mat-select>
   </mat-form-field>

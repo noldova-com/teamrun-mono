@@ -646,6 +646,48 @@ mat-icon.mat-icon {
   padding: var(--tr-space-2) var(--tr-space-3) var(--tr-space-1);
 }
 
+.mat-mdc-menu-panel.tr-shell-menu {
+  max-width: calc(100vw - var(--tr-space-4) * 2);
+}
+
+.tr-shell-menu .mat-mdc-menu-item-text {
+  display: flex;
+  gap: var(--tr-space-2);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.tr-shell-default {
+  flex-shrink: 0;
+}
+
+.tr-shell-select {
+  width: auto;
+  min-width: var(--tr-select-width);
+  max-width: 100%;
+}
+
+.tr-shell-select .mat-mdc-form-field-infix {
+  width: auto;
+  min-width: 0;
+}
+
+.tr-shell-trigger {
+  display: grid;
+}
+
+.tr-shell-trigger > span {
+  grid-area: 1 / 1;
+}
+
+.tr-shell-trigger > .tr-shell-trigger-sizer {
+  visibility: hidden;
+}
+
+.tr-shell-select-panel .mat-mdc-option .mdc-list-item__primary-text {
+  min-width: 0;
+}
+
 .mat-mdc-tooltip .mat-mdc-tooltip-surface {
   min-height: 0;
   max-width: var(--tr-hover-width);

@@ -1142,7 +1142,7 @@ export class Resources {
 
   public static readonly shellKindIcons: Readonly<Record<TerminalShellKind, string>> = {
     [TerminalShellKind.PowerShell]: "terminal",
-    [TerminalShellKind.CommandPrompt]: "chevron_right",
+    [TerminalShellKind.CommandPrompt]: "web_asset",
     [TerminalShellKind.Bash]: "attach_money",
     [TerminalShellKind.Zsh]: "percent",
     [TerminalShellKind.Fish]: "set_meal",
