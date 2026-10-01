@@ -458,6 +458,7 @@ export class Resources {
   public static readonly terminalStoredPageSize: number = 500;
   public static readonly terminalStoredPages: number = 12;
   public static readonly terminalLineHeight: number = 1.3;
+  public static readonly terminalWidthSettleDelay: number = 100;
   public static readonly terminalAcknowledgeBatch: number = 16 * 1024;
   public static readonly conptyBackend: "conpty" = "conpty";
   public static readonly deviceAttributesFinal: string = "c";

@@ -173,6 +173,56 @@ describe("TerminalSession", () => {
     expect(requests(MethodName.TerminalResize)).toEqual([]);
   });
 
+  it("stays at the smallest terminal size when its panel is narrower or lower, in the window and in the runtime", () => {
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
+    session.show(panel({ width: 10, height: 10 }), () => true);
+
+    fit.proposal = { cols: 2, rows: 1 };
+    session.fitToHost();
+
+    expect([terminal.cols, terminal.rows]).toEqual([40, 3]);
+    expect(requests(MethodName.TerminalResize)).toEqual([new TerminalResizeParams("t1", new TerminalSize(40, 3)).toJson()]);
+  });
+
+  it("applies a width change at once, then waits until the width has settled, while height changes apply at once", () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const terminalWindow = TerminalWindow.install();
+    onTestFinished(() => terminalWindow.restore());
+    session.load(new TerminalScreen(SampleData.terminal("t1"), ""));
+    session.show(panel({ width: 800, height: 400 }), () => true);
+    const sizes = (): string[] => requests(MethodName.TerminalResize).map(t => TerminalResizeParams.fromJson(t).size).map(t => `${t.columns}x${t.rows}`);
+
+    fit.proposal = { cols: 100, rows: 30 };
+    session.fitToHost();
+    vi.advanceTimersByTime(50);
+    fit.proposal = { cols: 90, rows: 30 };
+    session.fitToHost();
+    vi.advanceTimersByTime(50);
+    fit.proposal = { cols: 70, rows: 20 };
+    session.fitToHost();
+    expect(sizes()).toEqual(["100x30", "100x20"]);
+
+    vi.advanceTimersByTime(Resources.terminalWidthSettleDelay - 1);
+    expect(sizes()).toEqual(["100x30", "100x20"]);
+    vi.advanceTimersByTime(1);
+    expect(sizes()).toEqual(["100x30", "100x20", "70x20"]);
+    expect([terminal.cols, terminal.rows]).toEqual([70, 20]);
+
+    vi.advanceTimersByTime(Resources.terminalWidthSettleDelay);
+    fit.proposal = { cols: 60, rows: 20 };
+    session.fitToHost();
+    fit.proposal = { cols: 50, rows: 20 };
+    session.fitToHost();
+    session.dispose();
+    vi.advanceTimersByTime(Resources.terminalWidthSettleDelay);
+    expect(sizes()).toEqual(["100x30", "100x20", "70x20", "60x20"]);
+  });
+
   it("draws with WebGL once it opens, and with the DOM renderer where WebGL is unavailable or its context is lost", () => {
     const terminalWindow = TerminalWindow.install();
     onTestFinished(() => terminalWindow.restore());

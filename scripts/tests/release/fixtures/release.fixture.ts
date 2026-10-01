@@ -37,6 +37,8 @@ export default class ReleaseFixture {
     git(["config", "user.name", "Release fixture"]);
     git(["config", "user.email", "fixture@example.invalid"]);
     git(["config", "core.autocrlf", "false"]);
+    git(["config", "maintenance.auto", "false"]);
+    git(["config", "gc.auto", "0"]);
     git(["add", "."]);
     git(["commit", "-qm", "Fixture"]);
     git(["tag", `v${version}`]);

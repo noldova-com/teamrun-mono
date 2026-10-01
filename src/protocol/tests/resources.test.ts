@@ -55,7 +55,8 @@ export class ResourcesTests {
 
   @TestMethod
   public boundsTerminalsAndEncodesTheirColors(): void {
-    Assert.areEqual(2, Resources.minimumTerminalColumns);
+    Assert.areEqual(40, Resources.minimumTerminalColumns);
+    Assert.areEqual(3, Resources.minimumTerminalRows);
     Assert.areEqual(1000, Resources.maximumTerminalColumns);
     Assert.areEqual(1000, Resources.maximumTerminalRows);
     Assert.areEqual(-1, Resources.defaultTerminalColor);

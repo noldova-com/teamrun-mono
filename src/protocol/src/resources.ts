@@ -205,7 +205,8 @@ export class Resources {
   public static readonly styleField: string = "style";
   public static readonly stateField: string = "state";
   public static readonly screenField: string = "screen";
-  public static readonly minimumTerminalColumns: number = 2;
+  public static readonly minimumTerminalColumns: number = 40;
+  public static readonly minimumTerminalRows: number = 3;
   public static readonly maximumTerminalColumns: number = 1000;
   public static readonly maximumTerminalRows: number = 1000;
   public static readonly defaultTerminalColor: number = -1;

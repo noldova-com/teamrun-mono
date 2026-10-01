@@ -18,7 +18,7 @@ export class TerminalSize {
   public constructor(columns: number, rows: number) {
     if (!Number.isInteger(columns) || columns < Resources.minimumTerminalColumns || columns > Resources.maximumTerminalColumns)
       throw new ArgumentOutOfRangeException(Resources.columnsField, columns);
-    if (!Number.isInteger(rows) || rows < 1 || rows > Resources.maximumTerminalRows)
+    if (!Number.isInteger(rows) || rows < Resources.minimumTerminalRows || rows > Resources.maximumTerminalRows)
       throw new ArgumentOutOfRangeException(Resources.rowsField, rows);
 
     this.columns = columns;
@@ -28,7 +28,7 @@ export class TerminalSize {
   public static fitting(columns: number, rows: number): TerminalSize {
     return new TerminalSize(
       Math.min(Resources.maximumTerminalColumns, Math.max(Resources.minimumTerminalColumns, Math.floor(columns))),
-      Math.min(Resources.maximumTerminalRows, Math.max(1, Math.floor(rows))));
+      Math.min(Resources.maximumTerminalRows, Math.max(Resources.minimumTerminalRows, Math.floor(rows))));
   }
 
   public static fromJson(value: unknown, path?: string): TerminalSize {
