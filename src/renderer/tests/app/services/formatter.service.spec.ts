@@ -77,7 +77,7 @@ describe("Formatter", () => {
       detail(2, DetailKind.Note, "# Demo", { toolUseId: "t1", isError: false }),
       detail(3, DetailKind.Text, "Looking."),
       detail(4, DetailKind.Command, "> ls", { tool: "Bash", toolUseId: "t2" }),
-      detail(5, DetailKind.FileChange, "Edit: a.ts", { tool: "Edit", toolUseId: "t3" }),
+      detail(5, DetailKind.FileChange, "Edit: a.ts", { tool: "Edit", toolUseId: "t3", input: { file_path: "a.ts", old_string: "a", new_string: "b" } }),
       detail(6, DetailKind.Note, "Generated image (completed): out.png",
         { itemType: "imageGeneration", savedPath: "out.png", imageData: "AA", mediaType: "image/png" }),
       detail(7, DetailKind.Reasoning, "hmm"),
@@ -105,6 +105,22 @@ describe("Formatter", () => {
     expect(formatter().isWorkingTreeEvidence(message.details[10]!)).toBe(true);
     expect(formatter().isWorkingTreeEvidence(message.details[11]!)).toBe(true);
     expect(formatter().isWorkingTreeEvidence(message.details[5]!)).toBe(false);
+  });
+
+  it("counts the distinct files that the replies' changes read as edited, like the Changes panel", () => {
+    const edit = (sequence: number, path: string): MessageDetail =>
+      detail(sequence, DetailKind.FileChange, `Edit: ${path}`, { tool: "Edit", toolUseId: `t${sequence}`, input: { file_path: path, old_string: "a", new_string: "b" } });
+    const activity = formatter().activity(reply([
+      edit(0, "a.ts"),
+      edit(1, "a.ts"),
+      detail(2, DetailKind.FileChange, "Edit", { changes: [{ path: "b.ts", kind: "add", diff: "+b" }] }),
+      detail(3, DetailKind.FileChange, "Edit: unreadable", { tool: "edit" }),
+      detail(4, DetailKind.Command, "> ls")
+    ]));
+
+    expect(formatter().activitySummary(activity)).toBe("Ran 1 command, edited 2 files");
+    expect(formatter().activitySummary(activity, 5)).toBe("Ran 1 command, edited 5 files");
+    expect(formatter().activitySummary(activity.slice(3))).toBe("Ran 1 command");
   });
 
   it("labels activity with the duration and the step count", () => {
