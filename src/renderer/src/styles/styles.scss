@@ -674,6 +674,7 @@ mat-icon.mat-icon {
 
 .tr-shell-trigger {
   display: grid;
+  padding-inline-end: var(--tr-space-2);
 }
 
 .tr-shell-trigger > span {

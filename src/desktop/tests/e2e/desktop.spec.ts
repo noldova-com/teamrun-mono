@@ -457,6 +457,8 @@ test("opens new terminals with the default shell chosen in Settings", async () =
   await page.getByRole("option", { name: longName, exact: true }).click();
   await expect(shown).toHaveText(longName);
   expect(await shown.evaluate(t => t.scrollWidth <= t.clientWidth)).toBe(true);
+  await desktop.capture("terminal-settings-long-shell");
+  await expect(page.locator(".tr-shell-select-panel")).toHaveCount(0);
   await select.click();
   await page.getByRole("option", { name: "Fixture shell", exact: true }).click();
   await expect(shown).toHaveText("Fixture shell");
