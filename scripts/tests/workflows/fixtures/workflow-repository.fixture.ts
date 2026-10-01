@@ -24,6 +24,8 @@ export default class WorkflowRepositoryFixture {
     fixture.git(["config", "user.name", "Workflow fixture"]);
     fixture.git(["config", "user.email", "fixture@example.invalid"]);
     fixture.git(["config", "core.autocrlf", "false"]);
+    fixture.git(["config", "maintenance.auto", "false"]);
+    fixture.git(["config", "gc.auto", "0"]);
     fixture.git(["config", "commit.gpgsign", "false"]);
     return fixture;
   }

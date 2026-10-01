@@ -24,6 +24,8 @@ export class GitRepository {
     this.git("config", "user.email", "test@example.com");
     this.git("config", "user.name", "TeamRun tests");
     this.git("config", "core.autocrlf", "false");
+    this.git("config", "maintenance.auto", "false");
+    this.git("config", "gc.auto", "0");
   }
 
   public write(name: string, content: string | Buffer): string {
