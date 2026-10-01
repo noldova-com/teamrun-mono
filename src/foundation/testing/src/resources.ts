@@ -13,6 +13,7 @@ export class Resources {
   public static readonly gitHubSummaryVariable: string = "GITHUB_STEP_SUMMARY";
   public static readonly coverageVariable: string = "NODE_V8_COVERAGE";
   public static readonly coverageDirectoryVariable: string = "CONTEXT_COVERAGE_DIRECTORY";
+  public static readonly temporaryRootVariable: string = "CONTEXT_TEMPORARY_ROOT";
   public static readonly temporaryDirectoryPrefix: string = "teamrun-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;

@@ -87,7 +87,8 @@ export class TestRunEntry {
   }
 
   private isolateTemporaryFiles(): string {
-    const directory = mkdtempSync(join(tmpdir(), Resources.temporaryDirectoryPrefix));
+    const root = process.env[Resources.temporaryRootVariable] ?? tmpdir();
+    const directory = mkdtempSync(join(root, Resources.temporaryDirectoryPrefix));
     for (const variable of Resources.temporaryDirectoryVariables)
       process.env[variable] = directory;
 
