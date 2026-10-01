@@ -8,53 +8,57 @@ on:
 permissions: {}
 
 jobs:
-  starts:
-    name: pwsh starts (${{ matrix.runner }}, ${{ matrix.mode }})
+  node-starts:
+    name: node starts pwsh (${{ matrix.runner }}, windowsHide ${{ matrix.hide }}, ${{ matrix.copy }})
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { runner: windows-11-arm, mode: fresh }
-          - { runner: windows-11-arm, mode: warm }
-          - { runner: windows-11-arm, mode: fresh-parallel }
-          - { runner: windows-2025, mode: fresh }
+        runner: [windows-11-arm]
+        hide: ['0', '1']
+        copy: [a, b]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     steps:
-      - name: Describe pwsh
+      - name: Describe pwsh and node
         shell: bash
         run: |
-          command -v pwsh
-          pwsh -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString(); [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture; [Runtime.InteropServices.RuntimeInformation]::OSArchitecture; [Runtime.InteropServices.RuntimeInformation]::FrameworkDescription; [Environment]::ProcessPath'
+          node --version
+          pwsh -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString(); [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture; [Runtime.InteropServices.RuntimeInformation]::FrameworkDescription; [Environment]::ProcessPath'
 
-      - name: Start pwsh 300 times
-        shell: bash
+      - name: Start pwsh 600 times from node, two at a time, each with a fresh USERPROFILE
         env:
-          MODE: ${{ matrix.mode }}
+          HIDE: ${{ matrix.hide }}
+        shell: bash
         run: |
-          root="$RUNNER_TEMP/profiles"
-          logs="$RUNNER_TEMP/starts"
-          mkdir -p "$root" "$logs"
-          start() {
-            mkdir -p "$1"
-            USERPROFILE="$(cygpath -w "$1")" pwsh -NoProfile -NonInteractive -Command 'Import-Module Microsoft.PowerShell.Utility; $env:PSModulePath.Length' > "$2" 2>&1
-            echo $? >> "$2.code"
-          }
-          for i in $(seq 300); do
-            case "$MODE" in
-              fresh) start "$root/p$i" "$logs/s$i" ;;
-              warm) start "$root/shared" "$logs/s$i" ;;
-              fresh-parallel)
-                start "$root/a$i" "$logs/a$i" &
-                start "$root/b$i" "$logs/b$i" &
-                wait ;;
-            esac
-          done
-          total=$(cat "$logs"/*.code | wc -l)
-          failed=$(grep -lv '^0$' "$logs"/*.code | wc -l)
-          echo "starts: $total, failed: $failed"
-          echo "exit codes:"; cat "$logs"/*.code | sort | uniq -c
-          for code in $(grep -lv '^0$' "$logs"/*.code | head -n 5); do
-            echo "== ${code%.code} (exit $(cat "$code"))"; cat "${code%.code}"
-          done
-          test "$failed" -eq 0
+          node - <<'SCRIPT'
+          const { spawn } = require("node:child_process");
+          const fs = require("node:fs");
+          const os = require("node:os");
+          const path = require("node:path");
+          const hide = process.env.HIDE === "1";
+          const total = 600;
+          const root = fs.mkdtempSync(path.join(os.tmpdir(), "pwsh-starts-"));
+          const codes = {};
+          let failed = 0;
+          const start = i => new Promise(resolve => {
+            const profile = path.join(root, `p${i}`);
+            fs.mkdirSync(profile);
+            let output = "";
+            const child = spawn("pwsh", ["-NoProfile", "-NonInteractive", "-Command", "Import-Module Microsoft.PowerShell.Utility; $env:PSModulePath.Length"],
+              { env: { ...process.env, USERPROFILE: profile }, windowsHide: hide, stdio: ["ignore", "pipe", "pipe"] });
+            child.stdout.on("data", t => output += t);
+            child.stderr.on("data", t => output += t);
+            child.on("exit", code => {
+              codes[code] = (codes[code] ?? 0) + 1;
+              if (code !== 0 && failed++ < 3)
+                console.log(`start ${i} exited with ${code}:\n${output}`);
+              resolve();
+            });
+          });
+          (async () => {
+            for (let i = 0; i < total; i += 2)
+              await Promise.all([start(i), start(i + 1)]);
+            console.log(JSON.stringify({ windowsHide: hide, total, codes }));
+            process.exitCode = failed === 0 ? 0 : 1;
+          })();
+          SCRIPT
