@@ -6,10 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { existsSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { delimiter, join, relative } from "node:path";
 
-import { Assert, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
+import { Assert, Skip, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 import { WorkingTree } from "@noldova/teamrun-core";
 
 import { GitRepository } from "../../fixtures/git-repository.fixture.js";
@@ -224,4 +224,41 @@ export class WorkingTreeTests {
     Assert.areEqual("user staged\nuser unstaged\n", readFileSync(join(repository.path, "base.txt"), "utf8"));
     Assert.areEqual("keep me\n", readFileSync(join(repository.path, "untracked before.txt"), "utf8"));
   }
+
+  @TestMethod
+  public locatesTheFirstExecutableGitFileInAnAbsolutePathFolder(): void {
+    using directory = new TemporaryDataDirectory();
+    const [gitFolder, first, second] = ["folder", "first", "second"].map(t => join(directory.path, t));
+    mkdirSync(join(gitFolder!, "git"), { recursive: true });
+    for (const folder of [first!, second!]) {
+      mkdirSync(folder);
+      writeFileSync(join(folder, "git"), String.empty, { mode: 0o755 });
+    }
+    const searchPath = [join(directory.path, "missing"), gitFolder, first, second].join(delimiter);
+    Assert.areEqual(join(first!, "git"), WorkingTree.locateGit("darwin", searchPath));
+  }
+
+  @TestMethod
+  public keepsTheGitNameOnWindowsOrWithoutAnExecutableOnPath(): void {
+    using directory = new TemporaryDataDirectory();
+    writeFileSync(join(directory.path, "git"), String.empty, { mode: 0o755 });
+    Assert.areEqual("git", WorkingTree.locateGit("win32", directory.path));
+    Assert.areEqual("git", WorkingTree.locateGit("darwin", undefined));
+    Assert.areEqual("git", WorkingTree.locateGit("darwin", join(directory.path, "missing")));
+  }
+
+  @TestMethod
+  public skipsRelativeFoldersAndGitFilesWithoutExecutePermission(): void {
+    using directory = new TemporaryDataDirectory();
+    const [plain, executable] = ["plain", "executable"].map(t => join(directory.path, t));
+    mkdirSync(plain!);
+    mkdirSync(executable!);
+    writeFileSync(join(plain!, "git"), String.empty, { mode: 0o644 });
+    writeFileSync(join(executable!, "git"), String.empty, { mode: 0o755 });
+    const searchPath = [relative(process.cwd(), executable!), plain, executable].join(delimiter);
+    Assert.areEqual(join(executable!, "git"), WorkingTree.locateGit("linux", searchPath));
+  }
 }
+
+if (process.platform === "win32")
+  Skip("Windows files have no execute permission, and a relative path to another drive is absolute.")(WorkingTreeTests.prototype.skipsRelativeFoldersAndGitFilesWithoutExecutePermission);
