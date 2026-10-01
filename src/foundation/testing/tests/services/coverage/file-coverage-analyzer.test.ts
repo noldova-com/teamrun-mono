@@ -13,6 +13,8 @@ import { pathToFileURL } from "node:url";
 
 import { Assert, CoverageAnalyzer, CoverageProject, TestClass, TestMethod } from "@noldova/teamrun-foundation-testing";
 
+import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
+
 @TestClass
 export class FileCoverageAnalyzerTests {
   @TestMethod
@@ -46,7 +48,8 @@ export class FileCoverageAnalyzerTests {
 
   @TestMethod
   public async reportsUncoveredLinesOfIncludedFilesOnly(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 

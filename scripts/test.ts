@@ -29,6 +29,8 @@ export class Test extends Script {
   private static readonly SKIP_COVERAGE_DETAILS_OPTION: string = "--skip-coverage-details";
   private static readonly FILTERS_VARIABLE: string = "CONTEXT_TEST_FILTERS";
   private static readonly SKIP_TEST_DETAILS_VARIABLE: string = "CONTEXT_SKIP_TEST_DETAILS";
+  private static readonly TEMPORARY_ROOT_VARIABLE: string = "CONTEXT_TEMPORARY_ROOT";
+  private static readonly MAC_TEMPORARY_ROOT: string = "/tmp";
   private static readonly COVERAGE_VARIABLE: string = "NODE_V8_COVERAGE";
   private static readonly SUMMARY_VARIABLE: string = "GITHUB_STEP_SUMMARY";
   private static readonly ENABLED_VALUE: string = "1";
@@ -54,6 +56,9 @@ export class Test extends Script {
     environment[Test.FILTERS_VARIABLE] = JSON.stringify(filters);
     if (options.has(Test.SKIP_TEST_DETAILS_OPTION))
       environment[Test.SKIP_TEST_DETAILS_VARIABLE] = Test.ENABLED_VALUE;
+    // macOS's per-user temporary folder is long enough that a Unix socket in a test's folder inside the run's folder exceeds 104 bytes.
+    if (process.platform === "darwin")
+      environment[Test.TEMPORARY_ROOT_VARIABLE] = Test.MAC_TEMPORARY_ROOT;
 
     const measureCoverage = filters.length === 0;
     if (measureCoverage) {

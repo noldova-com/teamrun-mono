@@ -6,13 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { ArgumentException } from "@noldova/teamrun-foundation-exceptions";
 import { Assert, CoverageAnalyzer, CoverageProject, TestClass, TestingException, TestMethod } from "@noldova/teamrun-foundation-testing";
+
+import { TemporaryDirectory } from "../../fixtures/temporary-directory.fixture.js";
 
 @TestClass
 export class CoverageAnalyzerTests {
@@ -45,7 +46,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async rejectsARangeBeyondTheMeasuredFile(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
     const samplePath = join(includedDirectory, "sample.js");
@@ -82,7 +84,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async failsForAnEmptyUniverse(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -93,7 +96,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async reportsExplicitProjectIdentityAndRelativeGeneratedPath(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -114,7 +118,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async preservesEveryDeclaredProjectIdentity(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const firstDirectory = join(coverageDirectory, "first");
     const secondDirectory = join(coverageDirectory, "second");
     await mkdir(firstDirectory);
@@ -145,7 +150,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async recognizesEveryTextOwnedLineBreak(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-line-breaks-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -168,7 +174,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async mergesCountsAcrossReports(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -193,7 +200,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async mergesReportsWithDifferingBlockRangeSets(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -224,7 +232,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async paintsNestedRangesSharingAStartOffset(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -251,7 +260,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async treatsUnclaimedPositionsAsUncovered(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -275,7 +285,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async reportsANeverLoadedFileAsUncovered(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -302,7 +313,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async identifiesANeverLoadedInertFileAsNonExecutable(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -329,7 +341,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async mapsCoverageToTypeScriptSources(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -355,7 +368,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async honorsTheSourceRootOfAMap(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -376,7 +390,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async failsForAMalformedMap(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -399,7 +414,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async failsForAnUnreadableMap(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -420,7 +436,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async sortsLineRangesThatAMapReorders(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -447,7 +464,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async fallsBackToGeneratedLinesBeforeTheFirstMapping(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -472,7 +490,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async keepsTheGeneratedPathWhenAMapHasNoMappedSegment(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -491,7 +510,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async mergesAdjacentUncoveredLineRanges(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -519,7 +539,8 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async rejectsAMappedSourceOutsideTheDeclaredSourceDirectory(): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
 
@@ -541,7 +562,8 @@ export class CoverageAnalyzerTests {
   }
 
   private async assertMalformedReportAsync(report: unknown): Promise<void> {
-    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    using directory = new TemporaryDirectory();
+    const coverageDirectory = directory.path;
     const includedDirectory = join(coverageDirectory, "included");
     await mkdir(includedDirectory);
     await writeFile(join(includedDirectory, "sample.js"), "sample;\n");
